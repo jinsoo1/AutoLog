@@ -206,7 +206,7 @@ private fun RightPanel(ui: CarWidgetUi, modifier: GlanceModifier) {
 
     // 위젯이 낮거나(런처에서 작은 높이), 항목이 많으면(4개) 컴팩트 모드
     val size = LocalSize.current
-    val compact = size.height < 170.dp || ui.rows.size >= 4
+    val compact = size.height < 170.dp || size.width < 250.dp || ui.rows.size >= 4
 
     val headerTitleSize = if (compact) 12.sp else 13.sp
     val headerMetaSize  = if (compact) 10.sp else 11.sp
@@ -263,19 +263,53 @@ private fun RightPanel(ui: CarWidgetUi, modifier: GlanceModifier) {
 
 @Composable
 private fun MaintenanceRow(row: MaintenanceProgressRow, compact: Boolean) {
+    val width = LocalSize.current.width
 
-    val nameSize = if (compact) 11.sp else 12.sp
-    val metaSize = if (compact) 10.sp else 11.sp
+    val ultraNarrow = width < 220.dp
+    val narrow = width < 250.dp
+
+    val nameSize = when {
+        width < 190.dp -> 10.sp
+        width < 240.dp -> 11.sp
+        else -> 12.sp
+    }
+
+    val metaSize = when {
+        width < 190.dp -> 9.sp
+        width < 240.dp -> 10.sp
+        else -> 11.sp
+    }
 
     val outerPadH = if (compact) 6.dp else 8.dp
     val outerPadV = if (compact) 6.dp else 8.dp
 
-    val dotSize   = if (compact) 5.dp else 6.dp
+    val dotSize = if (compact) 5.dp else 6.dp
     val dotRadius = dotSize / 2
 
-    val lineGap   = if (compact) 4.dp else 6.dp
+    val lineGap = if (compact) 4.dp else 6.dp
     val barHeight = if (compact) 6.dp else 8.dp
-    val corner    = if (compact) 10.dp else 12.dp
+    val corner = if (compact) 10.dp else 12.dp
+
+    val nameWidth = when {
+        width < 180.dp -> 40.dp
+        width < 200.dp -> 52.dp
+        width < 220.dp -> 64.dp
+        width < 240.dp -> 76.dp
+        width < 260.dp -> 88.dp
+        else -> 100.dp
+    }
+
+    val maxNameChars = when {
+        width < 170.dp -> 4
+        width < 190.dp -> 5
+        width < 210.dp -> 6
+        width < 230.dp -> 7
+        width < 250.dp -> 8
+        width < 270.dp -> 9
+        else -> 10
+    }
+
+    val displayName = row.name.ellipsize(maxNameChars)
 
     Box(
         modifier = GlanceModifier
@@ -285,32 +319,48 @@ private fun MaintenanceRow(row: MaintenanceProgressRow, compact: Boolean) {
             .padding(horizontal = outerPadH, vertical = outerPadV)
     ) {
         Column(modifier = GlanceModifier.fillMaxWidth()) {
-
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 상태 점
                 Box(
                     modifier = GlanceModifier
                         .size(dotSize)
                         .cornerRadius(dotRadius)
                         .background(WColors.statusColor(row.status))
-                ) { }
+                ) {}
 
                 Spacer(GlanceModifier.width(5.dp))
 
-                Text(
-                    row.name,
-                    style = TextStyle(fontSize = nameSize, fontWeight = FontWeight.Medium),
-                    maxLines = 1
-                )
-                Spacer(GlanceModifier.defaultWeight())
-                Text(
-                    row.remainText,
-                    style = TextStyle(fontSize = metaSize, color = WColors.TextSecondary),
-                    maxLines = 1
-                )
+                Box(
+                    modifier = GlanceModifier.width(nameWidth),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = displayName,
+                        style = TextStyle(
+                            fontSize = nameSize,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(GlanceModifier.width(6.dp))
+
+                Box(
+                    modifier = GlanceModifier.defaultWeight(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Text(
+                        text = row.remainText,
+                        style = TextStyle(
+                            fontSize = metaSize,
+                            color = WColors.TextSecondary
+                        ),
+                        maxLines = 1
+                    )
+                }
             }
 
             Spacer(GlanceModifier.height(lineGap))
@@ -344,6 +394,13 @@ private fun RemoteProgressBar(
         remoteViews = rv,
         modifier = GlanceModifier.fillMaxWidth().height(height)
     )
+}
+
+private fun String.ellipsize(maxChars: Int): String {
+    if (maxChars <= 0) return ""
+    if (length <= maxChars) return this
+    if (maxChars == 1) return "…"
+    return take(maxChars - 1) + "…"
 }
 
 private fun Int.formatComma(): String =
