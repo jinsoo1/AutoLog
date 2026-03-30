@@ -49,7 +49,7 @@ class NoticeRepository @Inject constructor(
                 }
             }
 
-            // ✅ date 내림차순 정렬 (date 없으면 맨 아래)
+            // date 내림차순 정렬 (date 없으면 맨 아래)
             list.sortedWith(
                 compareByDescending<Notice> { n ->
                     n.date?.let { runCatching { LocalDate.parse(it, ISO) }.getOrNull() }

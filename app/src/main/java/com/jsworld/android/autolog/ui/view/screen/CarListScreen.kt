@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,38 +22,29 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jsworld.android.autolog.ui.data.default.DefaultMaintenanceItems.items
 import com.jsworld.android.autolog.ui.data.item.Car
 import com.jsworld.android.autolog.ui.data.item.CarCardUi
 import com.jsworld.android.autolog.ui.data.item.MaintenanceStatus
@@ -79,17 +68,15 @@ import com.jsworld.android.autolog.ui.view.viewModel.CarListViewModel
 fun CarListScreen(
     onAddCarClick: () -> Unit,
     onCarClick: (Car) -> Unit,
-    onNoticeClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: CarListViewModel = hiltViewModel()
 ) {
     val uiCars by viewModel.uiCars.collectAsStateWithLifecycle()
-    val unreadCount by viewModel.unreadCount.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             CarListTopBar(
-                hasNewNotice = unreadCount > 0,
-                onNoticeClick = onNoticeClick
+                onSettingsClick = onSettingsClick
             )
         },
         floatingActionButton = {
@@ -100,16 +87,17 @@ fun CarListScreen(
             )
         }
     ) { padding ->
-        // 기존 그대로
         if (uiCars.isEmpty()) {
             EmptyCarView(
-                modifier = Modifier.padding(padding).fillMaxSize(),
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
                 onAdd = onAddCarClick
             )
         } else {
             Column(
                 modifier = Modifier
-                    .padding(padding)      // ✅ Column 전체에 적용
+                    .padding(padding)
                     .fillMaxSize()
             ) {
                 Row(
@@ -118,7 +106,7 @@ fun CarListScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Spacer(Modifier.weight(1f)) // ✅ 왼쪽 공간 밀기
+                    Spacer(Modifier.weight(1f))
 
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
@@ -136,7 +124,7 @@ fun CarListScreen(
                 }
 
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(), // ✅ 여기서는 padding 제거
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -149,7 +137,6 @@ fun CarListScreen(
                     }
                 }
             }
-
         }
     }
 }
@@ -369,32 +356,25 @@ private fun InfoPill(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CarListTopBar(
-    hasNewNotice: Boolean,
-    onNoticeClick: () -> Unit
+fun CarListTopBar(
+    onSettingsClick: () -> Unit
 ) {
     TopAppBar(
         title = {
             Text(
-                "내 차량",
+                text = "내 차량",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
         },
         actions = {
-            BadgedBox(
-                badge = {
-                    if (hasNewNotice) {
-                        Badge(modifier = Modifier.offset(x = (-4).dp, y = 4.dp))
-                    }
-                }
-            ) {
-                IconButton(onClick = onNoticeClick) {
-                    Icon(Icons.Default.Campaign, contentDescription = "공지사항")
-                }
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "설정"
+                )
             }
         }
-
     )
 }
 

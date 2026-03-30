@@ -29,6 +29,7 @@ object Routes {
 
     const val EDIT_MAINTENANCE_HISTORY = "history_edit"
 
+    const val SETTINGS = "settings"
     const val NOTICE = "notice"
 
 }

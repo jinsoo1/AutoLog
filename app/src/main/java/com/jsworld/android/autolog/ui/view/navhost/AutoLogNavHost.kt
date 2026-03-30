@@ -38,6 +38,7 @@ import com.jsworld.android.autolog.ui.view.screen.EditMaintenanceSettingScreen
 import com.jsworld.android.autolog.ui.view.screen.MaintenanceHistoryEditScreen
 import com.jsworld.android.autolog.ui.view.screen.MaintenanceHistoryListScreen
 import com.jsworld.android.autolog.ui.view.screen.NoticeScreen
+import com.jsworld.android.autolog.ui.view.screen.SettingsScreen
 import com.jsworld.android.autolog.ui.view.viewModel.AddMaintenanceTypeViewModel
 import com.jsworld.android.autolog.ui.view.viewModel.AddMaintenanceViewModel
 import com.jsworld.android.autolog.ui.view.viewModel.CarMaintenanceItemPickerViewModel
@@ -121,8 +122,8 @@ fun AutoLogNavHost(
                         popUpTo(Routes.CAR_LIST) { inclusive = false } // ✅ list 아래는 건드리지 않음
                     }
                 },
-                onNoticeClick = {
-                    navController.navigate(Routes.NOTICE)
+                onSettingsClick = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
@@ -130,6 +131,14 @@ fun AutoLogNavHost(
         composable(Routes.NOTICE) {
             NoticeScreen(
                 onBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBackClick = { navController.popBackStack() },
+                onNoticeClick = { navController.navigate(Routes.NOTICE) },
                 viewModel = hiltViewModel()
             )
         }
