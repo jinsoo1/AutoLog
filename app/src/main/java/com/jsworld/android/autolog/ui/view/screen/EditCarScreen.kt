@@ -90,7 +90,7 @@ fun EditCarScreen(
                         }
                     },
                     actions = {
-                        // ✅ 삭제 버튼(휴지통)
+                        // 삭제 버튼(휴지통)
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "차량 삭제")
                         }
@@ -128,9 +128,9 @@ fun EditCarScreen(
     val canSave = nameValid && plateValid && mileageValid
 
     val showMileageError =
-        // ✅ 저장 시도했으면 무조건 기존처럼 에러 표시
+        // 저장 시도했으면 무조건 기존처럼 에러 표시
         (triedSave && !mileageValid) ||
-                // ✅ 입력 중에도: 값이 있고(minMileage 계산 가능) & 최소값 미만이면 즉시 표시
+                // 입력 중에도: 값이 있고(minMileage 계산 가능) & 최소값 미만이면 즉시 표시
                 (mileageText.isNotBlank() && mileage != null && mileage < minAllowedMileage)
 
     Scaffold(
@@ -143,7 +143,6 @@ fun EditCarScreen(
                     }
                 },
                 actions = {
-                    // ✅ 삭제 버튼(휴지통)
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "차량 삭제")
                     }
@@ -155,7 +154,7 @@ fun EditCarScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.navigationBars) // ✅ 네비게이션바 인셋 적용
+                        .windowInsetsPadding(WindowInsets.navigationBars) // 네비게이션바 인셋 적용
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -201,7 +200,7 @@ fun EditCarScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ✅ 상단 요약 헤더 카드
+            // 상단 요약 헤더 카드
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -252,7 +251,7 @@ fun EditCarScreen(
                 }
             }
 
-            // ✅ 기본 정보 섹션
+            // 기본 정보 섹션
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -314,13 +313,13 @@ fun EditCarScreen(
                                 leadingIcon = { Icon(Icons.Default.DateRange, null) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.weight(0.8f)   // ✅ 연식은 좁게
+                                modifier = Modifier.weight(0.8f)
                             )
 
                             FuelTypeDropdown(
                                 fuelType = fuelType,
                                 onFuelTypeChange = { fuelType = it },
-                                modifier = Modifier.weight(1.2f)   // ✅ 연료는 넓게
+                                modifier = Modifier.weight(1.2f)
                             )
                         }
 
@@ -342,7 +341,7 @@ fun EditCarScreen(
                 }
             }
 
-            // ✅ 주행/메모 섹션
+            // 주행/메모 섹션
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -423,7 +422,7 @@ fun EditCarScreen(
                     Button(
                         onClick = {
                             showDeleteDialog = false
-                            // ✅ 실제 삭제 + 리스트로(스택 정리)
+                            // 실제 삭제 + 리스트로(스택 정리)
                             viewModel.deleteCar(car!!, onDone = onDeletedGoToList)
                         }
                     ) {
@@ -480,7 +479,7 @@ private fun FuelTypeDropdown(
     ) {
         OutlinedTextField(
             value = fuelType,
-            onValueChange = {}, // ✅ 직접 입력 불가
+            onValueChange = {}, // 직접 입력 불가
             readOnly = true,
             singleLine = true,
             label = { Text("연료") },
@@ -505,7 +504,7 @@ private fun FuelTypeDropdown(
                 )
             }
 
-            // ✅ 선택 해제(빈 값)
+            // 선택 해제(빈 값)
             DropdownMenuItem(
                 text = { Text("선택 안함") },
                 onClick = {

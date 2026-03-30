@@ -110,8 +110,8 @@ fun AddMaintenanceTypeScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .imePadding()              // ✅ 키보드 올라오면 위로
-                    .navigationBarsPadding()   // ✅ 하단 내비 영역까지 안전
+                    .imePadding()              // 키보드 올라오면 위로
+                    .navigationBarsPadding()   // 하단 내비 영역까지 안전
             )
         }
     ) { padding ->
@@ -123,7 +123,7 @@ fun AddMaintenanceTypeScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
-            // ✅ 입력 카드
+            // 입력 카드
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -199,7 +199,7 @@ fun AddMaintenanceTypeScreen(
                 }
             }
 
-            // ✅ 팁 카드(요청하신 “추가 팁”)
+            // 팁 카드(요청하신 “추가 팁”)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),

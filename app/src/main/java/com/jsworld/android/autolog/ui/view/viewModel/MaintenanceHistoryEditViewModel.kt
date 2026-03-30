@@ -80,7 +80,7 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
                 )
             }
 
-            // ✅ autoUpdate 구독 (carId 확정 후)
+            // autoUpdate 구독 (carId 확정 후)
             autoJob?.cancel()
             autoJob = launch {
                 userPrefsRepository.observeAutoMileageUpdate(carId).collectLatest { enabled ->
@@ -157,7 +157,7 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
         }
     }
 
-    // ✅ 다이얼로그에서 사용
+    // 다이얼로그에서 사용
     private var _pendingEntity: MaintenanceHistoryEntity? = null
 
     fun confirmUpdateCarMileage(onDone: () -> Unit) {

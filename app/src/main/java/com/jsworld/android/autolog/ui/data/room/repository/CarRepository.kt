@@ -58,7 +58,7 @@ class CarRepository @Inject constructor(
     suspend fun updateCar(car: Car) {
         carDao.updateCar(car.toEntity())
         if (car.isPrimary) {
-            carDao.clearPrimaryExcept(car.id) // ✅ 대표차량 1대만(원하면 유지)
+            carDao.clearPrimaryExcept(car.id) // 대표차량 1대만(원하면 유지)
         }
     }
 }

@@ -67,7 +67,7 @@ class CarMaintenanceRepository @Inject constructor(
 
     private fun buildMaintenanceUiModelsFromRoom(
         carMileage: Int,
-        roomItems: List<SettingWithHistory>, // ✅ 여기만 바꾸면 됨
+        roomItems: List<SettingWithHistory>,
         typeMap: Map<Long, MaintenanceTypeEntity>,
         today: LocalDate
     ): List<MaintenanceUiModel> {
@@ -143,7 +143,7 @@ class CarMaintenanceRepository @Inject constructor(
                 else -> MaintenanceStatus.NORMAL
             }
 
-            // ✅ 위험 목록은 SOON/OVERDUE만 노출
+            // 위험 목록은 SOON/OVERDUE만 노출
             if (finalStatus == MaintenanceStatus.NORMAL) return@mapNotNull null
 
             val remainingText = buildString {
@@ -167,14 +167,14 @@ class CarMaintenanceRepository @Inject constructor(
     private fun getSettingsWithHistorySorted(
         carId: Long,
         sort: MaintenanceSort
-    ): Flow<List<SettingWithHistory>> {   // ✅ ItemSettingWithHistory 말고 SettingWithHistory
+    ): Flow<List<SettingWithHistory>> {   // ItemSettingWithHistory 말고 SettingWithHistory
         return when (sort) {
             MaintenanceSort.DEFAULT -> fullDao.getSettingsWithHistoryDefault(carId)
             MaintenanceSort.REMAINING_KM -> fullDao.getSettingsWithHistoryOrderByRemainingKm(carId)
             MaintenanceSort.DUE_DATE -> fullDao.getSettingsWithHistoryOrderByDueDate(carId)
             MaintenanceSort.URGENT_MIN -> fullDao.getSettingsWithHistoryOrderByCombined(carId)
         }
-        // ✅ 이미 SettingWithHistory면 map { it.toDomain() } 필요 없음
+        // 이미 SettingWithHistory면 map { it.toDomain() } 필요 없음
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -182,7 +182,7 @@ class CarMaintenanceRepository @Inject constructor(
         val carFlow = carDao.getCarById(carId) // Flow<CarEntity?>
 
         return observeSort(carId).flatMapLatest { sort ->
-            val settingsFlow = getSettingsWithHistorySorted(carId, sort) // ✅ 정렬 반영
+            val settingsFlow = getSettingsWithHistorySorted(carId, sort) // 정렬 반영
 
             combine(carFlow, settingsFlow) { carEntity, roomItems ->
                 val carMileage = carEntity?.mileage ?: return@combine emptyList()
@@ -236,7 +236,7 @@ class CarMaintenanceRepository @Inject constructor(
         settingDao.updateIntervals(settingId, km, months)
     }
 
-    // ✅ Picker용: types + settings(비활성 포함) 결합해서 체크 상태 만들기
+    // Picker용: types + settings(비활성 포함) 결합해서 체크 상태 만들기
     fun observePickerItems(carId: Long): Flow<List<MaintenanceTypePickUi>> {
         return combine(
             maintenanceTypeDao.observeAll(),                       // Flow<List<MaintenanceTypeEntity>>
@@ -258,16 +258,16 @@ class CarMaintenanceRepository @Inject constructor(
         }
     }
 
-    // ✅ 토글 로직(요청한 그대로)
+    // 토글 로직(요청한 그대로)
     suspend fun setTypeEnabled(carId: Long, typeId: Long, enabled: Boolean) {
         val existing = settingDao.getOneByCarIdAndTypeId(carId, typeId)
 
         if (enabled) {
             if (existing != null) {
-                // ✅ 있으면 enable
+                // 있으면 enable
                 settingDao.enableSetting(existing.id)
             } else {
-                // ✅ 없으면 insert (interval은 null로 두면 기본주기 사용)
+                // 없으면 insert (interval은 null로 두면 기본주기 사용)
                 settingDao.insertSetting(
                     CarMaintenanceSettingEntity(
                         carId = carId,
@@ -279,18 +279,18 @@ class CarMaintenanceRepository @Inject constructor(
                 )
             }
         } else {
-            // ✅ 해제는 disable (내역 유지)
+            // 해제는 disable (내역 유지)
             if (existing != null) {
                 settingDao.disableSetting(existing.id)
             }
         }
     }
 
-    // ✅ Picker는 이걸 써야 복원으로 이동함
+    // Picker는 이걸 써야 복원으로 이동함
     fun observeAllByCarId(carId: Long): Flow<List<CarMaintenanceSetting>> =
         settingDao.observeAllByCarId(carId).map { it.map { e -> e.toDomain() } }
 
-    // ✅ CarDetail 정렬/표시는 활성만 쓰고 싶다면 이걸 사용
+    // CarDetail 정렬/표시는 활성만 쓰고 싶다면 이걸 사용
     fun observeActiveByCarId(carId: Long): Flow<List<CarMaintenanceSetting>> =
         settingDao.observeActiveByCarId(carId).map { it.map { e -> e.toDomain() } }
 
@@ -299,7 +299,7 @@ class CarMaintenanceRepository @Inject constructor(
     suspend fun getByCarIdAndTypeIdOnce(carId: Long, typeId: Long): CarMaintenanceSetting? =
         settingDao.getByCarIdAndTypeIdOnce(carId, typeId)?.toDomain()
 
-    /** ✅ 체크 ON인데 설정이 없을 때: 기본값(null)로 추가 + 활성 */
+    /** 체크 ON인데 설정이 없을 때: 기본값(null)로 추가 + 활성 */
     suspend fun insertDefaultActive(carId: Long, typeId: Long): Long {
         return settingDao.insertSetting(
             CarMaintenanceSettingEntity(
@@ -334,7 +334,7 @@ class CarMaintenanceRepository @Inject constructor(
 
     fun observeMaintenanceDigestForCarList(carId: Long): Flow<CarMaintenanceDigest> {
         val carFlow = carDao.getCarById(carId)
-        val settingsFlow = fullDao.getSettingsWithHistoryOrderByCombined(carId) // ✅ URGENT_MIN 고정
+        val settingsFlow = fullDao.getSettingsWithHistoryOrderByCombined(carId) // URGENT_MIN 고정
 
         return combine(carFlow, settingsFlow) { carEntity, roomItems ->
             val carMileage = carEntity?.mileage ?: 0
@@ -382,11 +382,11 @@ class CarMaintenanceRepository @Inject constructor(
         val existing = settingDao.getOneByCarIdAndTypeId(carId, typeId)
 
         if (existing != null) {
-            // ✅ 이미 있으면 활성화 + (선택) 주기 업데이트
+            // 이미 있으면 활성화 + (선택) 주기 업데이트
             settingDao.enableSetting(existing.id)
             settingDao.updateIntervals(existing.id, intervalKm, intervalMonths)
         } else {
-            // ✅ 없으면 새로 생성
+            // 없으면 새로 생성
             settingDao.insertSetting(
                 CarMaintenanceSettingEntity(
                     id = 0,
@@ -405,7 +405,7 @@ class CarMaintenanceRepository @Inject constructor(
         name: String,
         defaultKm: Int?,
         defaultMonths: Int?,
-        // ✅ (선택) 이 차량만 별도 주기 쓰고 싶으면 넘김, 아니면 null/null
+        // (선택) 이 차량만 별도 주기 쓰고 싶으면 넘김, 아니면 null/null
         carIntervalKm: Int?,
         carIntervalMonths: Int?
     ): Long {
@@ -414,7 +414,7 @@ class CarMaintenanceRepository @Inject constructor(
         require(trimmed.isNotEmpty()) { "항목 이름이 비어있어요" }
         require(defaultKm != null || defaultMonths != null) { "기본 주기는 km/개월 중 하나는 입력해야 해요" }
 
-        // ✅ 중복 타입이면 재사용
+        // 중복 타입이면 재사용
         val existing = maintenanceTypeDao.findByName(trimmed)
         val typeId = existing?.id ?: maintenanceTypeDao.insertType(
             MaintenanceTypeEntity(
@@ -425,7 +425,7 @@ class CarMaintenanceRepository @Inject constructor(
             )
         )
 
-        // ✅ 이 차량에 즉시 활성화
+        // 이 차량에 즉시 활성화
         // 차량 전용 주기가 없으면 null로 두고 → 타입 기본값 사용
         enableTypeForCar(
             carId = carId,
@@ -451,13 +451,13 @@ class CarMaintenanceRepository @Inject constructor(
         require(trimmed.isNotEmpty()) { "항목 이름이 비어있어요" }
         require(defaultKm != null || defaultMonths != null) { "기본 주기는 km/개월 중 하나는 입력해야 해요" }
 
-        // ✅ 중복 체크 (대소문자 무시)
+        // 중복 체크 (대소문자 무시)
         val existing = maintenanceTypeDao.findByName(trimmed)
         if (existing != null) {
             throw IllegalStateException("이미 존재하는 항목이에요. 다른 이름으로 추가해 주세요.")
         }
 
-        // ✅ 새 타입 생성
+        // 새 타입 생성
         val typeId = maintenanceTypeDao.insertType(
             MaintenanceTypeEntity(
                 id = 0,
@@ -467,7 +467,7 @@ class CarMaintenanceRepository @Inject constructor(
             )
         )
 
-        // ✅ 이 차량에 활성화
+        // 이 차량에 활성화
         enableTypeForCar(
             carId = carId,
             typeId = typeId,

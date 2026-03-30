@@ -97,11 +97,11 @@ fun MaintenanceHistoryEditScreen(
             autoUpdateEnabled = ui.autoUpdateCarMileage,
             onAutoUpdateChanged = { enabled -> viewModel.setAutoMileageUpdate(enabled) },
 
-            // ✅ 버튼 동작은 기존대로
+            // 버튼 동작은 기존대로
             onConfirmUpdate = { viewModel.confirmUpdateCarMileage(onDone = onBack) },
             onDismissSaveOnly = { viewModel.declineUpdateCarMileage(onDone = onBack) },
 
-            // ✅ 바깥/백버튼/닫기: 다이얼로그만 닫기
+            // 바깥/백버튼/닫기: 다이얼로그만 닫기
             onDismiss = { viewModel.dismissUpdateCarDialog() }
         )
     }
@@ -130,8 +130,8 @@ fun MaintenanceHistoryEditScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()  // ✅ 네비게이션바 가림 방지
-                        .imePadding()             // ✅ 키보드 올라올 때 버튼 가림 방지
+                        .navigationBarsPadding()  // 네비게이션바 가림 방지
+                        .imePadding()             // 키보드 올라올 때 버튼 가림 방지
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -161,13 +161,13 @@ fun MaintenanceHistoryEditScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()), // ✅ 폼이 길어지면 스크롤
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
             Spacer(Modifier.height(8.dp))
 
-            // ✅ 범위 안내 카드
+            // 범위 안내 카드
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -207,7 +207,7 @@ fun MaintenanceHistoryEditScreen(
                 }
             }
 
-            // ✅ 에러 메시지
+            // 에러 메시지
             if (ui.error != null) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
@@ -227,7 +227,7 @@ fun MaintenanceHistoryEditScreen(
                 }
             }
 
-            // ✅ 입력 폼 카드
+            // 입력 폼 카드
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -345,7 +345,7 @@ private fun MileageUpdateDialog(
     onDismissSaveOnly: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // ✅ “너무 큰 값” 휴리스틱(원하면 숫자 조정)
+    // “너무 큰 값” 휴리스틱(원하면 숫자 조정)
     val diff = (newMileage - currentMileage).coerceAtLeast(0)
     val ratio = if (currentMileage > 0) newMileage.toFloat() / currentMileage.toFloat() else 0f
 
@@ -393,7 +393,7 @@ private fun MileageUpdateDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                // ✅ 경고 박스(너무 큰 값일 때만)
+                // 경고 박스(너무 큰 값일 때만)
                 if (isSuspicious) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = warnContainer),
@@ -427,7 +427,7 @@ private fun MileageUpdateDialog(
                     }
                 }
 
-                // ✅ 3칸 요약 카드
+                // 3칸 요약 카드
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     elevation = CardDefaults.cardElevation(0.dp),
@@ -457,7 +457,7 @@ private fun MileageUpdateDialog(
                     }
                 }
 
-                // ✅ “다음부터 자동 업데이트” 체크박스(설정 저장)
+                // “다음부터 자동 업데이트” 체크박스(설정 저장)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),

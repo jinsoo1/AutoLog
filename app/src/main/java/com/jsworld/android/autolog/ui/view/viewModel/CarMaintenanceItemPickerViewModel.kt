@@ -33,7 +33,7 @@ class CarMaintenanceItemPickerViewModel @Inject constructor(
     private fun observeAllItems(carId: Long): Flow<List<PickerItemUi>> =
         combine(
             maintenanceTypeRepository.observeAllTypes(),
-            carMaintenanceSettingRepository.observeAllByCarId(carId) // ✅ 여기 중요
+            carMaintenanceSettingRepository.observeAllByCarId(carId)
         ) { types, settings ->
             val settingMap = settings.associateBy { it.maintenanceTypeId }
             types.map { type ->
@@ -67,7 +67,7 @@ class CarMaintenanceItemPickerViewModel @Inject constructor(
             .distinctUntilChanged()
 
     /**
-     * ✅ 체크 변경:
+     * 체크 변경:
      * - 체크 해제 => disable + 스낵바("정비 내역은 유지됩니다")
      * - 체크 true  => (있으면 enable, 없으면 insert)
      */

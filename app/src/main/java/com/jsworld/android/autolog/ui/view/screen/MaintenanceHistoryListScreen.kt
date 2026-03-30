@@ -135,7 +135,7 @@ private fun HistoryCard(
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // ✅ 왼쪽 포인트 바(조금 둥글게)
+            // 왼쪽 포인트 바(조금 둥글게)
             Box(
                 modifier = Modifier
                     .width(5.dp)
@@ -150,7 +150,7 @@ private fun HistoryCard(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ✅ 상단: 날짜/주행거리 + 수정 버튼
+                // 상단: 날짜/주행거리 + 수정 버튼
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -189,7 +189,7 @@ private fun HistoryCard(
                         }
                     }
 
-                    // ✅ 수정 버튼(아이콘 버튼 + 톤다운)
+                    // 수정 버튼(아이콘 버튼 + 톤다운)
                     FilledTonalIconButton(
                         onClick = { onEdit(h.id) }
                     ) {
@@ -202,7 +202,7 @@ private fun HistoryCard(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                // ✅ 장소 / 비용 / 메모 (아이콘 배지로 정돈)
+                // 장소 / 비용 / 메모 (아이콘 배지로 정돈)
                 SmallLine(
                     icon = Icons.Default.Place,
                     label = "장소",
@@ -235,7 +235,7 @@ private fun SmallLine(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-        // ✅ 아이콘을 작은 배지로 감싸서 통일감
+        // 아이콘을 작은 배지로 감싸서 통일감
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = MaterialTheme.shapes.large

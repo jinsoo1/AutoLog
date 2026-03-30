@@ -110,7 +110,7 @@ fun EditMaintenanceSettingScreen(
             )
         },
 
-        // ✅ 버튼은 bottomBar로 내려서 항상 보이게
+        // 버튼은 bottomBar로 내려서 항상 보이게
         bottomBar = {
             Surface(tonalElevation = 2.dp) {
                 Column(
@@ -176,7 +176,7 @@ fun EditMaintenanceSettingScreen(
 
         val isUsingDefault = ui.currentKm == null && ui.currentMonths == null
 
-        // ✅ 본문은 LazyColumn으로 스크롤
+        // 본문은 LazyColumn으로 스크롤
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -203,7 +203,7 @@ fun EditMaintenanceSettingScreen(
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(16.dp)
                     ) {
-                        // ✅ 상단 헤더(기존 그대로)
+                        // 상단 헤더(기존 그대로)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -253,7 +253,7 @@ fun EditMaintenanceSettingScreen(
                             )
                         }
 
-                        // ✅ 마지막 정비 내역(접힘/펼침)
+                        // 마지막 정비 내역(접힘/펼침)
                         Spacer(Modifier.height(12.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(10.dp))
@@ -280,7 +280,7 @@ fun EditMaintenanceSettingScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            // ✅ 접힘 상태 요약(항상 보여주기)
+                            // 접힘 상태 요약(항상 보여주기)
                             val summary = if (!hasLast) {
                                 "없음"
                             } else {
@@ -313,7 +313,7 @@ fun EditMaintenanceSettingScreen(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
 
-                                // ✅ 상세 정보(기존)
+                                // 상세 정보(기존)
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     HeaderMiniRow(
                                         icon = Icons.Default.Place,
@@ -335,13 +335,13 @@ fun EditMaintenanceSettingScreen(
                                     )
                                 }
 
-                                // ✅ 하단 액션 영역: 전체 내역 보기 + 접기 버튼
+                                // 하단 액션 영역: 전체 내역 보기 + 접기 버튼
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // ✅ 전체 내역 보기(메인 액션)
+                                    // 전체 내역 보기(메인 액션)
                                     FilledTonalButton(
                                         onClick = { onViewAllHistory(settingId) },
                                         modifier = Modifier.weight(1f),
@@ -535,7 +535,7 @@ private fun LastMaintenanceSection(
                 return@Column
             }
 
-            // ✅ 기본(항상 표시): 날짜 + 주행거리만 간단히
+            // 기본(항상 표시): 날짜 + 주행거리만 간단히
             InfoLineCompact(
                 icon = Icons.Default.DateRange,
                 title = "날짜",
@@ -548,7 +548,7 @@ private fun LastMaintenanceSection(
                 value = lastServiceMileage?.let { "${it.formatKm()}km" } ?: "-"
             )
 
-            // ✅ 펼침(선택): 장소/비용/메모
+            // 펼침(선택): 장소/비용/메모
             AnimatedVisibility(visible = expanded) {
                 Column {
                     if (!lastPlace.isNullOrBlank()) {

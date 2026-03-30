@@ -37,7 +37,7 @@ class CarStatusWidgetConfigActivity : ComponentActivity() {
             return
         }
 
-        // ✅ 기본은 취소
+        // 기본은 취소
         setResult(
             Activity.RESULT_CANCELED,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -56,18 +56,18 @@ class CarStatusWidgetConfigActivity : ComponentActivity() {
                             val manager = GlanceAppWidgetManager(this@CarStatusWidgetConfigActivity)
                             val glanceId = manager.getGlanceIdBy(appWidgetId)
 
-                            // ✅⭐ 가장 중요: definition 명시!
+                            // 가장 중요: definition 명시!
                             updateAppWidgetState(
                                 context = this@CarStatusWidgetConfigActivity,
                                 definition = PreferencesGlanceStateDefinition,
                                 glanceId = glanceId
                             ) { prefs: Preferences ->
                                 val mutable = prefs.toMutablePreferences()
-                                mutable[KEY_CAR_ID] = car.id   // ✅ 이제 set 연산자 됨
-                                mutable                      // ✅ Preferences 리턴(중요!)
+                                mutable[KEY_CAR_ID] = car.id   // 이제 set 연산자 됨
+                                mutable                        // Preferences 리턴(중요!)
                             }
 
-                            // ✅ 위젯 즉시 갱신
+                            // 위젯 즉시 갱신
                             CarStatusWidget().update(this@CarStatusWidgetConfigActivity, glanceId)
 
                             WidgetDailyUpdateScheduler.schedule(this@CarStatusWidgetConfigActivity)

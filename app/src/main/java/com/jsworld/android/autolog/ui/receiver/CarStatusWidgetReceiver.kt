@@ -12,7 +12,7 @@ class CarStatusWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        WidgetDailyUpdateScheduler.schedule(context) // ✅ 하루 갱신 스케줄 시작
+        WidgetDailyUpdateScheduler.schedule(context) // 하루 갱신 스케줄 시작
     }
 
     override fun onDisabled(context: Context) {

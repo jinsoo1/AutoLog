@@ -44,7 +44,7 @@ fun NoticeScreen(
         val willExpand = !expandedIds.contains(notice.id)
         expandedIds = if (willExpand) expandedIds + notice.id else expandedIds - notice.id
 
-        // ✅ 펼칠 때 읽음 처리
+        // 펼칠 때 읽음 처리
         if (willExpand) viewModel.markRead(notice.id)
     }
 
@@ -65,7 +65,7 @@ fun NoticeScreen(
                 },
                 actions = {
 
-                    // ✅ 새 공지 n개 배지 (0이면 숨김)
+                    // 새 공지 n개 배지 (0이면 숨김)
                     if (unreadCount > 0) {
                         Surface(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
@@ -153,7 +153,7 @@ private fun NoticeCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                // ✅ 새 공지 dot
+                // 새 공지 dot
                 if (!isRead) {
                     Box(
                         modifier = Modifier
@@ -194,7 +194,7 @@ private fun NoticeCard(
                 )
             }
 
-            // ✅ 접힌 상태: content 1줄 + next 라벨(있으면)
+            // 접힌 상태: content 1줄 + next 라벨(있으면)
             if (!expanded) {
                 if (notice.content.isNotBlank()) {
                     Text(
@@ -224,7 +224,7 @@ private fun NoticeCard(
                 return@Column
             }
 
-            // ✅ 펼친 상태
+            // 펼친 상태
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             if (notice.content.isNotBlank()) {
@@ -235,7 +235,7 @@ private fun NoticeCard(
                 )
             }
 
-            // ✅ next 목록 표시
+            // next 목록 표시
             if (notice.next.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(

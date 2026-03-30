@@ -11,10 +11,10 @@ class DailyWidgetRefreshWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        // ✅ 전체 위젯 갱신
+        // 전체 위젯 갱신
         CarStatusWidgetUpdater.updateAll(applicationContext)
 
-        // ✅ 다음날 것도 다시 예약 (매일 반복)
+        // 다음날 것도 다시 예약 (매일 반복)
         WidgetDailyUpdateScheduler.schedule(applicationContext)
 
         return Result.success()

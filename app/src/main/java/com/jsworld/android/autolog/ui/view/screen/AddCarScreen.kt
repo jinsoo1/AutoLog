@@ -86,8 +86,8 @@ fun AddCarScreen(
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding() // ✅ 네비바 안전
-                        .imePadding()            // ✅ 키보드 안전
+                        .navigationBarsPadding() // 네비바 안전
+                        .imePadding()            // 키보드 안전
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Button(
@@ -137,7 +137,7 @@ fun AddCarScreen(
         ) {
 
             item {
-                // ✅ 안내 카드
+                // 안내 카드
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
@@ -175,7 +175,7 @@ fun AddCarScreen(
             }
 
             item {
-                // ✅ 기본 정보 섹션
+                // 기본 정보 섹션
                 SectionCard(title = "기본 정보") {
                     CarTextField2(
                         label = "차량 이름 *",
@@ -203,7 +203,7 @@ fun AddCarScreen(
             }
 
             item {
-                // ✅ 주행/연료 섹션
+                // 주행/연료 섹션
                 SectionCard(title = "주행/연료") {
                     CarTextField2(
                         label = "현재 주행거리",
@@ -223,7 +223,7 @@ fun AddCarScreen(
             }
 
             item {
-                // ✅ 메모 섹션
+                // 메모 섹션
                 SectionCard(title = "메모") {
                     CarTextField2(
                         label = "메모",
@@ -237,7 +237,7 @@ fun AddCarScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(90.dp)) } // ✅ bottomBar 높이만큼 여유(스크롤 시 가려짐 방지)
+            item { Spacer(Modifier.height(90.dp)) } // bottomBar 높이만큼 여유(스크롤 시 가려짐 방지)
         }
     }
 }

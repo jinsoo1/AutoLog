@@ -52,7 +52,7 @@ class AddMaintenanceViewModel @Inject constructor(
         }
     }
 
-    /** ✅ "현재차량 주행거리 업데이트"를 물어볼지 판단 */
+    /** "현재차량 주행거리 업데이트"를 물어볼지 판단 */
     suspend fun checkMileageUpdateSuggestion(
         carId: Long,
         newMileage: Int
@@ -80,7 +80,7 @@ class AddMaintenanceViewModel @Inject constructor(
         )
     }
 
-    /** ✅ 저장 + (선택) 차량 주행거리 업데이트 */
+    /** 저장 + (선택) 차량 주행거리 업데이트 */
     fun saveWithOptionalMileageUpdate(
         carId: Long,
         pending: PendingMaintenanceSave,

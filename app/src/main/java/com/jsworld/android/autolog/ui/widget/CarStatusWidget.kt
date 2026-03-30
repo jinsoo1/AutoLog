@@ -59,7 +59,7 @@ private object WColors {
     }
 }
 
-// ✅ 위젯 인스턴스(GlanceId)별 저장되는 key
+// 위젯 인스턴스(GlanceId)별 저장되는 key
 val KEY_CAR_ID = longPreferencesKey("car_id")
 
 class CarStatusWidget : GlanceAppWidget() {
@@ -80,7 +80,7 @@ class CarStatusWidget : GlanceAppWidget() {
                 EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
             }
 
-            // ✅ carId가 바뀌면 다시 로드되도록 produceState 사용
+            // carId가 바뀌면 다시 로드되도록 produceState 사용
             val ui by produceState<CarWidgetUi?>(initialValue = null, key1 = carId) {
                 value = runCatching {
                     ep.carWidgetRepository().getCarWidgetUiOnce(carId, maxRows = 4)
@@ -114,10 +114,10 @@ private fun WidgetRoot(
         action = ACTION_OPEN_CAR_DETAIL
         putExtra(EXTRA_CAR_ID, carId)
 
-        // ✅ 중요: PendingIntent 재사용 방지용 (carId별 유니크)
+        // 중요: PendingIntent 재사용 방지용 (carId별 유니크)
         data = Uri.parse("autolog://widget/car/$carId")
 
-        // ✅ 기존 태스크가 있으면 재사용 + 새 인텐트 전달
+        // 기존 태스크가 있으면 재사용 + 새 인텐트 전달
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -204,7 +204,7 @@ private fun LeftPanel(ui: CarWidgetUi, modifier: GlanceModifier) {
 @Composable
 private fun RightPanel(ui: CarWidgetUi, modifier: GlanceModifier) {
 
-    // ✅ 위젯이 낮거나(런처에서 작은 높이), 항목이 많으면(4개) 컴팩트 모드
+    // 위젯이 낮거나(런처에서 작은 높이), 항목이 많으면(4개) 컴팩트 모드
     val size = LocalSize.current
     val compact = size.height < 170.dp || ui.rows.size >= 4
 

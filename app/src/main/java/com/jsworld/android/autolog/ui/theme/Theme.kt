@@ -17,7 +17,7 @@ private val DarkColorScheme = darkColorScheme(
     primary = AutoBlueDark,
     onPrimary = Color(0xFF0B1220),
 
-    primaryContainer = Color(0xFF1E3A8A),      // ✅ 진한 블루(컨테이너)
+    primaryContainer = Color(0xFF1E3A8A),      // 진한 블루(컨테이너)
     onPrimaryContainer = Color(0xFFDBEAFE),
 
     secondary = AutoSlateDark,
@@ -53,7 +53,7 @@ private val LightColorScheme = lightColorScheme(
     primary = AutoBlueLight,
     onPrimary = Color.White,
 
-    primaryContainer = Color(0xFFDBEAFE),      // ✅ 연한 블루(컨테이너)
+    primaryContainer = Color(0xFFDBEAFE),      // 연한 블루(컨테이너)
     onPrimaryContainer = Color(0xFF0B1220),
 
     secondary = AutoSlateLight,
@@ -88,7 +88,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun AutoLogTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // ✅ 앱 고유 색을 쓰려면 기본 false 추천
+    // 앱 고유 색을 쓰려면 기본 false 추천
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

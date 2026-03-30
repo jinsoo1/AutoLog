@@ -282,7 +282,7 @@ fun CarHeader(
     car: Car,
     minAllowedMileage: Int?,
     onEditCar: () -> Unit,
-    onUpdateMileage: (Int) -> Unit,   // ✅ 주행거리 저장 콜백
+    onUpdateMileage: (Int) -> Unit,   // 주행거리 저장 콜백
 ) {
     val hasNotes = !car.notes.isNullOrBlank()
     var notesExpanded by rememberSaveable(car.id) { mutableStateOf(false) }
@@ -326,7 +326,7 @@ fun CarHeader(
                 }
             }
 
-            // 2) ✅ 현재 주행거리 "강조 블록" + 즉시 업데이트
+            // 2) 현재 주행거리 "강조 블록" + 즉시 업데이트
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -371,7 +371,7 @@ fun CarHeader(
 
 
             if (hasNotes) {
-                // ✅ 상세 토글 (연료/연식 + 메모를 한 번에)
+                // 상세 토글 (연료/연식 + 메모를 한 번에)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -400,7 +400,7 @@ fun CarHeader(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                        // ✅ 연료/연식
+                        // 연료/연식
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -409,7 +409,7 @@ fun CarHeader(
                             InfoText(label = "연식", value = car.year ?: "-")
                         }
 
-                        // ✅ 메모(있을 때만)
+                        // 메모(있을 때만)
                         if (hasNotes) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
@@ -462,7 +462,7 @@ private fun RowScope.InfoText(label: String, value: String) {
 @Composable
 private fun MileageQuickEditDialog(
     currentMileage: Int,
-    minAllowedMileage: Int?,   // ✅ nullable
+    minAllowedMileage: Int?,   // nullable
     onDismiss: () -> Unit,
     onSave: (Int) -> Unit
 ) {
@@ -517,7 +517,7 @@ private fun MileageQuickEditDialog(
                 enabled = canSave,
                 onClick = {
                     val v = parsed ?: return@Button
-                    if (minAllowedMileage != null && v < minAllowedMileage) return@Button // ✅ 방어
+                    if (minAllowedMileage != null && v < minAllowedMileage) return@Button // 방어
                     onSave(v)
                 }
             ) { Text("저장") }
@@ -606,11 +606,11 @@ fun MaintenanceStatusCard(item: MaintenanceUiModel) {
 @Composable
 fun MaintenanceStatusHeader(
     dangerCount: Int,
-    worstStatus: MaintenanceStatus?, // ✅ 추가 (OVERDUE / SOON / null)
+    worstStatus: MaintenanceStatus?, // 추가 (OVERDUE / SOON / null)
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val canToggle = dangerCount > 0 // ✅ 위험 항목 있을 때만 토글 가능(버튼 노출)
+    val canToggle = dangerCount > 0 // 위험 항목 있을 때만 토글 가능(버튼 노출)
 
     val rotation by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -620,7 +620,7 @@ fun MaintenanceStatusHeader(
     val isDanger = dangerCount > 0
     val label = if (!isDanger) "정상" else "위험 $dangerCount"
 
-    // ✅ 위험도에 따른 색상 (초과=빨강, 임박=노랑, 정상=초록/기본)
+    // 위험도에 따른 색상 (초과=빨강, 임박=노랑, 정상=초록/기본)
     val statusColor = when (worstStatus) {
         MaintenanceStatus.OVERDUE -> StatusOverdue
         MaintenanceStatus.SOON -> StatusSoon
@@ -651,7 +651,7 @@ fun MaintenanceStatusHeader(
             )
         }
 
-        // ✅ GoodMaintenanceCard 상태면 버튼 자체를 숨김
+        // GoodMaintenanceCard 상태면 버튼 자체를 숨김
         if (canToggle) {
             IconButton(onClick = onToggle) {
                 Icon(
@@ -747,7 +747,7 @@ fun MaintenanceSettingsHeader(
                 )
             }
 
-            // ✅ 정렬 Chip (드롭다운)
+            // 정렬 Chip (드롭다운)
             Box {
                 AssistChip(
                     onClick = { sortMenuExpanded = true },
@@ -780,7 +780,7 @@ fun MaintenanceSettingsHeader(
 
             Spacer(Modifier.width(8.dp))
 
-            // ✅ 항목 선택 버튼
+            // 항목 선택 버튼
             FilledTonalButton(
                 onClick = onPickItems,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -821,24 +821,24 @@ fun MaintenanceSettingItem(
     val lastDate = lastServiceDate?.toLocalDateOrNull()
     val today = LocalDate.now()
 
-    // ✅ 내역 없을 때 기준값
+    // 내역 없을 때 기준값
     val hasAnyHistory = (lastDate != null) || (lastServiceMileage != null)
 
-    // ✅ km 기준: 내역 없으면 0km 기준
+    // km 기준: 내역 없으면 0km 기준
     val baseLastMileage = lastServiceMileage ?: 0
 
-    // ✅ date 기준: 내역 없으면 "오늘" 기준
+    // date 기준: 내역 없으면 "오늘" 기준
     val baseDateForCalc = lastDate ?: today
 
     // --------------------------
     // 예정/잔여 계산
     // --------------------------
 
-    // ✅ km 예정/잔여
+    // km 예정/잔여
     val dueMileage = if (intervalKm != null) baseLastMileage + intervalKm else null
     val remainingKm = dueMileage?.let { it - carMileage }
 
-    // ✅ 날짜 예정/잔여
+    // 날짜 예정/잔여
     val dueDate =
         if (intervalMonths != null) baseDateForCalc.plusMonths(intervalMonths.toLong())
         else null
@@ -856,12 +856,12 @@ fun MaintenanceSettingItem(
         (remainingKm != null && remainingKm < 0) ||
                 (remainingDays != null && remainingDays < 0)
 
-    // ✅ 도래(임박) 기준: 주기 대비 15% 이하(0 포함)
+    // 도래(임박) 기준: 주기 대비 15% 이하(0 포함)
     val soonKmThreshold: Int? = intervalKm?.let { interval ->
         max(1, (interval * SOON_RATIO).roundToInt())
     }
 
-    // ✅ 날짜쪽은 "전체 주기 일수" 대비 15% 이하
+    // 날짜쪽은 "전체 주기 일수" 대비 15% 이하
     val totalDaysOfCycle: Long? = if (intervalMonths != null && dueDate != null) {
         ChronoUnit.DAYS.between(baseDateForCalc, dueDate).coerceAtLeast(1)
     } else null
@@ -881,7 +881,7 @@ fun MaintenanceSettingItem(
         else -> "정상"
     }
 
-    // ✅ 상태색(고정)
+    // 상태색(고정)
     val statusColor = when {
         isOverdue -> StatusOverdue
         isDue -> StatusSoon
@@ -929,7 +929,7 @@ fun MaintenanceSettingItem(
     val dueDateText = dueDate?.toString() ?: "-"
 
     // --------------------------
-    // ✅ Progress 계산 (여기만 추가!)
+    // Progress 계산 (여기만 추가!)
     // --------------------------
 
     val kmProgress: Float? = if (intervalKm != null && intervalKm > 0 && dueMileage != null) {
@@ -1029,7 +1029,7 @@ fun MaintenanceSettingItem(
                     boldValue = isOverdue || isDue
                 )
 
-                // ✅ ProgressBar(거리/기간) 추가
+                // ProgressBar(거리/기간) 추가
                 if (kmProgress != null) {
                     Spacer(Modifier.height(10.dp))
                     ProgressLine(

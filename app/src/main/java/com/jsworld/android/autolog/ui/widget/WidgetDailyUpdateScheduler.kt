@@ -15,7 +15,7 @@ object WidgetDailyUpdateScheduler {
 
     fun schedule(context: Context) {
         val now = ZonedDateTime.now(ZoneId.systemDefault())
-        val next = now.toLocalDate().plusDays(1).atTime(0, 5).atZone(now.zone) // ✅ 00:05
+        val next = now.toLocalDate().plusDays(1).atTime(0, 5).atZone(now.zone) // 00:05
         val delay = Duration.between(now, next).toMillis().coerceAtLeast(1)
 
         val req = OneTimeWorkRequestBuilder<DailyWidgetRefreshWorker>()

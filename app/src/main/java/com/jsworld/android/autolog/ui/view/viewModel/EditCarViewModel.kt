@@ -34,7 +34,7 @@ class EditCarViewModel @Inject constructor(
     fun deleteCar(car: Car, onDone: () -> Unit) {
         viewModelScope.launch {
             carRepository.deleteCar(car)
-            widgetUpdater.requestUpdate() // ✅ 위젯 갱신(차량 삭제 반영)
+            widgetUpdater.requestUpdate() // 위젯 갱신(차량 삭제 반영)
             onDone()
         }
     }

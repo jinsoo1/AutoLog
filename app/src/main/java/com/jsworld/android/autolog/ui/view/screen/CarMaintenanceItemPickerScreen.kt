@@ -123,7 +123,7 @@ fun CarMaintenanceItemPickerScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
 
-            // ✅ 관리중
+            // 관리중
             item {
                 PickerSectionHeader(
                     title = "관리중",
@@ -142,7 +142,7 @@ fun CarMaintenanceItemPickerScreen(
                 }
             )
 
-            // ✅ 복원(비활성)
+            // 복원(비활성)
             item {
                 PickerSectionHeader(
                     title = "복원",
@@ -161,7 +161,7 @@ fun CarMaintenanceItemPickerScreen(
                 }
             )
 
-            // ✅ 추가 가능
+            // 추가 가능
             item {
                 PickerSectionHeader(
                     title = "추가 가능한 항목",
@@ -262,7 +262,7 @@ private fun CategoryGroupCard(
     ) {
         Column(Modifier.fillMaxWidth()) {
 
-            // ✅ 카드 헤더(카테고리)
+            // 카드 헤더(카테고리)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -294,7 +294,7 @@ private fun CategoryGroupCard(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // ✅ 카드 내부 항목들
+            // 카드 내부 항목들
             items.forEachIndexed { index, item ->
                 PickerRowInCard(
                     item = item,
@@ -319,7 +319,7 @@ private fun PickerRowInCard(
 ) {
     val hasCustomInterval = item.intervalKm != null || item.intervalMonths != null
 
-    // ✅ 텍스트 생성 헬퍼
+    // 텍스트 생성 헬퍼
     fun cycleText(km: Int?, months: Int?): String {
         val kmText = km?.let { "${it.formatKm()}km" } ?: "-"
         val moText = months?.let { "${it}개월" } ?: "-"
@@ -328,7 +328,7 @@ private fun PickerRowInCard(
 
     val defaultText = cycleText(item.defaultKm, item.defaultMonths)
 
-    // ✅ 실제 사용 주기(커스텀은 우선, 없으면 기본)
+    // 실제 사용 주기(커스텀은 우선, 없으면 기본)
     val effectiveKm = item.intervalKm ?: item.defaultKm
     val effectiveMonths = item.intervalMonths ?: item.defaultMonths
     val currentText = cycleText(effectiveKm, effectiveMonths)
@@ -356,14 +356,14 @@ private fun PickerRowInCard(
 
             Spacer(Modifier.height(3.dp))
 
-            // ✅ 기본 주기(항상 표시)
+            // 기본 주기(항상 표시)
             Text(
                 text = "기본 주기: $defaultText",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // ✅ 차량 설정 주기(커스텀이 있을 때만 표시)
+            // 차량 설정 주기(커스텀이 있을 때만 표시)
             if (hasCustomInterval) {
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -395,7 +395,7 @@ private fun LazyListScope.sectionWithCategoryGroups(
         return
     }
 
-    // ✅ 그룹(카테고리) 단위로 카드 1개씩
+    // 그룹(카테고리) 단위로 카드 1개씩
     items(
         items = groups,
         key = { group -> "group_${sectionKey}_${group.category.name}" } // enum이면 name이 고유

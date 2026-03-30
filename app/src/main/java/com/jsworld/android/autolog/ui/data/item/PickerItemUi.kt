@@ -60,7 +60,7 @@ data class PickerItemUi(
     val defaultMonths: Int?,
     val settingId: Long?,   // 있으면 settingId
     val isActive: Boolean,
-    // ✅ 추가: 현재 차량 설정 주기(커스텀)
+    // 추가: 현재 차량 설정 주기(커스텀)
     val intervalKm: Int?,
     val intervalMonths: Int?
 ) {

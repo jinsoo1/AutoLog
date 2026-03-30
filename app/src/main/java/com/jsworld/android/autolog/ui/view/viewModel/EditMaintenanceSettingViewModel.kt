@@ -62,7 +62,7 @@ class EditMaintenanceSettingViewModel @Inject constructor(
 
     fun resetToDefault(settingId: Long, onDone: () -> Unit) {
         viewModelScope.launch {
-            // ✅ null이면 기본값 사용
+            // null이면 기본값 사용
             carMaintenanceRepository.updateSettingIntervals(settingId, null, null)
             widgetUpdater.requestUpdate()
             onDone()

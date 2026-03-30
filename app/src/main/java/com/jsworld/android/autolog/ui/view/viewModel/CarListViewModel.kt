@@ -66,9 +66,9 @@ class CarListViewModel @Inject constructor(
                         }
                     ) { list ->
                         list.toList().sortedWith(
-                            compareByDescending<CarCardUi> { it.car.isPrimary }   // ✅ 대표 먼저
-                                .thenByDescending { it.dangerCount }             // ✅ 위험개수 많은 순
-                                .thenBy { it.car.name }                         // ✅ 동률이면 가나다
+                            compareByDescending<CarCardUi> { it.car.isPrimary }   // 대표 먼저
+                                .thenByDescending { it.dangerCount }             // 위험개수 많은 순
+                                .thenBy { it.car.name }                         // 동률이면 가나다
                         )
                     }
                 }

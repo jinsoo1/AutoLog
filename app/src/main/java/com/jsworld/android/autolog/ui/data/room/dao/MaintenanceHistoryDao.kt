@@ -48,7 +48,7 @@ interface MaintenanceHistoryDao {
     """)
     fun observeLastHistory(settingId: Long): Flow<MaintenanceHistoryEntity?>
 
-    // ✅ 전체 내역(최신순)
+    // 전체 내역(최신순)
     @Query("""
         SELECT *
         FROM maintenance_history

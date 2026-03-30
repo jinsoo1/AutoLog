@@ -104,8 +104,8 @@ fun AddMaintenanceScreen(
     var selected by remember { mutableStateOf<SettingOption?>(null) }
 
     var dateText by rememberSaveable { mutableStateOf("") }
-    var mileageRaw by rememberSaveable { mutableStateOf<Int?>(null) } // ✅ 실제 값
-    var mileageText by rememberSaveable { mutableStateOf("") }             // ✅ 표시 값(1,000)
+    var mileageRaw by rememberSaveable { mutableStateOf<Int?>(null) } // 실제 값
+    var mileageText by rememberSaveable { mutableStateOf("") }        // 표시 값(1,000)
     var placeText by rememberSaveable { mutableStateOf("") }
     var costText by rememberSaveable { mutableStateOf("") }
     var memoText by rememberSaveable { mutableStateOf("") }
@@ -115,7 +115,7 @@ fun AddMaintenanceScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // ✅ 선택된 항목의 “이전 정비” 정보
+    // 선택된 항목의 “이전 정비” 정보
     val lastDate = selected?.lastServiceDate?.toLocalDateOrNull()
     val lastMileage = selected?.lastServiceMileage
 
@@ -125,7 +125,7 @@ fun AddMaintenanceScreen(
 
     val autoMileageUpdate by viewModel.observeAutoMileageUpdate(carId).collectAsState(initial = false)
 
-    // ✅ 선택 변경 시 자동 보정 로직(기존 그대로)
+    // 선택 변경 시 자동 보정 로직(기존 그대로)
     LaunchedEffect(selected?.settingId) {
         val base = java.time.LocalDate.now()
         val suggested = if (lastDate != null) {
@@ -148,7 +148,7 @@ fun AddMaintenanceScreen(
 //        }
     }
 
-    // ✅ 검증(기존 그대로)
+    // 검증(기존 그대로)
     val itemValid = selected != null
 
     val pickedDate = dateText.toLocalDateOrNull()
@@ -173,7 +173,7 @@ fun AddMaintenanceScreen(
                 }
             )
         },
-        // ✅ 하단 고정 저장 버튼(키보드/네비게이션 바 대응)
+        // 하단 고정 저장 버튼(키보드/네비게이션 바 대응)
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,
@@ -214,7 +214,7 @@ fun AddMaintenanceScreen(
                                     return@launch
                                 }
 
-                                // ✅ 자동 업데이트 설정이면: 다이얼로그 없이 차량 주행거리도 같이 올림
+                                // 자동 업데이트 설정이면: 다이얼로그 없이 차량 주행거리도 같이 올림
                                 if (autoMileageUpdate) {
                                     viewModel.saveWithOptionalMileageUpdate(carId, pending, updateCarMileage = true, onDone = onBack)
                                     // (선택) 안내 스낵바
@@ -222,7 +222,7 @@ fun AddMaintenanceScreen(
                                     return@launch
                                 }
 
-                                // ✅ 아니면 다이얼로그 표시
+                                // 아니면 다이얼로그 표시
                                 pendingSave = pending
                                 mileageDecision = decision
                                 showMileageDialog = true
@@ -246,7 +246,7 @@ fun AddMaintenanceScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
-            // ✅ 상단 안내 카드(가독성)
+            // 상단 안내 카드(가독성)
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -265,14 +265,14 @@ fun AddMaintenanceScreen(
                 }
             }
 
-            // ✅ 필수 입력 섹션
+            // 필수 입력 섹션
             item {
                 SectionHeader(title = "필수 입력", subtitle = "정비 항목 · 날짜 · 주행거리")
             }
 
             item {
                 FormCard {
-                    // ✅ 정비 항목 선택(드롭다운)
+                    // 정비 항목 선택(드롭다운)
                     ExposedDropdownMenuBox(
                         expanded = expanded,
                         onExpandedChange = { expanded = !expanded }
@@ -289,7 +289,7 @@ fun AddMaintenanceScreen(
                             isError = triedSave && !itemValid,
                             supportingText = {
                                 Column {
-                                    // ✅ 현재 차량 주행거리
+                                    // 현재 차량 주행거리
                                     val curText = currentMileage?.let { "${it.formatKm()}km" } ?: "불러오는 중…"
                                     Text(
                                         text = "현재 주행거리: $curText",
@@ -297,7 +297,7 @@ fun AddMaintenanceScreen(
                                         style = MaterialTheme.typography.bodySmall
                                     )
 
-                                    // ✅ 이전 정비 주행거리
+                                    // 이전 정비 주행거리
                                     val prevText = lastMileage?.let { "${it.formatKm()}km" } ?: "없음"
                                     Text(
                                         text = "이전 주행거리: $prevText",
@@ -305,7 +305,7 @@ fun AddMaintenanceScreen(
                                         style = MaterialTheme.typography.bodySmall
                                     )
 
-                                    // ✅ 에러 메시지(상황별)
+                                    // 에러 메시지(상황별)
                                     if (triedSave && !mileageValid) {
                                         val err = when {
                                             mileageRaw == null -> "주행거리를 숫자로 입력해주세요."
@@ -374,7 +374,7 @@ fun AddMaintenanceScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // ✅ 날짜
+                    // 날짜
                     DatePickerField(
                         dateText = dateText,
                         onDateSelected = { dateText = it },
@@ -385,7 +385,7 @@ fun AddMaintenanceScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // ✅ 주행거리
+                    // 주행거리
 
                     OutlinedTextField(
                         value = mileageText,
@@ -394,7 +394,7 @@ fun AddMaintenanceScreen(
                             val raw = digits.toIntOrNull()
 
                             mileageRaw = raw
-                            mileageText = raw?.formatKm().orEmpty() // ✅ 50000 -> "50,000"
+                            mileageText = raw?.formatKm().orEmpty() // 50000 -> "50,000"
                         },
                         label = { Text("정비 시 주행거리(km) *") },
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
@@ -439,7 +439,7 @@ fun AddMaintenanceScreen(
                 }
             }
 
-            // ✅ 선택 입력 섹션
+            // 선택 입력 섹션
             item {
                 SectionHeader(title = "선택 입력", subtitle = "장소 · 비용 · 메모")
             }
@@ -503,7 +503,7 @@ fun AddMaintenanceScreen(
                         Switch(
                             checked = autoMileageUpdate,
                             onCheckedChange = { enabled ->
-                                viewModel.setAutoMileageUpdate(carId, enabled) // ✅ 여기서도 해제 가능
+                                viewModel.setAutoMileageUpdate(carId, enabled) // 여기서도 해제 가능
                             }
                         )
                     }
@@ -522,7 +522,7 @@ fun AddMaintenanceScreen(
             newMileage = p.serviceMileage,
             autoUpdateEnabled = autoMileageUpdate,
             onAutoUpdateChanged = { enabled ->
-                viewModel.setAutoMileageUpdate(carId, enabled) // ✅ 설정 저장
+                viewModel.setAutoMileageUpdate(carId, enabled) // 설정 저장
             },
             onConfirmUpdate = {
                 showMileageDialog = false
@@ -687,7 +687,7 @@ private fun MileageUpdateDialog(
     onDismissSaveOnly: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // ✅ “너무 큰 값” 휴리스틱(원하면 숫자 조정)
+    // “너무 큰 값” 휴리스틱(원하면 숫자 조정)
     val diff = (newMileage - currentMileage).coerceAtLeast(0)
     val ratio = if (currentMileage > 0) newMileage.toFloat() / currentMileage.toFloat() else 0f
 
@@ -735,7 +735,7 @@ private fun MileageUpdateDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                // ✅ 경고 박스(너무 큰 값일 때만)
+                // 경고 박스(너무 큰 값일 때만)
                 if (isSuspicious) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = warnContainer),
@@ -769,7 +769,7 @@ private fun MileageUpdateDialog(
                     }
                 }
 
-                // ✅ 3칸 요약 카드
+                // 3칸 요약 카드
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     elevation = CardDefaults.cardElevation(0.dp),
@@ -799,7 +799,7 @@ private fun MileageUpdateDialog(
                     }
                 }
 
-                // ✅ “다음부터 자동 업데이트” 체크박스(설정 저장)
+                // “다음부터 자동 업데이트” 체크박스(설정 저장)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),

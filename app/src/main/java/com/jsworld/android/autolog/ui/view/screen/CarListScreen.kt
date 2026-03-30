@@ -177,7 +177,7 @@ private fun CarSummaryCard(
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // ✅ 왼쪽 상태 스트립(임박/초과일 때만)
+            // 왼쪽 상태 스트립(임박/초과일 때만)
             if (showStrip) {
                 Box(
                     modifier = Modifier
@@ -249,7 +249,7 @@ private fun CarSummaryCard(
                     }
                 }
 
-                // ✅ 정보 pill 3개 (연료는 길어져도 한 줄 + … 처리)
+                // 정보 pill 3개 (연료는 길어져도 한 줄 + … 처리)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoPill(
                         icon = Icons.Default.Route,
@@ -259,7 +259,7 @@ private fun CarSummaryCard(
                         icon = Icons.Default.CalendarMonth,
                         text = car.year ?: "-"
                     )
-                    // ✅ 연료는 남는 공간을 먹고, 한 줄로만 보이도록
+                    // 연료는 남는 공간을 먹고, 한 줄로만 보이도록
                     InfoPill(
                         icon = Icons.Default.LocalGasStation,
                         text = car.fuelType ?: "-",
@@ -301,13 +301,13 @@ private fun CarSummaryCard(
                         )
                     }
 
-                    // ✅ 칩 대신 더 미니멀한 상태 배지
+                    // 칩 대신 더 미니멀한 상태 배지
                     Surface(
                         color = statusColor.copy(alpha = 0.14f),
                         shape = MaterialTheme.shapes.large
                     ) {
                         Text(
-                            badgeText, // ✅ "위험 3" / "정상"
+                            badgeText, // "위험 3" / "정상"
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = statusColor,
@@ -347,8 +347,8 @@ private fun InfoPill(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,                    // ✅ 한 줄 고정
-                overflow = TextOverflow.Ellipsis  // ✅ 길면 … 처리
+                maxLines = 1,                     // 한 줄 고정
+                overflow = TextOverflow.Ellipsis  // 길면 … 처리
             )
         }
     }

@@ -33,14 +33,14 @@ interface CarMaintenanceSettingDao {
     @Insert
     suspend fun insertAll(list: List<CarMaintenanceSettingEntity>)
 
-    // ✅ Picker는 비활성 포함으로 읽어야 함
+    // Picker는 비활성 포함으로 읽어야 함
     @Query("SELECT * FROM car_maintenance_settings WHERE carId = :carId")
     fun observeByCarIdIncludingInactive(carId: Long): Flow<List<CarMaintenanceSettingEntity>>
 
     @Query("SELECT * FROM car_maintenance_settings WHERE carId = :carId")
     suspend fun getByCarIdOnceIncludingInactive(carId: Long): List<CarMaintenanceSettingEntity>
 
-    // ✅ carId + typeId로 1건 찾기(있으면 enable/disable, 없으면 insert)
+    // carId + typeId로 1건 찾기(있으면 enable/disable, 없으면 insert)
     @Query("""
         SELECT * FROM car_maintenance_settings
         WHERE carId = :carId AND maintenanceTypeId = :typeId
@@ -196,11 +196,11 @@ interface CarMaintenanceSettingDao {
 
 
 
-    // ✅ Picker 전용: 활성+비활성 모두
+    // Picker 전용: 활성+비활성 모두
     @Query("SELECT * FROM car_maintenance_settings WHERE carId = :carId")
     fun observeAllByCarId(carId: Long): Flow<List<CarMaintenanceSettingEntity>>
 
-    // ✅ 화면(디테일 정렬 등) 전용: 활성만
+    // 화면(디테일 정렬 등) 전용: 활성만
     @Query("SELECT * FROM car_maintenance_settings WHERE carId = :carId AND isActive = 1")
     fun observeActiveByCarId(carId: Long): Flow<List<CarMaintenanceSettingEntity>>
 

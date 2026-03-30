@@ -33,7 +33,7 @@ class CarDetailViewModel @Inject constructor(
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
 
-    // ✅ carId별 캐시
+    // carId별 캐시
     private val carFlowMap = mutableMapOf<Long, StateFlow<Car?>>()
     private val statusFlowMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()
     private val sortFlowMap = mutableMapOf<Long, StateFlow<MaintenanceSort>>()

@@ -27,7 +27,7 @@ class MaintenanceHistoryRepository @Inject constructor(
         cost: Int?,
         memo: String?
     ) {
-        // ✅ 최소 방어 로직 (화면에서 이미 검증하지만, repository에서도 한번 더)
+        // 최소 방어 로직 (화면에서 이미 검증하지만, repository에서도 한번 더)
         require(settingId > 0) { "settingId must be > 0" }
         require(serviceDate.isNotBlank()) { "serviceDate is required" }
         require(serviceMileage > 0) { "serviceMileage must be > 0" }

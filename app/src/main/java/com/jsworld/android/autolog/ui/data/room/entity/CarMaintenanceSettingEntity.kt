@@ -33,5 +33,5 @@ data class CarMaintenanceSettingEntity(
 
     val intervalKm: Int?,            // 이 차량 전용 교체주기
     val intervalMonths: Int?,
-    val isActive: Boolean = true // ✅ 추가
+    val isActive: Boolean = true // 추가
 )

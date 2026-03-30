@@ -38,7 +38,7 @@ class CarWidgetRepository @Inject constructor(
         val carMileage = car.mileage
         val today = LocalDate.now()
 
-        // ✅ 위젯은 차량별 정렬 설정 말고 "가장 급한 순" 고정이 보기 좋음
+        // 위젯은 차량별 정렬 설정 말고 "가장 급한 순" 고정이 보기 좋음
         val roomItems = fullDao.getSettingsWithHistoryOrderByCombined(carId).first()
 
         val typeIds = roomItems.map { it.setting.maintenanceTypeId }.distinct()
@@ -59,7 +59,7 @@ class CarWidgetRepository @Inject constructor(
             val baseLastMileage = lastMileage ?: 0
             val baseDateForCalc = lastDate ?: today
 
-            // ✅ remaining 계산(정렬에 필요)
+            // remaining 계산(정렬에 필요)
             val remainingKm: Int? = if (intervalKm != null && intervalKm > 0) {
                 val dueMileage = baseLastMileage + intervalKm
                 dueMileage - carMileage
@@ -126,7 +126,7 @@ class CarWidgetRepository @Inject constructor(
                 remainText = remainText
             )
 
-            // ✅ 정렬 키 계산:
+            // 정렬 키 계산:
             // OVERDUE면 abs(초과량) 기준으로 "작을수록" 먼저(최근 초과 우선)
             // SOON/NORMAL이면 잔여가 "작을수록" 먼저
             val kmKey = remainingKm?.let { r -> (if (r < 0) abs(r) else r).toLong() }
@@ -146,12 +146,12 @@ class CarWidgetRepository @Inject constructor(
             )
         }
 
-        // ✅ 위젯은 너무 많으면 지저분 → TOP N
+        // 위젯은 너무 많으면 지저분 → TOP N
         val rows = rowsAllWithKey
             .sortedWith(
                 compareBy<RowWithKey> { it.statusRank }
-                    .thenBy { it.urgentKey }        // ✅ 남은 거리/일 중 더 급한 값
-                    .thenBy { it.row.name }         // ✅ 마지막 타이브레이커
+                    .thenBy { it.urgentKey }        // 남은 거리/일 중 더 급한 값
+                    .thenBy { it.row.name }         // 마지막 타이브레이커
             )
             .map { it.row }
             .take(maxRows)

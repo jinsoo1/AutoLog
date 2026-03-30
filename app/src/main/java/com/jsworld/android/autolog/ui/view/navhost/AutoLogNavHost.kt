@@ -100,13 +100,13 @@ fun AutoLogNavHost(
                     viewModel.addCar(car)
 
                     if (isFirst) {
-                        // ✅ 최초 진입 → AddCar 스택 제거 후 리스트로
+                        // 최초 진입 → AddCar 스택 제거 후 리스트로
                         navController.navigate(Routes.CAR_LIST) {
                             popUpTo("add_car?first=true") { inclusive = true }
                             launchSingleTop = true
                         }
                     } else {
-                        // ✅ 일반 추가 → 뒤로
+                        // 일반 추가 → 뒤로
                         navController.popBackStack()
                     }
                 }
@@ -119,7 +119,7 @@ fun AutoLogNavHost(
                 onCarClick = { car ->
                     navController.navigate(Routes.carDetail(car.id)) {
                         launchSingleTop = true
-                        popUpTo(Routes.CAR_LIST) { inclusive = false } // ✅ list 아래는 건드리지 않음
+                        popUpTo(Routes.CAR_LIST) { inclusive = false } // list 아래는 건드리지 않음
                     }
                 },
                 onSettingsClick = {
@@ -261,7 +261,7 @@ fun AutoLogNavHost(
                 settingId = settingId,
                 viewModel = vm,
 
-                // ✅ 히스토리 목록은 "목록 화면"처럼 취급 → 상태 저장/복원 설정 추천
+                // 히스토리 목록은 "목록 화면"처럼 취급 → 상태 저장/복원 설정 추천
                 onViewAllHistory = { id ->
                     navController.navigate(historyListRoute(id)) {
                         launchSingleTop = true
@@ -322,7 +322,7 @@ fun SplashRoute(
         val host = navController as? NavHostController ?: return@LaunchedEffect
         val dest = startDestination ?: return@LaunchedEffect
 
-        handled = true  // ✅ 여기서 잠금
+        handled = true  // 여기서 잠금
 
         if (initialWidgetCarId != null && initialWidgetCarId > 0L) {
             host.openCarDetailAsListChild(initialWidgetCarId)
@@ -360,13 +360,13 @@ fun NavHostController.navigateToCarListRoot() {
 }
 
 /**
- * ✅ 어떤 진입점(대표차량/위젯/푸시)에서도 "CAR_LIST -> CAR_DETAIL" 구조를 강제
+ * 어떤 진입점(대표차량/위젯/푸시)에서도 "CAR_LIST -> CAR_DETAIL" 구조를 강제
  */
 fun NavHostController.openCarDetailAsListChild(carId: Long) {
     val currentRoute = currentBackStackEntry?.destination?.route
     val targetRoute = Routes.carDetail(carId)
 
-    if (currentRoute == targetRoute) return  // ✅ 중복 방지
+    if (currentRoute == targetRoute) return  // 중복 방지
 
     navigateToCarListRoot()
     navigate(targetRoute) { launchSingleTop = true }

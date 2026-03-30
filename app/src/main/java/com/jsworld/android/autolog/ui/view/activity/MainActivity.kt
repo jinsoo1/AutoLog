@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                // ✅ 앱이 이미 살아있는 상태에서 위젯 클릭 시 이동
+                // 앱이 이미 살아있는 상태에서 위젯 클릭 시 이동
                 LaunchedEffect(Unit) {
                     widgetNavRequests.collect { carId ->
                         navController.navigate(Routes.carDetail(carId)) {
