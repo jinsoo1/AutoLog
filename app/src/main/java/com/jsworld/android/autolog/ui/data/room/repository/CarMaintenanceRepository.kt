@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.ui.data.room.repository
 
+import androidx.room.withTransaction
 import com.jsworld.android.autolog.ui.data.item.CarMaintenanceDigest
 import com.jsworld.android.autolog.ui.data.item.CarMaintenanceSetting
 import com.jsworld.android.autolog.ui.data.item.MaintenanceSort
@@ -13,9 +14,12 @@ import com.jsworld.android.autolog.ui.data.room.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceFullDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceTypeDao
+import com.jsworld.android.autolog.ui.data.room.dao.MileageHistoryDao
+import com.jsworld.android.autolog.ui.data.room.database.AutoLogDatabase
 import com.jsworld.android.autolog.ui.data.room.entity.CarMaintenanceSettingEntity
 import com.jsworld.android.autolog.ui.data.room.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.ui.data.room.entity.MaintenanceTypeEntity
+import com.jsworld.android.autolog.ui.data.room.entity.MileageHistoryEntity
 import com.jsworld.android.autolog.ui.data.room.mapper.toDomain
 import com.jsworld.android.autolog.ui.data.room.with.SettingWithHistory
 import com.jsworld.android.autolog.ui.data.item.SettingWithHistory as ItemSettingWithHistory
@@ -40,11 +44,13 @@ private const val SOON_RATIO = 0.15f
 
 @Singleton
 class CarMaintenanceRepository @Inject constructor(
+    private val database: AutoLogDatabase,
     private val fullDao: MaintenanceFullDao,
     private val maintenanceTypeDao: MaintenanceTypeDao,
     private val carDao: CarDao, // car mileage 가져오려면 필요(또는 CarRepository 사용)
     private val settingDao: CarMaintenanceSettingDao,
     private val maintenanceHistoryDao: MaintenanceHistoryDao,
+    private val mileageHistoryDao: MileageHistoryDao,
     private val carSortPrefRepository: CarSortPreferenceRepository
 ) {
 
@@ -329,7 +335,24 @@ class CarMaintenanceRepository @Inject constructor(
         settingDao.getCarIdBySettingId(settingId)
 
     suspend fun updateCarMileage(carId: Long, mileage: Int) {
-        carDao.updateMileage(carId, mileage)
+        val now = System.currentTimeMillis()
+
+        database.withTransaction {
+            carDao.updateMileageWithTimestamp(
+                carId = carId,
+                mileage = mileage,
+                updatedAt = now
+            )
+
+            mileageHistoryDao.insertHistory(
+                MileageHistoryEntity(
+                    carId = carId,
+                    mileage = mileage,
+                    recordedAt = now,
+                    memo = "주행거리 업데이트"
+                )
+            )
+        }
     }
 
     fun observeMaintenanceDigestForCarList(carId: Long): Flow<CarMaintenanceDigest> {

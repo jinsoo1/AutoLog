@@ -7,7 +7,9 @@ import com.jsworld.android.autolog.ui.data.room.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceFullDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceTypeDao
+import com.jsworld.android.autolog.ui.data.room.dao.MileageHistoryDao
 import com.jsworld.android.autolog.ui.data.room.database.AutoLogDatabase
+import com.jsworld.android.autolog.ui.data.room.database.MIGRATION_1_2
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,7 +31,10 @@ object DatabaseModule {
             context,
             AutoLogDatabase::class.java,
             "autolog_db"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
+
 
     @Provides
     fun provideCarDao(db: AutoLogDatabase): CarDao = db.carDao()
@@ -49,4 +54,8 @@ object DatabaseModule {
     @Provides
     fun provideFullDao(db: AutoLogDatabase): MaintenanceFullDao =
         db.maintenanceFullDao()
+
+    @Provides
+    fun provideMileageHistoryDao(db: AutoLogDatabase): MileageHistoryDao =
+        db.mileageHistoryDao()
 }

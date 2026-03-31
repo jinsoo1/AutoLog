@@ -16,5 +16,8 @@ data class CarEntity(
     val fuelType: String? = null,
     val notes: String? = null,
 
-    val isPrimary: Boolean = false // ⭐ 추가
+    val isPrimary: Boolean = false,
+
+    /** 마지막으로 주행거리를 업데이트한 시각 */
+    val lastMileageUpdatedAt: Long? = null
 )

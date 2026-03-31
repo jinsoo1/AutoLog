@@ -54,4 +54,31 @@ interface CarDao {
     @Query("UPDATE cars SET isPrimary = 0 WHERE id != :carId")
     suspend fun clearPrimaryExcept(carId: Long)
 
+    /**
+     * 주행거리 업데이트 + 마지막 업데이트 시각 저장
+     */
+    @Query("""
+        UPDATE cars
+        SET mileage = :mileage,
+            lastMileageUpdatedAt = :updatedAt
+        WHERE id = :carId
+    """)
+    suspend fun updateMileageWithTimestamp(
+        carId: Long,
+        mileage: Int,
+        updatedAt: Long
+    )
+
+    /**
+     * 이번 주에 주행거리 업데이트가 없는 차량 조회
+     */
+    @Query("""
+        SELECT * FROM cars
+        WHERE lastMileageUpdatedAt IS NULL
+           OR lastMileageUpdatedAt < :weekStartMillis
+        ORDER BY isPrimary DESC, id DESC
+    """)
+    suspend fun getCarsNeedingWeeklyMileageUpdate(
+        weekStartMillis: Long
+    ): List<CarEntity>
 }

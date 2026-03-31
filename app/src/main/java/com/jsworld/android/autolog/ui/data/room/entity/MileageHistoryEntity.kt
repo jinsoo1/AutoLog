@@ -6,35 +6,32 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "car_maintenance_settings",
+    tableName = "mileage_history",
     foreignKeys = [
         ForeignKey(
             entity = CarEntity::class,
             parentColumns = ["id"],
             childColumns = ["carId"],
             onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = MaintenanceTypeEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["maintenanceTypeId"],
-            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [
         Index("carId"),
-        Index("maintenanceTypeId"),
-        Index(value = ["carId", "maintenanceTypeId"], unique = true)
+        Index(value = ["carId", "recordedAt"])
     ]
 )
-data class CarMaintenanceSettingEntity(
+data class MileageHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
     val carId: Long,
-    val maintenanceTypeId: Long,
 
-    val intervalKm: Int?,
-    val intervalMonths: Int?,
-    val isActive: Boolean = true
+    /** 해당 시점의 총 주행거리 */
+    val mileage: Int,
+
+    /** 기록 시각 */
+    val recordedAt: Long = System.currentTimeMillis(),
+
+    /** 선택 메모 (선택사항) */
+    val memo: String? = null
 )

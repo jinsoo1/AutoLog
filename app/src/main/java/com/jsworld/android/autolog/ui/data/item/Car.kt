@@ -8,5 +8,6 @@ data class Car(
     val mileage: Int,
     val fuelType: String?,
     val notes: String?,
-    val isPrimary: Boolean = false // ⭐ 추가
+    val isPrimary: Boolean = false,
+    val lastMileageUpdatedAt: Long? = null
 )

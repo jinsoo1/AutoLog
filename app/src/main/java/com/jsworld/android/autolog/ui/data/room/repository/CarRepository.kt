@@ -1,7 +1,11 @@
 package com.jsworld.android.autolog.ui.data.room.repository
 
+import androidx.room.withTransaction
 import com.jsworld.android.autolog.ui.data.item.Car
 import com.jsworld.android.autolog.ui.data.room.dao.CarDao
+import com.jsworld.android.autolog.ui.data.room.dao.MileageHistoryDao
+import com.jsworld.android.autolog.ui.data.room.database.AutoLogDatabase
+import com.jsworld.android.autolog.ui.data.room.entity.MileageHistoryEntity
 import com.jsworld.android.autolog.ui.data.room.mapper.toDomain
 import com.jsworld.android.autolog.ui.data.room.mapper.toEntity
 import jakarta.inject.Inject
@@ -12,41 +16,61 @@ import kotlinx.coroutines.flow.map
 
 @Singleton
 class CarRepository @Inject constructor(
-    private val carDao: CarDao
+    private val database: AutoLogDatabase,
+    private val carDao: CarDao,
+    private val mileageHistoryDao: MileageHistoryDao
 ) {
 
     fun getAllCars(): Flow<List<Car>> =
         carDao.getAllCars().map { list -> list.map { it.toDomain() } }
 
-//    fun getCarById(carId: Long): Flow<Car?> =
-//        carDao.getCarById(carId)
-
     suspend fun addCar(input: Car) {
-        carDao.insertCar(input.toEntity())
+        val carId = carDao.insertCar(input.toEntity())
+
+        if (input.mileage > 0) {
+            mileageHistoryDao.insertHistory(
+                MileageHistoryEntity(
+                    carId = carId,
+                    mileage = input.mileage,
+                    recordedAt = 0L,
+                    memo = "초기 등록 주행거리"
+                )
+            )
+        }
     }
 
     suspend fun updateMileage(carId: Long, mileage: Int) {
-        carDao.updateMileage(carId, mileage)
+        val now = System.currentTimeMillis()
+
+        database.withTransaction {
+            carDao.updateMileageWithTimestamp(
+                carId = carId,
+                mileage = mileage,
+                updatedAt = now
+            )
+
+            mileageHistoryDao.insertHistory(
+                MileageHistoryEntity(
+                    carId = carId,
+                    mileage = mileage,
+                    recordedAt = now,
+                    memo = "주행거리 업데이트"
+                )
+            )
+        }
     }
 
     suspend fun deleteCar(car: Car) {
         carDao.deleteCar(car.toEntity())
     }
 
-
-    /**
-     * 대표 차량 관련 쿼리
-     */
     fun getPrimaryCar(): Flow<Car?> =
         carDao.getPrimaryCar().map { it?.toDomain() }
 
     suspend fun togglePrimaryCar(car: Car) {
-
         if (car.isPrimary) {
-            // ⭐ 이미 대표 → 해제
             carDao.unsetPrimary(car.id)
         } else {
-            // ⭐ 대표 아님 → 다른 대표 제거 후 설정
             carDao.clearPrimary()
             carDao.setPrimary(car.id)
         }
@@ -58,7 +82,12 @@ class CarRepository @Inject constructor(
     suspend fun updateCar(car: Car) {
         carDao.updateCar(car.toEntity())
         if (car.isPrimary) {
-            carDao.clearPrimaryExcept(car.id) // 대표차량 1대만(원하면 유지)
+            carDao.clearPrimaryExcept(car.id)
         }
+    }
+
+    suspend fun getCarsNeedingWeeklyMileageUpdate(weekStartMillis: Long): List<Car> {
+        return carDao.getCarsNeedingWeeklyMileageUpdate(weekStartMillis)
+            .map { it.toDomain() }
     }
 }

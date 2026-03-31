@@ -3,13 +3,10 @@ package com.jsworld.android.autolog.ui.data.room.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
-import com.jsworld.android.autolog.ui.data.room.entity.SettingOptionEntity
-import com.jsworld.android.autolog.ui.data.room.entity.SettingWithHistoryEntity
+import com.jsworld.android.autolog.ui.data.room.entity.SettingOptionRow
 import com.jsworld.android.autolog.ui.data.room.with.CarWithSettings
 import com.jsworld.android.autolog.ui.data.room.with.SettingWithTypeAndHistories
 import com.jsworld.android.autolog.ui.data.room.with.SettingWithHistory as RoomSettingWithHistory
-import com.jsworld.android.autolog.ui.data.item.SettingWithHistory as ItemSettingWithHistory
-
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -43,7 +40,7 @@ interface MaintenanceFullDao {
         GROUP BY s.id, t.name
         ORDER BY t.name
     """)
-    fun observeSettingOptions(carId: Long): Flow<List<SettingOptionEntity>>
+    fun observeSettingOptions(carId: Long): Flow<List<SettingOptionRow>>
 
 
     @Transaction
