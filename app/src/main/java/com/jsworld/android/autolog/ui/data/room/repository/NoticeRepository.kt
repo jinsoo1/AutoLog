@@ -2,7 +2,7 @@ package com.jsworld.android.autolog.ui.data.room.repository
 
 import android.content.Context
 import com.jsworld.android.autolog.ui.data.item.Notice
-import com.jsworld.android.autolog.ui.view.util.Constant.AUTOLOG_NOTICE
+import com.jsworld.android.autolog.ui.util.Constant.AUTOLOG_NOTICE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton

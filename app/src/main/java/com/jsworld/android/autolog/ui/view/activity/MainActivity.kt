@@ -6,21 +6,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
-import androidx.glance.appwidget.updateAll
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.jsworld.android.autolog.ui.theme.AutoLogTheme
 import com.jsworld.android.autolog.ui.view.Routes
 import com.jsworld.android.autolog.ui.view.navhost.AutoLogNavHost
-import com.jsworld.android.autolog.ui.view.util.Constant.ACTION_OPEN_CAR_DETAIL
-import com.jsworld.android.autolog.ui.view.util.Constant.EXTRA_CAR_ID
+import com.jsworld.android.autolog.ui.util.Constant.ACTION_OPEN_CAR_DETAIL
+import com.jsworld.android.autolog.ui.util.Constant.EXTRA_CAR_ID
 import com.jsworld.android.autolog.ui.view.viewModel.MainViewModel
-import com.jsworld.android.autolog.ui.widget.CarStatusWidget
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

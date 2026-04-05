@@ -20,8 +20,8 @@ android {
         applicationId = "com.jsworld.android.autolog"
         minSdk = 28
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -75,6 +75,9 @@ dependencies {
     implementation(libs.material.icons.extended)
     implementation("androidx.compose.foundation:foundation")
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.hilt.common)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
     debugImplementation(libs.compose.ui.tooling)
 
     // Navigation

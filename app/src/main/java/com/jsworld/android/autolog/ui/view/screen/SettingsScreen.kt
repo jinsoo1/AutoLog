@@ -1,7 +1,11 @@
 package com.jsworld.android.autolog.ui.view.screen
 
-import android.R.attr.onClick
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,9 +32,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +44,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jsworld.android.autolog.ui.scheduler.WeeklyMileageWorkScheduler
+import com.jsworld.android.autolog.ui.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.ui.view.viewModel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +67,74 @@ fun SettingsScreen(
                 "준비 중인 기능입니다.",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
+        .collectAsStateWithLifecycle(initialValue = false)
+
+    val enableWeeklyNotification: () -> Unit = remember(context) {
+        {
+            AutoLogNotificationHelper.createChannels(context)
+            WeeklyMileageWorkScheduler.enqueueNext(context)
+            viewModel.setWeeklyMileageNotificationEnabled(true)
+
+            Toast.makeText(
+                context,
+                "매주 일요일 오후 8시에 알림을 보내드릴게요.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val disableWeeklyNotification: () -> Unit = remember(context) {
+        {
+            WeeklyMileageWorkScheduler.cancel(context)
+            viewModel.setWeeklyMileageNotificationEnabled(false)
+
+            Toast.makeText(
+                context,
+                "주간 알림이 꺼졌습니다.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            if (granted) {
+                enableWeeklyNotification()
+            } else {
+                viewModel.setWeeklyMileageNotificationEnabled(false)
+
+                Toast.makeText(
+                    context,
+                    "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    )
+
+    val onNotificationToggleChange: (Boolean) -> Unit = { checked ->
+        if (checked) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    enableWeeklyNotification()
+                } else {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                enableWeeklyNotification()
+            }
+        } else {
+            disableWeeklyNotification()
         }
     }
 
@@ -108,17 +186,22 @@ fun SettingsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    SettingsSectionTitle("준비 중")
+                    SettingsSectionTitle("알림")
                 }
 
                 item {
-                    SettingsMenuItem(
+                    SettingsSwitchMenuItem(
                         icon = Icons.Outlined.Notifications,
-                        title = "알림 설정",
-                        subtitle = "주행거리/기간 알림 설정 기능 예정",
-                        badgeText = "준비중",
-                        onClick = showNotReadyToast
+                        title = "주간 주행거리 알림",
+                        subtitle = "매주 1회 주행거리 업데이트 여부를 알려드립니다",
+                        checked = notificationEnabled,
+                        onCheckedChange = onNotificationToggleChange
                     )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsSectionTitle("준비 중")
                 }
 
                 item {
@@ -224,6 +307,74 @@ fun SettingsMenuItem(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    )
+}
+
+@Composable
+fun SettingsSwitchMenuItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
             )
         }
     }

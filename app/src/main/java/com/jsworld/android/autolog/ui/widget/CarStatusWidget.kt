@@ -8,7 +8,6 @@ import kotlin.jvm.java
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.widget.RemoteViews
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -34,8 +33,8 @@ import dagger.hilt.android.EntryPointAccessors
 import java.text.NumberFormat
 import kotlin.math.roundToInt
 import com.jsworld.android.autolog.R
-import com.jsworld.android.autolog.ui.view.util.Constant.ACTION_OPEN_CAR_DETAIL
-import com.jsworld.android.autolog.ui.view.util.Constant.EXTRA_CAR_ID
+import com.jsworld.android.autolog.ui.util.Constant.ACTION_OPEN_CAR_DETAIL
+import com.jsworld.android.autolog.ui.util.Constant.EXTRA_CAR_ID
 
 
 private object WColors {

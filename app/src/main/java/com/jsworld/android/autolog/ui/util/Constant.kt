@@ -1,4 +1,4 @@
-package com.jsworld.android.autolog.ui.view.util
+package com.jsworld.android.autolog.ui.util
 
 object Constant {
 
