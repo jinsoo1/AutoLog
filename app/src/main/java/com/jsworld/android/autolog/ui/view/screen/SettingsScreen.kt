@@ -76,7 +76,7 @@ fun SettingsScreen(
     val enableWeeklyNotification: () -> Unit = remember(context) {
         {
             AutoLogNotificationHelper.createChannels(context)
-            WeeklyMileageWorkScheduler.enqueueNext(context)
+            WeeklyMileageWorkScheduler.rescheduleNext(context)
             viewModel.setWeeklyMileageNotificationEnabled(true)
 
             Toast.makeText(

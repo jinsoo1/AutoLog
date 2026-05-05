@@ -1,10 +1,13 @@
 package com.jsworld.android.autolog.ui.scheduler
 
 import android.content.Context
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.jsworld.android.autolog.ui.worker.WeeklyMileageReminderWorker
+import java.time.Instant
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 object WeeklyMileageWorkScheduler {
@@ -13,14 +16,24 @@ object WeeklyMileageWorkScheduler {
     private const val TEST_WORK_NAME = "weekly_mileage_reminder_test"
 
     fun enqueueNext(context: Context) {
+        enqueueNextInternal(context, ExistingWorkPolicy.KEEP)
+    }
+
+    fun rescheduleNext(context: Context) {
+        enqueueNextInternal(context, ExistingWorkPolicy.REPLACE)
+    }
+
+    private fun enqueueNextInternal(
+        context: Context,
+        policy: ExistingWorkPolicy
+    ) {
         val delay = calculateDelayUntilNextSunday8Pm()
 
         val nextTime = System.currentTimeMillis() + delay
-        android.util.Log.d(
+        Log.d(
             "WeeklyWorker",
-            "enqueueNext delayMillis=$delay, nextTime=${
-                java.time.Instant.ofEpochMilli(nextTime)
-                    .atZone(java.time.ZoneId.systemDefault())
+            "enqueueNext policy=$policy, delayMillis=$delay, nextTime=${
+                Instant.ofEpochMilli(nextTime).atZone(ZoneId.systemDefault())
             }"
         )
 
@@ -30,7 +43,7 @@ object WeeklyMileageWorkScheduler {
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            policy,
             request
         )
     }
