@@ -15,13 +15,22 @@ object WeeklyMileageWorkScheduler {
     fun enqueueNext(context: Context) {
         val delay = calculateDelayUntilNextSunday8Pm()
 
+        val nextTime = System.currentTimeMillis() + delay
+        android.util.Log.d(
+            "WeeklyWorker",
+            "enqueueNext delayMillis=$delay, nextTime=${
+                java.time.Instant.ofEpochMilli(nextTime)
+                    .atZone(java.time.ZoneId.systemDefault())
+            }"
+        )
+
         val request = OneTimeWorkRequestBuilder<WeeklyMileageReminderWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             request
         )
     }
@@ -45,12 +54,6 @@ object WeeklyMileageWorkScheduler {
 
         android.util.Log.d("WeeklyWorker", "work enqueued id=${request.id}")
 
-        wm.getWorkInfoByIdLiveData(request.id).observeForever { info ->
-            android.util.Log.d(
-                "WeeklyWorker",
-                "work state=${info?.state}, id=${info?.id}"
-            )
-        }
     }
 
     fun cancel(context: Context) {

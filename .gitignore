@@ -1,29 +1,78 @@
-# Gradle / build
+# =========================
+# Gradle / Build
+# =========================
 .gradle/
 build/
 **/build/
+!gradle/wrapper/gradle-wrapper.jar
 
-# Local SDK path
+# APK / AAB
+*.apk
+*.aab
+
+# =========================
+# Local config
+# =========================
 local.properties
+*.properties
 
+# =========================
 # Android Studio / IntelliJ
+# =========================
 .idea/
 *.iml
+*.iws
+*.ipr
 
-# Mac
+# =========================
+# OS files
+# =========================
 .DS_Store
+Thumbs.db
 
+# =========================
 # Native build
+# =========================
 .cxx/
 .externalNativeBuild/
 
+# =========================
 # Logs
+# =========================
 *.log
 
-# Keystore / signing
+# =========================
+# Keystore / signing (중요)
+# =========================
 *.jks
 *.keystore
 *.p12
 
+# =========================
 # Generated / temp
+# =========================
 captures/
+outputs/
+tmp/
+temp/
+
+# =========================
+# Kotlin / Java
+# =========================
+*.class
+
+# =========================
+# Firebase / Google Services (선택)
+# =========================
+#google-services.json
+#*.firebase*
+
+# =========================
+# NDK
+# =========================
+obj/
+
+# =========================
+# 기타
+# =========================
+*.hprof
