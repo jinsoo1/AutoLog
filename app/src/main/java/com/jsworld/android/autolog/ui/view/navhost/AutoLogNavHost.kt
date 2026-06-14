@@ -25,6 +25,7 @@ import com.jsworld.android.autolog.ui.view.Routes.ADD_CAR_FIRST
 import com.jsworld.android.autolog.ui.view.Routes.ADD_MAINTENANCE_TYPE
 import com.jsworld.android.autolog.ui.view.Routes.EDIT_MAINTENANCE_HISTORY
 import com.jsworld.android.autolog.ui.view.Routes.EDIT_MAINTENANCE_SETTING
+import com.jsworld.android.autolog.ui.view.Routes.EXCEL_EXPORT
 import com.jsworld.android.autolog.ui.view.Routes.ROUTE_HISTORY_LIST
 import com.jsworld.android.autolog.ui.view.Routes.historyListRoute
 import com.jsworld.android.autolog.ui.view.screen.AddCarScreen
@@ -35,6 +36,7 @@ import com.jsworld.android.autolog.ui.view.screen.CarListScreen
 import com.jsworld.android.autolog.ui.view.screen.CarMaintenanceItemPickerScreen
 import com.jsworld.android.autolog.ui.view.screen.EditCarScreen
 import com.jsworld.android.autolog.ui.view.screen.EditMaintenanceSettingScreen
+import com.jsworld.android.autolog.ui.view.screen.ExcelExportScreen
 import com.jsworld.android.autolog.ui.view.screen.MaintenanceHistoryEditScreen
 import com.jsworld.android.autolog.ui.view.screen.MaintenanceHistoryListScreen
 import com.jsworld.android.autolog.ui.view.screen.NoticeScreen
@@ -139,7 +141,16 @@ fun AutoLogNavHost(
             SettingsScreen(
                 onBackClick = { navController.popBackStack() },
                 onNoticeClick = { navController.navigate(Routes.NOTICE) },
+                onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
                 viewModel = hiltViewModel()
+            )
+        }
+
+        composable(EXCEL_EXPORT) {
+            ExcelExportScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
 

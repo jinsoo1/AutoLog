@@ -56,6 +56,7 @@ import com.jsworld.android.autolog.ui.view.viewModel.SettingsViewModel
 fun SettingsScreen(
     onBackClick: () -> Unit,
     onNoticeClick: () -> Unit,
+    onExcelExportClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -196,6 +197,20 @@ fun SettingsScreen(
                         subtitle = "매주 1회 주행거리 업데이트 여부를 알려드립니다",
                         checked = notificationEnabled,
                         onCheckedChange = onNotificationToggleChange
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsSectionTitle("데이터 관리")
+                }
+
+                item {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Backup,
+                        title = "엑셀 내보내기",
+                        subtitle = "차량을 선택하여 정비내역을 엑셀 파일로 저장",
+                        onClick = onExcelExportClick
                     )
                 }
 

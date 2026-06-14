@@ -3,6 +3,7 @@ package com.jsworld.android.autolog.ui.data.module
 import android.content.Context
 import androidx.room.Room
 import com.jsworld.android.autolog.ui.data.room.dao.CarDao
+import com.jsworld.android.autolog.ui.data.room.dao.CarExportDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceFullDao
 import com.jsworld.android.autolog.ui.data.room.dao.MaintenanceHistoryDao
@@ -58,4 +59,8 @@ object DatabaseModule {
     @Provides
     fun provideMileageHistoryDao(db: AutoLogDatabase): MileageHistoryDao =
         db.mileageHistoryDao()
+
+    @Provides
+    fun provideCarExportDao(db: AutoLogDatabase): CarExportDao =
+        db.carExportDao()
 }

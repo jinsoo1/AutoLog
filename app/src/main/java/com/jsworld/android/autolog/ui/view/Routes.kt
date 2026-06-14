@@ -32,4 +32,6 @@ object Routes {
     const val SETTINGS = "settings"
     const val NOTICE = "notice"
 
+    const val EXCEL_EXPORT = "excel_export"
+
 }
