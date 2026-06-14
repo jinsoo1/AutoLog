@@ -20,8 +20,8 @@ android {
         applicationId = "com.jsworld.android.autolog"
         minSdk = 28
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -106,6 +106,8 @@ dependencies {
     implementation("androidx.glance:glance-material:1.1.1")
 
     implementation(libs.androidx.work.runtime.ktx)
+
+    implementation(libs.apache.poi.ooxml)
 
 }
 
