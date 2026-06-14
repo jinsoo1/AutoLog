@@ -78,10 +78,19 @@
 # Preferences DataStore는 보통 문제 없음. (Proto DataStore를 쓸 땐 protobuf 규칙 필요)
 -keep class androidx.datastore.** { *; }
 
-# Apache POI - Android release build R8 warnings
+# Apache POI / XMLBeans optional dependencies for Android release build
+
+-dontwarn javax.xml.stream.**
+-dontwarn net.sf.saxon.**
+-dontwarn org.apache.batik.**
+
+# Apache POI may reference desktop Java APIs that Android does not provide.
+# Do not use POI APIs that depend on these classes, such as autoSizeColumn().
 -dontwarn java.awt.**
 -dontwarn javax.imageio.**
 -dontwarn javax.print.**
+
+# Optional logging / crypto dependencies sometimes referenced transitively
 -dontwarn org.apache.logging.log4j.**
--dontwarn org.bouncycastle.**
 -dontwarn org.slf4j.**
+-dontwarn org.bouncycastle.**
