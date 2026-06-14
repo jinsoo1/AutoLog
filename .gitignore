@@ -5,6 +5,7 @@
 build/
 **/build/
 !gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 
 # APK / AAB
 *.apk
@@ -16,63 +17,6 @@ build/
 local.properties
 *.properties
 
-# =========================
-# Android Studio / IntelliJ
-# =========================
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# =========================
-# OS files
-# =========================
-.DS_Store
-Thumbs.db
-
-# =========================
-# Native build
-# =========================
-.cxx/
-.externalNativeBuild/
-
-# =========================
-# Logs
-# =========================
-*.log
-
-# =========================
-# Keystore / signing (중요)
-# =========================
-*.jks
-*.keystore
-*.p12
-
-# =========================
-# Generated / temp
-# =========================
-captures/
-outputs/
-tmp/
-temp/
-
-# =========================
-# Kotlin / Java
-# =========================
-*.class
-
-# =========================
-# Firebase / Google Services (선택)
-# =========================
-#google-services.json
-#*.firebase*
-
-# =========================
-# NDK
-# =========================
-obj/
-
-# =========================
-# 기타
-# =========================
-*.hprof
+# Gradle 필수/공통 설정 파일은 Git에 포함
+!gradle/wrapper/gradle-wrapper.properties
+!gradle.properties
