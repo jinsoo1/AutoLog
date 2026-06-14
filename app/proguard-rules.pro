@@ -77,3 +77,11 @@
 ############################################
 # Preferences DataStore는 보통 문제 없음. (Proto DataStore를 쓸 땐 protobuf 규칙 필요)
 -keep class androidx.datastore.** { *; }
+
+# Apache POI - Android release build R8 warnings
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn javax.print.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.slf4j.**
