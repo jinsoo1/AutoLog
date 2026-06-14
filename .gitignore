@@ -20,3 +20,5 @@ local.properties
 # Gradle 필수/공통 설정 파일은 Git에 포함
 !gradle/wrapper/gradle-wrapper.properties
 !gradle.properties
+
+*.hprof

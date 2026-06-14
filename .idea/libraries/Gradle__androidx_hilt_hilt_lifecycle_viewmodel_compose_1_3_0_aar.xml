@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Gradle: androidx.hilt:hilt-lifecycle-viewmodel-compose:1.3.0@aar" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/7dca2df5c64b62101ca8c3e9dff75b85/transformed/hilt-lifecycle-viewmodel-compose-1.3.0/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/7dca2df5c64b62101ca8c3e9dff75b85/transformed/hilt-lifecycle-viewmodel-compose-1.3.0/AndroidManifest.xml" />
+      <root url="jar://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/7dca2df5c64b62101ca8c3e9dff75b85/transformed/hilt-lifecycle-viewmodel-compose-1.3.0/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidx.hilt/hilt-lifecycle-viewmodel-compose/1.3.0/ea48aea470b69d218d0b027df2b667131cae7bd/hilt-lifecycle-viewmodel-compose-1.3.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
