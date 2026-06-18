@@ -1,5 +1,3 @@
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 plugins {
@@ -131,47 +129,3 @@ dependencies {
     implementation(libs.apache.poi.ooxml)
 
 }
-
-val appNameForFile = "AutoLog"
-val aabTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-
-fun sanitizeFileName(s: String): String =
-    s.replace(Regex("""[\\/:*?"<>|]"""), "_").replace(" ", "_")
-
-tasks.register("renameReleaseAab") {
-    doLast {
-        // Task의 extensions가 아니라 Project의 android 확장을 가져와야 함
-        val androidExt = project.extensions.findByName("android")
-            ?: error("android extension not found. app 모듈(build.gradle.kts)에 있는지 확인하세요.")
-
-        // defaultConfig 접근(리플렉션으로 안전하게)
-        val defaultConfig = androidExt.javaClass.methods.first { it.name == "getDefaultConfig" }.invoke(androidExt)
-        val vName = (defaultConfig.javaClass.methods.first { it.name == "getVersionName" }.invoke(defaultConfig) as? String) ?: "0.0.0"
-        val vCodeAny = defaultConfig.javaClass.methods.first { it.name == "getVersionCode" }.invoke(defaultConfig)
-        val vCode = (vCodeAny as? Number)?.toInt() ?: 0
-
-        val now = LocalDateTime.now().format(aabTimeFormatter)
-
-        val bundleRoot = layout.buildDirectory.dir("outputs/bundle").get().asFile
-        val aabFile = bundleRoot
-            .walkTopDown()
-            .filter { it.isFile && it.extension == "aab" && it.path.contains("release", ignoreCase = true) }
-            .maxByOrNull { it.lastModified() }
-            ?: error("Release AAB를 찾지 못했습니다: $bundleRoot")
-
-        val newName = sanitizeFileName("${appNameForFile}_${vName}(${vCode})_${now}.aab")
-        val target = aabFile.parentFile.resolve(newName)
-
-        if (target.exists()) target.delete()
-        if (!aabFile.renameTo(target)) {
-            aabFile.copyTo(target, overwrite = true)
-            aabFile.delete()
-        }
-
-        println("AAB renamed: ${target.absolutePath}")
-    }
-}
-
-// bundleRelease / bundleFreeRelease / bundleProdRelease 등 모든 Release 번들 작업에 붙이기
-tasks.matching { it.name.startsWith("bundle") && it.name.endsWith("Release") }
-    .configureEach { finalizedBy("renameReleaseAab") }
