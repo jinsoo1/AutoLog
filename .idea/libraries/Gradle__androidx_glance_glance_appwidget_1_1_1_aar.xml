@@ -1,9 +1,9 @@
 <component name="libraryTable">
   <library name="Gradle: androidx.glance:glance-appwidget:1.1.1@aar" external-system-id="GRADLE">
     <CLASSES>
-      <root url="file://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/9e67a1715224116a0a639e6211b3afac/transformed/glance-appwidget-1.1.1/AndroidManifest.xml" />
-      <root url="jar://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/9e67a1715224116a0a639e6211b3afac/transformed/glance-appwidget-1.1.1/jars/classes.jar!/" />
-      <root url="file://$USER_HOME$/.gradle/caches/9.0-milestone-1/transforms/9e67a1715224116a0a639e6211b3afac/transformed/glance-appwidget-1.1.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/31fe70df8f5ba44795e5b5234ac43380/transformed/glance-appwidget-1.1.1/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/31fe70df8f5ba44795e5b5234ac43380/transformed/glance-appwidget-1.1.1/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/31fe70df8f5ba44795e5b5234ac43380/transformed/glance-appwidget-1.1.1/AndroidManifest.xml" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
