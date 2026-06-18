@@ -73,8 +73,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.ui.data.item.SettingOption
 import com.jsworld.android.autolog.ui.view.viewModel.AddMaintenanceViewModel
@@ -104,8 +106,13 @@ fun AddMaintenanceScreen(
     var selected by remember { mutableStateOf<SettingOption?>(null) }
 
     var dateText by rememberSaveable { mutableStateOf("") }
-    var mileageRaw by rememberSaveable { mutableStateOf<Int?>(null) } // 실제 값
-    var mileageText by rememberSaveable { mutableStateOf("") }        // 표시 값(1,000)
+    var mileageTextFieldValue by remember {
+        mutableStateOf(TextFieldValue(""))
+    }
+
+    var mileageRaw by remember {
+        mutableStateOf<Int?>(null)
+    }
     var placeText by rememberSaveable { mutableStateOf("") }
     var costText by rememberSaveable { mutableStateOf("") }
     var memoText by rememberSaveable { mutableStateOf("") }
@@ -388,21 +395,35 @@ fun AddMaintenanceScreen(
                     // 주행거리
 
                     OutlinedTextField(
-                        value = mileageText,
+                        value = mileageTextFieldValue,
                         onValueChange = { input ->
-                            val digits = input.filter { it.isDigit() }
+                            val digits = input.text.filter { it.isDigit() }
                             val raw = digits.toIntOrNull()
 
                             mileageRaw = raw
-                            mileageText = raw?.formatKm().orEmpty() // 50000 -> "50,000"
+
+                            val formatted = raw?.formatKm().orEmpty()
+
+                            mileageTextFieldValue = TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
                         },
                         label = { Text("정비 시 주행거리(km) *") },
-                        leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Route,
+                                contentDescription = null
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number
+                        ),
                         isError = triedSave && !mileageValid,
                         supportingText = {
                             Column {
                                 val cur = currentMileage?.let { "${it.formatKm()}km" } ?: "불러오는 중…"
+
                                 Text(
                                     text = "현재 주행거리: $cur",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -410,6 +431,7 @@ fun AddMaintenanceScreen(
                                 )
 
                                 val prev = lastMileage?.let { "${it.formatKm()}km" } ?: "없음"
+
                                 Text(
                                     text = "이전 주행거리: $prev",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -422,6 +444,7 @@ fun AddMaintenanceScreen(
                                         mileageRaw!! <= 0 -> "주행거리는 0보다 큰 값이어야 해요."
                                         lastMileage != null && mileageRaw!! <= lastMileage ->
                                             "이전 정비 주행거리(${lastMileage.formatKm()}km)보다 큰 값을 입력해주세요."
+
                                         else -> "주행거리를 확인해주세요."
                                     }
 
