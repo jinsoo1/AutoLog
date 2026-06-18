@@ -19,6 +19,12 @@ build/
 *.aar
 
 # =========================
+# Android Studio / IntelliJ
+# =========================
+.idea/
+*.iml
+
+# =========================
 # Local config / secrets
 # =========================
 local.properties
