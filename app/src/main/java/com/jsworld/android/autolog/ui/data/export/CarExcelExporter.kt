@@ -37,43 +37,49 @@ class CarExcelExporter @Inject constructor(
     suspend fun exportCar(
         carId: Long,
         outputUri: Uri
-    ): Boolean = withContext(Dispatchers.IO) {
-        val data = carExportRepository.getCarExportData(carId)
-            ?: return@withContext false
-
-        val workbook = XSSFWorkbook()
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        var workbook: XSSFWorkbook? = null
 
         try {
-            createSummarySheet(
-                workbook = workbook,
-                data = data
-            )
+            val data = carExportRepository.getCarExportData(carId)
+                ?: return@withContext Result.failure(
+                    IllegalStateException("차량 내보내기 데이터를 찾을 수 없습니다. carId=$carId")
+                )
 
-            createMaintenanceSettingSheet(
-                workbook = workbook,
-                data = data
-            )
+            workbook = XSSFWorkbook()
 
-            createMaintenanceHistorySheet(
-                workbook = workbook,
-                data = data
-            )
+            android.util.Log.d("CarExcelExporter", "createSummarySheet start")
+            createSummarySheet(workbook, data)
 
-            createMileageHistorySheet(
-                workbook = workbook,
-                data = data
-            )
+            android.util.Log.d("CarExcelExporter", "createMaintenanceSettingSheet start")
+            createMaintenanceSettingSheet(workbook, data)
+
+            android.util.Log.d("CarExcelExporter", "createMaintenanceHistorySheet start")
+            createMaintenanceHistorySheet(workbook, data)
+
+            android.util.Log.d("CarExcelExporter", "createMileageHistorySheet start")
+            createMileageHistorySheet(workbook, data)
+
+            android.util.Log.d("CarExcelExporter", "write workbook start")
 
             context.contentResolver.openOutputStream(outputUri)?.use { outputStream ->
                 workbook.write(outputStream)
-            } ?: return@withContext false
+            } ?: return@withContext Result.failure(
+                IllegalStateException("파일 저장 스트림을 열 수 없습니다. uri=$outputUri")
+            )
 
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
+            android.util.Log.d("CarExcelExporter", "export success")
+            Result.success(Unit)
+
+        } catch (t: Throwable) {
+            android.util.Log.e("CarExcelExporter", "Excel export failed", t)
+            Result.failure(t)
         } finally {
-            workbook.close()
+            try {
+                workbook?.close()
+            } catch (t: Throwable) {
+                android.util.Log.e("CarExcelExporter", "Workbook close failed", t)
+            }
         }
     }
 

@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.ui.view.screen
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +35,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import com.jsworld.android.autolog.ui.data.item.ExcelExportUiState
 import com.jsworld.android.autolog.ui.view.viewModel.ExcelExportViewModel
 
@@ -55,6 +63,10 @@ fun ExcelExportScreen(
     val selectedCarId by viewModel.selectedCarId.collectAsStateWithLifecycle()
     val exportState by viewModel.exportState.collectAsStateWithLifecycle()
 
+    var errorDialogState by remember {
+        mutableStateOf<ExcelExportUiState.Error?>(null)
+    }
+
     val createExcelLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -65,30 +77,51 @@ fun ExcelExportScreen(
         }
     }
 
-    LaunchedEffect(exportState) {
-        when (val state = exportState) {
-            is ExcelExportUiState.Success -> {
-                Toast.makeText(
-                    context,
-                    "엑셀 파일이 저장되었습니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
+    when (val state = exportState) {
+        is ExcelExportUiState.Success -> {
+            Toast.makeText(
+                context,
+                "엑셀 파일이 저장되었습니다.",
+                Toast.LENGTH_SHORT
+            ).show()
 
-                viewModel.resetExportState()
-            }
-
-            is ExcelExportUiState.Error -> {
-                Toast.makeText(
-                    context,
-                    state.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                viewModel.resetExportState()
-            }
-
-            else -> Unit
+            viewModel.resetExportState()
         }
+
+        is ExcelExportUiState.Error -> {
+            errorDialogState = state
+            viewModel.resetExportState()
+        }
+
+        else -> Unit
+    }
+
+    errorDialogState?.let { error ->
+        ExcelExportErrorDialog(
+            error = error,
+            onDismiss = {
+                errorDialogState = null
+            },
+            onCopyClick = {
+                val copyText = buildString {
+                    appendLine(error.message)
+                    appendLine()
+                    appendLine(error.detail ?: "상세 로그가 없습니다.")
+                }
+
+                copyToClipboard(
+                    context = context,
+                    label = "AutoLog Excel Export Crash",
+                    text = copyText
+                )
+
+                Toast.makeText(
+                    context,
+                    "크래시 로그가 클립보드에 복사되었습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        )
     }
 
     Scaffold(
@@ -132,8 +165,8 @@ fun ExcelExportScreen(
                             exportState !is ExcelExportUiState.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding() // 네비바 안전
-                        .imePadding()            // 키보드 안전
+                        .navigationBarsPadding()
+                        .imePadding()
                         .padding(16.dp)
                 ) {
                     Text(
@@ -202,6 +235,62 @@ fun ExcelExportScreen(
 }
 
 @Composable
+private fun ExcelExportErrorDialog(
+    error: ExcelExportUiState.Error,
+    onDismiss: () -> Unit,
+    onCopyClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "엑셀 저장 오류",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = error.message,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "아래 버튼을 눌러 크래시 로그를 복사한 뒤 확인할 수 있습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = error.detail?.take(1_500) ?: "상세 로그가 없습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 12
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onCopyClick
+            ) {
+                Text("크래시 로그 복사")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("닫기")
+            }
+        }
+    )
+}
+
+@Composable
 private fun ExcelExportCarItem(
     carName: String,
     plate: String,
@@ -250,5 +339,18 @@ private fun ExcelExportCarItem(
 
     HorizontalDivider(
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    )
+}
+
+private fun copyToClipboard(
+    context: Context,
+    label: String,
+    text: String
+) {
+    val clipboardManager =
+        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+    clipboardManager.setPrimaryClip(
+        ClipData.newPlainText(label, text)
     )
 }
