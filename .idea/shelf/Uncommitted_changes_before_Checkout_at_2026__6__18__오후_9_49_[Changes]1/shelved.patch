@@ -1,0 +1,421 @@
+Index: gradle.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\nkotlin.code.style=official
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>ISO-8859-1
+===================================================================
+diff --git a/gradle.properties b/gradle.properties
+--- a/gradle.properties	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ b/gradle.properties	(date 1781783478529)
+@@ -1,3 +1,4 @@
+ org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8
+ android.useAndroidX=true
+-kotlin.code.style=official
+\ No newline at end of file
++kotlin.code.style=official
++android.experimental.enableArtProfiles=false
+\ No newline at end of file
+Index: app/proguard-rules.pro
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># Add project specific ProGuard rules here.\n# You can control the set of applied configuration files using the\n# proguardFiles setting in build.gradle.\n#\n# For more details, see\n#   http://developer.android.com/guide/developing/tools/proguard.html\n\n# If your project uses WebView with JS, uncomment the following\n# and specify the fully qualified class name to the JavaScript interface\n# class:\n#-keepclassmembers class fqcn.of.javascript.interface.for.webview {\n#   public *;\n#}\n\n# Uncomment this to preserve the line number information for\n# debugging stack traces.\n#-keepattributes SourceFile,LineNumberTable\n\n# If you keep the line number information, uncomment this to\n# hide the original source file name.\n#-renamesourcefileattribute SourceFile\n\n# proguard-rules.pro (최소 시작점)\n\n-keepattributes SourceFile,LineNumberTable\n-renamesourcefileattribute SourceFile\n\n############################################\n# Hilt / Dagger\n############################################\n# Hilt가 생성한 컴포넌트/엔트리포인트 관련(대부분 기본으로 되지만, 릴리즈에서 리플렉션 이슈 시 안전장치)\n-keep class dagger.hilt.** { *; }\n-keep class javax.inject.** { *; }\n-keep class dagger.** { *; }\n\n# 애노테이션 유지(필요 시)\n-keepattributes *Annotation*\n\n############################################\n# Room\n############################################\n# Room은 compile-time 생성이라 보통 keep 불필요.\n# 다만, 룸 메타/애노테이션 기반 이슈나 리플렉션 기반 유틸이 섞인 경우 대비(안전장치)\n-keep class androidx.room.** { *; }\n-keep class **_Impl { *; }   # Room이 생성하는 *_Impl(DAO/DB 구현체)\n-keep class **_Dao { *; }    # 혹시 생성물 네이밍 케이스 대비(없어도 무방)\n\n############################################\n# WorkManager\n############################################\n# Worker는 리플렉션으로 인스턴스 생성될 수 있어 릴리즈에서 종종 깨짐\n-keep class * extends androidx.work.ListenableWorker { *; }\n-keep class * extends androidx.work.Worker { *; }\n-keep class * extends androidx.work.CoroutineWorker { *; }\n\n# (선택) HiltWorker를 쓰면 이쪽도 도움이 됩니다\n-keep class dagger.hilt.android.internal.managers.** { *; }\n-keep class androidx.hilt.work.** { *; }\n\n############################################\n# Glance AppWidget\n############################################\n# Glance 위젯 리시버/서비스/프로바이더가 매니페스트로 로딩되므로 보통 괜찮지만,\n# 릴리즈에서 위젯이 안 뜨는 경우가 있어 안전장치로 유지\n-keep class androidx.glance.** { *; }\n-keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }\n\n############################################\n# Compose / Navigation\n############################################\n# Compose/Navigation은 보통 추가 keep 불필요.\n# 하지만 \"release에서만 화면 전환/리플렉션 관련 크래시\"가 나면 아래를 고려\n-keep class androidx.navigation.** { *; }\n\n############################################\n# DataStore\n############################################\n# Preferences DataStore는 보통 문제 없음. (Proto DataStore를 쓸 땐 protobuf 규칙 필요)\n-keep class androidx.datastore.** { *; }\n\n# Apache POI / XMLBeans optional dependencies for Android release build\n\n-dontwarn javax.xml.stream.**\n-dontwarn net.sf.saxon.**\n-dontwarn org.apache.batik.**\n\n# Apache POI may reference desktop Java APIs that Android does not provide.\n# Do not use POI APIs that depend on these classes, such as autoSizeColumn().\n-dontwarn java.awt.**\n-dontwarn javax.imageio.**\n-dontwarn javax.print.**\n\n# Optional logging / crypto dependencies sometimes referenced transitively\n-dontwarn org.apache.logging.log4j.**\n-dontwarn org.slf4j.**\n-dontwarn org.bouncycastle.**
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/proguard-rules.pro b/app/proguard-rules.pro
+--- a/app/proguard-rules.pro	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ b/app/proguard-rules.pro	(date 1781785290405)
+@@ -5,92 +5,211 @@
+ # For more details, see
+ #   http://developer.android.com/guide/developing/tools/proguard.html
+ 
+-# If your project uses WebView with JS, uncomment the following
+-# and specify the fully qualified class name to the JavaScript interface
+-# class:
+-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+-#   public *;
+-#}
+-
+-# Uncomment this to preserve the line number information for
+-# debugging stack traces.
+-#-keepattributes SourceFile,LineNumberTable
+-
+-# If you keep the line number information, uncomment this to
+-# hide the original source file name.
+-#-renamesourcefileattribute SourceFile
+-
+-# proguard-rules.pro (최소 시작점)
++############################################
++# Debugging stack traces
++############################################
+ 
+ -keepattributes SourceFile,LineNumberTable
+ -renamesourcefileattribute SourceFile
+ 
++# Annotation / Kotlin / Reflection metadata
++-keepattributes *Annotation*
++-keepattributes Signature
++-keepattributes InnerClasses,EnclosingMethod
++-keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations
++-keepattributes RuntimeVisibleParameterAnnotations,RuntimeInvisibleParameterAnnotations
++-keepattributes AnnotationDefault
++
+ ############################################
+ # Hilt / Dagger
+ ############################################
+-# Hilt가 생성한 컴포넌트/엔트리포인트 관련(대부분 기본으로 되지만, 릴리즈에서 리플렉션 이슈 시 안전장치)
++
++# Hilt/Dagger는 대부분 기본 규칙으로 처리되지만,
++# 릴리즈에서 리플렉션/생성 코드 관련 이슈가 있을 때를 대비한 안전장치
+ -keep class dagger.hilt.** { *; }
+ -keep class javax.inject.** { *; }
+ -keep class dagger.** { *; }
+ 
+-# 애노테이션 유지(필요 시)
+--keepattributes *Annotation*
+-
+ ############################################
+ # Room
+ ############################################
+-# Room은 compile-time 생성이라 보통 keep 불필요.
+-# 다만, 룸 메타/애노테이션 기반 이슈나 리플렉션 기반 유틸이 섞인 경우 대비(안전장치)
++
++# Room은 compile-time 생성이라 보통 keep 불필요하지만,
++# 릴리즈에서 생성 구현체 관련 이슈를 피하기 위한 안전장치
+ -keep class androidx.room.** { *; }
+--keep class **_Impl { *; }   # Room이 생성하는 *_Impl(DAO/DB 구현체)
+--keep class **_Dao { *; }    # 혹시 생성물 네이밍 케이스 대비(없어도 무방)
++-keep class **_Impl { *; }
++-keep class **_Dao { *; }
+ 
+ ############################################
+ # WorkManager
+ ############################################
+-# Worker는 리플렉션으로 인스턴스 생성될 수 있어 릴리즈에서 종종 깨짐
++
++# Worker는 리플렉션으로 인스턴스 생성될 수 있어 릴리즈에서 깨질 수 있음
+ -keep class * extends androidx.work.ListenableWorker { *; }
+ -keep class * extends androidx.work.Worker { *; }
+ -keep class * extends androidx.work.CoroutineWorker { *; }
+ 
+-# (선택) HiltWorker를 쓰면 이쪽도 도움이 됩니다
++# HiltWorker 사용 대비
+ -keep class dagger.hilt.android.internal.managers.** { *; }
+ -keep class androidx.hilt.work.** { *; }
+ 
+ ############################################
+ # Glance AppWidget
+ ############################################
+-# Glance 위젯 리시버/서비스/프로바이더가 매니페스트로 로딩되므로 보통 괜찮지만,
+-# 릴리즈에서 위젯이 안 뜨는 경우가 있어 안전장치로 유지
++
+ -keep class androidx.glance.** { *; }
+ -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
+ 
+ ############################################
+ # Compose / Navigation
+ ############################################
+-# Compose/Navigation은 보통 추가 keep 불필요.
+-# 하지만 "release에서만 화면 전환/리플렉션 관련 크래시"가 나면 아래를 고려
++
++# Compose/Navigation은 보통 추가 keep 불필요하지만 안전장치
+ -keep class androidx.navigation.** { *; }
+ 
+ ############################################
+ # DataStore
+ ############################################
+-# Preferences DataStore는 보통 문제 없음. (Proto DataStore를 쓸 땐 protobuf 규칙 필요)
++
+ -keep class androidx.datastore.** { *; }
+ 
+-# Apache POI / XMLBeans optional dependencies for Android release build
++############################################
++# Apache POI / XMLBeans / OOXML - Release R8
++############################################
++
++# Apache POI core
++-keep class org.apache.poi.** { *; }
++-keepnames class org.apache.poi.**
++
++# XMLBeans
++-keep class org.apache.xmlbeans.** { *; }
++-keepnames class org.apache.xmlbeans.**
++
++# OOXML generated schemas
++-keep class org.openxmlformats.schemas.** { *; }
++-keepnames class org.openxmlformats.schemas.**
++
++-keep class com.microsoft.schemas.** { *; }
++-keepnames class com.microsoft.schemas.**
++
++-keep class schemaorg_apache_xmlbeans.** { *; }
++-keepnames class schemaorg_apache_xmlbeans.**
++
++# XML signature / drawing schemas sometimes used by POI internals
++-keep class org.w3.x2000.x09.xmldsig.** { *; }
++-keepnames class org.w3.x2000.x09.xmldsig.**
++
++-keep class org.etsi.uri.x01903.** { *; }
++-keepnames class org.etsi.uri.x01903.**
++
++############################################
++# Apache POI dependencies
++############################################
++
++# Commons libraries used by POI
++-keep class org.apache.commons.** { *; }
++-keepnames class org.apache.commons.**
++
++# Logging libraries that POI may access indirectly/reflection-style
++-keep class org.apache.logging.** { *; }
++-keepnames class org.apache.logging.**
+ 
++-keep class org.slf4j.** { *; }
++-keepnames class org.slf4j.**
++
++############################################
++# Keep constructors for reflection
++############################################
++
++-keepclassmembers class org.apache.poi.** {
++    public <init>(...);
++}
++
++-keepclassmembers class org.apache.xmlbeans.** {
++    public <init>(...);
++}
++
++-keepclassmembers class org.openxmlformats.schemas.** {
++    public <init>(...);
++}
++
++-keepclassmembers class com.microsoft.schemas.** {
++    public <init>(...);
++}
++
++-keepclassmembers class schemaorg_apache_xmlbeans.** {
++    public <init>(...);
++}
++
++-keepclassmembers class org.apache.commons.** {
++    public <init>(...);
++}
++
++-keepclassmembers class org.apache.logging.** {
++    public <init>(...);
++}
++
++-keepclassmembers class org.slf4j.** {
++    public <init>(...);
++}
++
++############################################
++# Apache POI optional dependencies - dontwarn
++############################################
++
++# XMLBeans optional JavaParser config parser
++-dontwarn com.github.javaparser.**
++
++# XMLBeans optional Maven / Ant tooling
++-dontwarn org.apache.maven.**
++-dontwarn org.apache.tools.ant.**
++-dontwarn com.sun.org.apache.xml.internal.resolver.**
++
++# Optional XML stream / XPath / Saxon
+ -dontwarn javax.xml.stream.**
+ -dontwarn net.sf.saxon.**
++
++# Optional SVG / PDF / Drawing / Desktop rendering
+ -dontwarn org.apache.batik.**
++-dontwarn org.apache.pdfbox.**
++-dontwarn de.rototor.pdfbox.**
++-dontwarn org.w3c.dom.svg.**
++-dontwarn org.w3c.dom.events.**
++-dontwarn org.w3c.dom.traversal.**
+ 
+-# Apache POI may reference desktop Java APIs that Android does not provide.
+-# Do not use POI APIs that depend on these classes, such as autoSizeColumn().
++# Optional XML digital signature / crypto
++-dontwarn javax.xml.crypto.**
++-dontwarn javax.xml.crypto.dsig.**
++-dontwarn javax.xml.crypto.dsig.dom.**
++-dontwarn javax.xml.crypto.dsig.keyinfo.**
++-dontwarn javax.xml.crypto.dsig.spec.**
++-dontwarn org.apache.jcp.xml.dsig.internal.dom.**
++-dontwarn org.apache.xml.security.**
++-dontwarn org.ietf.jgss.**
++
++# Android에 없는 Java desktop APIs
++# autoSizeColumn(), PDF/SVG/PPT 렌더링 같은 기능은 사용하면 안 됨
+ -dontwarn java.awt.**
++-dontwarn javax.swing.**
+ -dontwarn javax.imageio.**
+ -dontwarn javax.print.**
+ 
+-# Optional logging / crypto dependencies sometimes referenced transitively
++# Optional logging / crypto dependencies
+ -dontwarn org.apache.logging.log4j.**
+ -dontwarn org.slf4j.**
+--dontwarn org.bouncycastle.**
+\ No newline at end of file
++-dontwarn org.bouncycastle.**
++
++# Office schema optional references
++-dontwarn com.microsoft.schemas.**
++-dontwarn org.openxmlformats.schemas.**
++-dontwarn org.w3.x2000.x09.xmldsig.**
++-dontwarn org.etsi.uri.x01903.**
++
++############################################
++# Apache Commons Compress optional codecs
++############################################
++
++-dontwarn com.github.luben.zstd.**
++-dontwarn org.brotli.dec.**
++-dontwarn org.objectweb.asm.**
++-dontwarn org.tukaani.xz.**
+\ No newline at end of file
+Index: .idea/libraries/Gradle__androidx_compose_ui_ui_tooling_android_1_10_0_aar.xml
+===================================================================
+diff --git a/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_android_1_10_0_aar.xml b/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_android_1_10_0_aar.xml
+deleted file mode 100644
+--- a/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_android_1_10_0_aar.xml	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ /dev/null	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
+@@ -1,14 +0,0 @@
+-<component name="libraryTable">
+-  <library name="Gradle: androidx.compose.ui:ui-tooling-android:1.10.0@aar" external-system-id="GRADLE">
+-    <CLASSES>
+-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/64c9be2ef00a8df65237a83ba841427f/transformed/ui-tooling/AndroidManifest.xml" />
+-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/64c9be2ef00a8df65237a83ba841427f/transformed/ui-tooling/res" />
+-      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/64c9be2ef00a8df65237a83ba841427f/transformed/ui-tooling/jars/classes.jar!/" />
+-    </CLASSES>
+-    <JAVADOC />
+-    <SOURCES>
+-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidx.compose.ui/ui-tooling-android/1.10.0/9b047b7f56019e81768b3c6eac47e569ca423f4a/ui-tooling-android-1.10.0-sources.jar!/" />
+-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidx.compose.ui/ui-tooling-android/1.10.0/3ea400e31bb45352ec52036d9d5f220497adce49/ui-tooling-1.10.0-samples-sources.jar!/" />
+-    </SOURCES>
+-  </library>
+-</component>
+\ No newline at end of file
+Index: .idea/libraries/Gradle__androidx_compose_ui_ui_tooling_data_android_1_10_0_aar.xml
+===================================================================
+diff --git a/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_data_android_1_10_0_aar.xml b/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_data_android_1_10_0_aar.xml
+deleted file mode 100644
+--- a/.idea/libraries/Gradle__androidx_compose_ui_ui_tooling_data_android_1_10_0_aar.xml	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ /dev/null	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
+@@ -1,12 +0,0 @@
+-<component name="libraryTable">
+-  <library name="Gradle: androidx.compose.ui:ui-tooling-data-android:1.10.0@aar" external-system-id="GRADLE">
+-    <CLASSES>
+-      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/65ed100ba8977ef5c3fbdee05c90f393/transformed/ui-tooling-data/jars/classes.jar!/" />
+-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/65ed100ba8977ef5c3fbdee05c90f393/transformed/ui-tooling-data/AndroidManifest.xml" />
+-    </CLASSES>
+-    <JAVADOC />
+-    <SOURCES>
+-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidx.compose.ui/ui-tooling-data-android/1.10.0/311dd561c15915b95b4aaf8f2962d8c78ca47fd2/ui-tooling-data-android-1.10.0-sources.jar!/" />
+-    </SOURCES>
+-  </library>
+-</component>
+\ No newline at end of file
+Index: .idea/modules/app/AutoLog.app.androidTest.iml
+===================================================================
+diff --git a/.idea/modules/app/AutoLog.app.androidTest.iml b/.idea/modules/app/AutoLog.app.androidTest.iml
+deleted file mode 100644
+--- a/.idea/modules/app/AutoLog.app.androidTest.iml	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ /dev/null	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
+@@ -1,14 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<module version="4">
+-  <component name="FacetManager">
+-    <facet external-system-id="GRADLE" type="android" name="Android">
+-      <configuration>
+-        <option name="SELECTED_BUILD_VARIANT" value="debug" />
+-        <option name="ALLOW_USER_CONFIGURATION" value="false" />
+-        <option name="MANIFEST_FILE_RELATIVE_PATH" value="/src/main/AndroidManifest.xml" />
+-        <option name="RES_FOLDER_RELATIVE_PATH" value="/src/main/res" />
+-        <option name="ASSETS_FOLDER_RELATIVE_PATH" value="/src/main/assets" />
+-      </configuration>
+-    </facet>
+-  </component>
+-</module>
+\ No newline at end of file
+Index: .idea/libraries/Gradle__androidx_annotation_annotation_experimental_1_4_1_aar.xml
+===================================================================
+diff --git a/.idea/libraries/Gradle__androidx_annotation_annotation_experimental_1_4_1_aar.xml b/.idea/libraries/Gradle__androidx_annotation_annotation_experimental_1_4_1_aar.xml
+deleted file mode 100644
+--- a/.idea/libraries/Gradle__androidx_annotation_annotation_experimental_1_4_1_aar.xml	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ /dev/null	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
+@@ -1,13 +0,0 @@
+-<component name="libraryTable">
+-  <library name="Gradle: androidx.annotation:annotation-experimental:1.4.1@aar" external-system-id="GRADLE">
+-    <CLASSES>
+-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/328973295a5c997b0fdf88cf7eb4844c/transformed/annotation-experimental-1.4.1/AndroidManifest.xml" />
+-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/328973295a5c997b0fdf88cf7eb4844c/transformed/annotation-experimental-1.4.1/res" />
+-      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/328973295a5c997b0fdf88cf7eb4844c/transformed/annotation-experimental-1.4.1/jars/classes.jar!/" />
+-    </CLASSES>
+-    <JAVADOC />
+-    <SOURCES>
+-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidx.annotation/annotation-experimental/1.4.1/4dc003cb3c5ff16a1c3d09f3d1f7ae7b2d14a9c4/annotation-experimental-1.4.1-sources.jar!/" />
+-    </SOURCES>
+-  </library>
+-</component>
+\ No newline at end of file
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import com.android.build.gradle.internal.dsl.BaseAppModuleExtension\nimport java.time.LocalDateTime\nimport java.time.format.DateTimeFormatter\n\nplugins {\n    alias(libs.plugins.android.application)\n    alias(libs.plugins.kotlin.android)\n    alias(libs.plugins.kotlin.compose)\n    alias(libs.plugins.hilt)\n    alias(libs.plugins.kotlin.kapt)\n}\n\nandroid {\n    namespace = \"com.jsworld.android.autolog\"\n    compileSdk {\n        version = release(36)\n    }\n\n    defaultConfig {\n        applicationId = \"com.jsworld.android.autolog\"\n        minSdk = 28\n        targetSdk = 36\n        versionCode = 5\n        versionName = \"1.0.4\"\n\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\n    }\n\n\n    buildTypes {\n        release {\n            isMinifyEnabled = true\n            isShrinkResources = true\n\n            proguardFiles(\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n                \"proguard-rules.pro\"\n            )\n        }\n    }\n\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_11\n        targetCompatibility = JavaVersion.VERSION_11\n    }\n    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)\n\n            freeCompilerArgs.addAll(\n                \"-Xcontext-receivers\"\n            )\n        }\n    }\n    buildFeatures {\n        compose = true\n    }\n    kapt {\n        correctErrorTypes = true\n    }\n}\n\ndependencies {\n    // Core & Lifecycle\n    implementation(libs.android.core.ktx)\n    implementation(libs.lifecycle.runtime.ktx)\n    implementation(libs.activity.compose)\n\n    // Compose\n    implementation(platform(libs.compose.bom))\n    implementation(libs.compose.ui)\n    implementation(libs.compose.ui.graphics)\n    implementation(libs.compose.ui.tooling.preview)\n    implementation(libs.compose.material3)\n    implementation(libs.material.icons.extended)\n    implementation(\"androidx.compose.foundation:foundation\")\n    implementation(libs.androidx.material3)\n    implementation(libs.androidx.hilt.common)\n    implementation(libs.androidx.hilt.work)\n    kapt(libs.androidx.hilt.compiler)\n    debugImplementation(libs.compose.ui.tooling)\n\n    // Navigation\n    implementation(libs.navigation.compose)\n\n    // Room\n    implementation(libs.room.runtime)\n    implementation(libs.room.ktx)\n    kapt(libs.room.compiler)\n\n    // Coroutines\n    implementation(libs.coroutines.core)\n\n    // Hilt\n    implementation(libs.hilt.android)\n    kapt(libs.hilt.compiler)\n    implementation(libs.androidx.hilt.navigation.compose)\n\n    implementation(libs.datastore.preferences)\n\n    // For AppWidgets support\n    implementation(\"androidx.glance:glance-appwidget:1.1.1\")\n// For interop APIs with Material 3\n    implementation(\"androidx.glance:glance-material3:1.1.1\")\n// For interop APIs with Material 2\n    implementation(\"androidx.glance:glance-material:1.1.1\")\n\n    implementation(libs.androidx.work.runtime.ktx)\n\n    implementation(libs.apache.poi.ooxml)\n\n}\n\nval appNameForFile = \"AutoLog\"\nval aabTimeFormatter = DateTimeFormatter.ofPattern(\"yyyyMMdd_HHmmss\")\n\nfun sanitizeFileName(s: String): String =\n    s.replace(Regex(\"\"\"[\\\\/:*?\"<>|]\"\"\"), \"_\").replace(\" \", \"_\")\n\ntasks.register(\"renameReleaseAab\") {\n    doLast {\n        // Task의 extensions가 아니라 Project의 android 확장을 가져와야 함\n        val androidExt = project.extensions.findByName(\"android\")\n            ?: error(\"android extension not found. app 모듈(build.gradle.kts)에 있는지 확인하세요.\")\n\n        // defaultConfig 접근(리플렉션으로 안전하게)\n        val defaultConfig = androidExt.javaClass.methods.first { it.name == \"getDefaultConfig\" }.invoke(androidExt)\n        val vName = (defaultConfig.javaClass.methods.first { it.name == \"getVersionName\" }.invoke(defaultConfig) as? String) ?: \"0.0.0\"\n        val vCodeAny = defaultConfig.javaClass.methods.first { it.name == \"getVersionCode\" }.invoke(defaultConfig)\n        val vCode = (vCodeAny as? Number)?.toInt() ?: 0\n\n        val now = LocalDateTime.now().format(aabTimeFormatter)\n\n        val bundleRoot = layout.buildDirectory.dir(\"outputs/bundle\").get().asFile\n        val aabFile = bundleRoot\n            .walkTopDown()\n            .filter { it.isFile && it.extension == \"aab\" && it.path.contains(\"release\", ignoreCase = true) }\n            .maxByOrNull { it.lastModified() }\n            ?: error(\"Release AAB를 찾지 못했습니다: $bundleRoot\")\n\n        val newName = sanitizeFileName(\"${appNameForFile}_${vName}(${vCode})_${now}.aab\")\n        val target = aabFile.parentFile.resolve(newName)\n\n        if (target.exists()) target.delete()\n        if (!aabFile.renameTo(target)) {\n            aabFile.copyTo(target, overwrite = true)\n            aabFile.delete()\n        }\n\n        println(\"AAB renamed: ${target.absolutePath}\")\n    }\n}\n\n// bundleRelease / bundleFreeRelease / bundleProdRelease 등 모든 Release 번들 작업에 붙이기\ntasks.matching { it.name.startsWith(\"bundle\") && it.name.endsWith(\"Release\") }\n    .configureEach { finalizedBy(\"renameReleaseAab\") }
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision 72a776fca265b4560e49e38f7baed586a7c9240c)
++++ b/app/build.gradle.kts	(date 1781781693650)
+@@ -1,6 +1,6 @@
+-import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
+ import java.time.LocalDateTime
+ import java.time.format.DateTimeFormatter
++import java.util.Properties
+ 
+ plugins {
+     alias(libs.plugins.android.application)
+@@ -10,6 +10,13 @@
+     alias(libs.plugins.kotlin.kapt)
+ }
+ 
++val localProperties = Properties().apply {
++    val localPropertiesFile = rootProject.file("local.properties")
++    if (localPropertiesFile.exists()) {
++        load(localPropertiesFile.inputStream())
++    }
++}
++
+ android {
+     namespace = "com.jsworld.android.autolog"
+     compileSdk {
+@@ -26,11 +33,25 @@
+         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+     }
+ 
++    signingConfigs {
++        create("release") {
++            storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE"))
++            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
++            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
++            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
++        }
++    }
+ 
+     buildTypes {
++        debug {
++            applicationIdSuffix = ".debug"
++            versionNameSuffix = "-debug"
++        }
++
+         release {
+             isMinifyEnabled = true
+             isShrinkResources = true
++            signingConfig = signingConfigs.getByName("release")
+ 
+             proguardFiles(
+                 getDefaultProguardFile("proguard-android-optimize.txt"),

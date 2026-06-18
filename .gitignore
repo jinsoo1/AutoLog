@@ -4,21 +4,77 @@
 .gradle/
 build/
 **/build/
+
+# Gradle Wrapper는 Git에 포함
+!gradle/wrapper/
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 
-# APK / AAB
+# =========================
+# APK / AAB / outputs
+# =========================
 *.apk
 *.aab
+*.ap_
+*.aar
 
 # =========================
-# Local config
+# Local config / secrets
 # =========================
 local.properties
+keystore/
+*.jks
+*.keystore
+*.p12
+
+# properties는 기본적으로 무시
 *.properties
 
-# Gradle 필수/공통 설정 파일은 Git에 포함
-!gradle/wrapper/gradle-wrapper.properties
+# 단, 프로젝트 공통 Gradle 설정은 Git에 포함
 !gradle.properties
+!gradle/wrapper/gradle-wrapper.properties
 
+# =========================
+# Android Studio / IntelliJ
+# =========================
+.idea/
+*.iml
+
+# 혹시 .idea 전체를 추적하지 않고 일부만 관리하고 싶지 않다면 위의 .idea/만으로 충분합니다.
+# 아래는 .idea가 이미 일부 노출되는 경우를 위한 추가 안전장치입니다.
+.idea/libraries/
+.idea/shelf/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/caches/
+.idea/deploymentTargetDropDown.xml
+.idea/gradle.xml
+.idea/misc.xml
+
+# Shelved changes
+shelf/
+*.patch
+
+# =========================
+# Kotlin / Android temporary files
+# =========================
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs / crash / heap dump
+# =========================
+*.log
 *.hprof
+hs_err_pid*
+replay_pid*

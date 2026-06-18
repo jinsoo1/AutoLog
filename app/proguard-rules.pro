@@ -5,92 +5,211 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-# proguard-rules.pro (최소 시작점)
+############################################
+# Debugging stack traces
+############################################
 
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Annotation / Kotlin / Reflection metadata
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes InnerClasses,EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations,RuntimeInvisibleParameterAnnotations
+-keepattributes AnnotationDefault
+
 ############################################
 # Hilt / Dagger
 ############################################
-# Hilt가 생성한 컴포넌트/엔트리포인트 관련(대부분 기본으로 되지만, 릴리즈에서 리플렉션 이슈 시 안전장치)
+
+# Hilt/Dagger는 대부분 기본 규칙으로 처리되지만,
+# 릴리즈에서 리플렉션/생성 코드 관련 이슈가 있을 때를 대비한 안전장치
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
 -keep class dagger.** { *; }
 
-# 애노테이션 유지(필요 시)
--keepattributes *Annotation*
-
 ############################################
 # Room
 ############################################
-# Room은 compile-time 생성이라 보통 keep 불필요.
-# 다만, 룸 메타/애노테이션 기반 이슈나 리플렉션 기반 유틸이 섞인 경우 대비(안전장치)
+
+# Room은 compile-time 생성이라 보통 keep 불필요하지만,
+# 릴리즈에서 생성 구현체 관련 이슈를 피하기 위한 안전장치
 -keep class androidx.room.** { *; }
--keep class **_Impl { *; }   # Room이 생성하는 *_Impl(DAO/DB 구현체)
--keep class **_Dao { *; }    # 혹시 생성물 네이밍 케이스 대비(없어도 무방)
+-keep class **_Impl { *; }
+-keep class **_Dao { *; }
 
 ############################################
 # WorkManager
 ############################################
-# Worker는 리플렉션으로 인스턴스 생성될 수 있어 릴리즈에서 종종 깨짐
+
+# Worker는 리플렉션으로 인스턴스 생성될 수 있어 릴리즈에서 깨질 수 있음
 -keep class * extends androidx.work.ListenableWorker { *; }
 -keep class * extends androidx.work.Worker { *; }
 -keep class * extends androidx.work.CoroutineWorker { *; }
 
-# (선택) HiltWorker를 쓰면 이쪽도 도움이 됩니다
+# HiltWorker 사용 대비
 -keep class dagger.hilt.android.internal.managers.** { *; }
 -keep class androidx.hilt.work.** { *; }
 
 ############################################
 # Glance AppWidget
 ############################################
-# Glance 위젯 리시버/서비스/프로바이더가 매니페스트로 로딩되므로 보통 괜찮지만,
-# 릴리즈에서 위젯이 안 뜨는 경우가 있어 안전장치로 유지
+
 -keep class androidx.glance.** { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
 
 ############################################
 # Compose / Navigation
 ############################################
-# Compose/Navigation은 보통 추가 keep 불필요.
-# 하지만 "release에서만 화면 전환/리플렉션 관련 크래시"가 나면 아래를 고려
+
+# Compose/Navigation은 보통 추가 keep 불필요하지만 안전장치
 -keep class androidx.navigation.** { *; }
 
 ############################################
 # DataStore
 ############################################
-# Preferences DataStore는 보통 문제 없음. (Proto DataStore를 쓸 땐 protobuf 규칙 필요)
+
 -keep class androidx.datastore.** { *; }
 
-# Apache POI / XMLBeans optional dependencies for Android release build
+############################################
+# Apache POI / XMLBeans / OOXML - Release R8
+############################################
 
+# Apache POI core
+-keep class org.apache.poi.** { *; }
+-keepnames class org.apache.poi.**
+
+# XMLBeans
+-keep class org.apache.xmlbeans.** { *; }
+-keepnames class org.apache.xmlbeans.**
+
+# OOXML generated schemas
+-keep class org.openxmlformats.schemas.** { *; }
+-keepnames class org.openxmlformats.schemas.**
+
+-keep class com.microsoft.schemas.** { *; }
+-keepnames class com.microsoft.schemas.**
+
+-keep class schemaorg_apache_xmlbeans.** { *; }
+-keepnames class schemaorg_apache_xmlbeans.**
+
+# XML signature / drawing schemas sometimes used by POI internals
+-keep class org.w3.x2000.x09.xmldsig.** { *; }
+-keepnames class org.w3.x2000.x09.xmldsig.**
+
+-keep class org.etsi.uri.x01903.** { *; }
+-keepnames class org.etsi.uri.x01903.**
+
+############################################
+# Apache POI dependencies
+############################################
+
+# Commons libraries used by POI
+-keep class org.apache.commons.** { *; }
+-keepnames class org.apache.commons.**
+
+# Logging libraries that POI may access indirectly/reflection-style
+-keep class org.apache.logging.** { *; }
+-keepnames class org.apache.logging.**
+
+-keep class org.slf4j.** { *; }
+-keepnames class org.slf4j.**
+
+############################################
+# Keep constructors for reflection
+############################################
+
+-keepclassmembers class org.apache.poi.** {
+    public <init>(...);
+}
+
+-keepclassmembers class org.apache.xmlbeans.** {
+    public <init>(...);
+}
+
+-keepclassmembers class org.openxmlformats.schemas.** {
+    public <init>(...);
+}
+
+-keepclassmembers class com.microsoft.schemas.** {
+    public <init>(...);
+}
+
+-keepclassmembers class schemaorg_apache_xmlbeans.** {
+    public <init>(...);
+}
+
+-keepclassmembers class org.apache.commons.** {
+    public <init>(...);
+}
+
+-keepclassmembers class org.apache.logging.** {
+    public <init>(...);
+}
+
+-keepclassmembers class org.slf4j.** {
+    public <init>(...);
+}
+
+############################################
+# Apache POI optional dependencies - dontwarn
+############################################
+
+# XMLBeans optional JavaParser config parser
+-dontwarn com.github.javaparser.**
+
+# XMLBeans optional Maven / Ant tooling
+-dontwarn org.apache.maven.**
+-dontwarn org.apache.tools.ant.**
+-dontwarn com.sun.org.apache.xml.internal.resolver.**
+
+# Optional XML stream / XPath / Saxon
 -dontwarn javax.xml.stream.**
 -dontwarn net.sf.saxon.**
--dontwarn org.apache.batik.**
 
-# Apache POI may reference desktop Java APIs that Android does not provide.
-# Do not use POI APIs that depend on these classes, such as autoSizeColumn().
+# Optional SVG / PDF / Drawing / Desktop rendering
+-dontwarn org.apache.batik.**
+-dontwarn org.apache.pdfbox.**
+-dontwarn de.rototor.pdfbox.**
+-dontwarn org.w3c.dom.svg.**
+-dontwarn org.w3c.dom.events.**
+-dontwarn org.w3c.dom.traversal.**
+
+# Optional XML digital signature / crypto
+-dontwarn javax.xml.crypto.**
+-dontwarn javax.xml.crypto.dsig.**
+-dontwarn javax.xml.crypto.dsig.dom.**
+-dontwarn javax.xml.crypto.dsig.keyinfo.**
+-dontwarn javax.xml.crypto.dsig.spec.**
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.**
+-dontwarn org.apache.xml.security.**
+-dontwarn org.ietf.jgss.**
+
+# Android에 없는 Java desktop APIs
+# autoSizeColumn(), PDF/SVG/PPT 렌더링 같은 기능은 사용하면 안 됨
 -dontwarn java.awt.**
+-dontwarn javax.swing.**
 -dontwarn javax.imageio.**
 -dontwarn javax.print.**
 
-# Optional logging / crypto dependencies sometimes referenced transitively
+# Optional logging / crypto dependencies
 -dontwarn org.apache.logging.log4j.**
 -dontwarn org.slf4j.**
 -dontwarn org.bouncycastle.**
+
+# Office schema optional references
+-dontwarn com.microsoft.schemas.**
+-dontwarn org.openxmlformats.schemas.**
+-dontwarn org.w3.x2000.x09.xmldsig.**
+-dontwarn org.etsi.uri.x01903.**
+
+############################################
+# Apache Commons Compress optional codecs
+############################################
+
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.brotli.dec.**
+-dontwarn org.objectweb.asm.**
+-dontwarn org.tukaani.xz.**
