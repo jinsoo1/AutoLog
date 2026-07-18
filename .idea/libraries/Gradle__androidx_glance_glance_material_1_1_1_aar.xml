@@ -1,9 +1,9 @@
 <component name="libraryTable">
   <library name="Gradle: androidx.glance:glance-material:1.1.1@aar" external-system-id="GRADLE">
     <CLASSES>
-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/e72df3ff81efff628b36d18bb8cd8ec8/transformed/glance-material-1.1.1/AndroidManifest.xml" />
-      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/e72df3ff81efff628b36d18bb8cd8ec8/transformed/glance-material-1.1.1/jars/classes.jar!/" />
-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/e72df3ff81efff628b36d18bb8cd8ec8/transformed/glance-material-1.1.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/8a3432daedc49757073cb3d490e3a3dd/transformed/glance-material-1.1.1/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/8a3432daedc49757073cb3d490e3a3dd/transformed/glance-material-1.1.1/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/8a3432daedc49757073cb3d490e3a3dd/transformed/glance-material-1.1.1/AndroidManifest.xml" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.jsworld.android.autolog.ui.data.room.dao.BackupDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarExportDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarMaintenanceSettingDao
@@ -16,6 +17,7 @@ import com.jsworld.android.autolog.ui.data.room.entity.CarMaintenanceSettingEnti
 import com.jsworld.android.autolog.ui.data.room.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.ui.data.room.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.ui.data.room.entity.MileageHistoryEntity
+import com.jsworld.android.autolog.ui.data.room.repository.BackupRepository.Companion.DATABASE_VERSION
 
 @Database(
     entities = [
@@ -25,7 +27,7 @@ import com.jsworld.android.autolog.ui.data.room.entity.MileageHistoryEntity
         MaintenanceHistoryEntity::class,
         MileageHistoryEntity::class
     ],
-    version = 2,
+    version = DATABASE_VERSION,
     exportSchema = true
 )
 abstract class AutoLogDatabase : RoomDatabase() {
@@ -37,6 +39,8 @@ abstract class AutoLogDatabase : RoomDatabase() {
     abstract fun maintenanceFullDao(): MaintenanceFullDao
     abstract fun mileageHistoryDao(): MileageHistoryDao
     abstract fun carExportDao(): CarExportDao
+
+    abstract fun backupDao(): BackupDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {

@@ -2,6 +2,7 @@ package com.jsworld.android.autolog.ui.data.module
 
 import android.content.Context
 import androidx.room.Room
+import com.jsworld.android.autolog.ui.data.room.dao.BackupDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarExportDao
 import com.jsworld.android.autolog.ui.data.room.dao.CarMaintenanceSettingDao
@@ -63,4 +64,12 @@ object DatabaseModule {
     @Provides
     fun provideCarExportDao(db: AutoLogDatabase): CarExportDao =
         db.carExportDao()
+
+    @Provides
+    @Singleton
+    fun provideBackupDao(
+        database: AutoLogDatabase
+    ): BackupDao {
+        return database.backupDao()
+    }
 }

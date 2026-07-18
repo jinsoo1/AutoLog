@@ -1,9 +1,9 @@
 <component name="libraryTable">
   <library name="Gradle: androidx.datastore:datastore-core-android:1.1.1@aar" external-system-id="GRADLE">
     <CLASSES>
-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/66df6e76b06a1543217c7dc044692a62/transformed/datastore-core-release/AndroidManifest.xml" />
-      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/66df6e76b06a1543217c7dc044692a62/transformed/datastore-core-release/jars/classes.jar!/" />
-      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/66df6e76b06a1543217c7dc044692a62/transformed/datastore-core-release/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/482dc68e0bf78ee1fcca331bac8bf755/transformed/datastore-core-release/AndroidManifest.xml" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.14.5/transforms/482dc68e0bf78ee1fcca331bac8bf755/transformed/datastore-core-release/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/8.14.5/transforms/482dc68e0bf78ee1fcca331bac8bf755/transformed/datastore-core-release/jars/classes.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

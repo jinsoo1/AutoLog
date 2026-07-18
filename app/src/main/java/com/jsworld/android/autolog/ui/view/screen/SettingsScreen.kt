@@ -25,6 +25,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.TableView
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,10 +37,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -47,10 +54,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jsworld.android.autolog.ui.data.item.BackupUiEvent
 import com.jsworld.android.autolog.ui.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.ui.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.ui.view.viewModel.SettingsViewModel
-
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -61,18 +70,41 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
 
-    val showNotReadyToast = remember(context) {
-        {
-            Toast.makeText(
-                context,
-                "준비 중인 기능입니다.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
+    val backupUiState by viewModel.backupUiState
+        .collectAsStateWithLifecycle()
 
     val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
         .collectAsStateWithLifecycle(initialValue = false)
+
+    var showRestoreDialog by remember {
+        mutableStateOf(false)
+    }
+
+    /**
+     * JSON 백업 파일 저장 위치 선택
+     */
+    val backupFileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument(
+                mimeType = "application/json"
+            )
+        ) { uri ->
+            uri ?: return@rememberLauncherForActivityResult
+
+            viewModel.exportBackup(uri)
+        }
+
+    /**
+     * JSON 백업 파일 선택
+     */
+    val restoreFileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            uri ?: return@rememberLauncherForActivityResult
+
+            viewModel.restoreBackup(uri)
+        }
 
     val enableWeeklyNotification: () -> Unit = remember(context) {
         {
@@ -101,22 +133,23 @@ fun SettingsScreen(
         }
     }
 
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted ->
-            if (granted) {
-                enableWeeklyNotification()
-            } else {
-                viewModel.setWeeklyMileageNotificationEnabled(false)
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { granted ->
+                if (granted) {
+                    enableWeeklyNotification()
+                } else {
+                    viewModel.setWeeklyMileageNotificationEnabled(false)
 
-                Toast.makeText(
-                    context,
-                    "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Toast.makeText(
+                        context,
+                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
-        }
-    )
+        )
 
     val onNotificationToggleChange: (Boolean) -> Unit = { checked ->
         if (checked) {
@@ -129,13 +162,64 @@ fun SettingsScreen(
                 if (granted) {
                     enableWeeklyNotification()
                 } else {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    notificationPermissionLauncher.launch(
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
                 }
             } else {
                 enableWeeklyNotification()
             }
         } else {
             disableWeeklyNotification()
+        }
+    }
+
+    /**
+     * 백업 및 복원 완료 이벤트 처리
+     */
+    LaunchedEffect(Unit) {
+        viewModel.backupEvent.collect { event ->
+            when (event) {
+                BackupUiEvent.ExportSuccess -> {
+                    Toast.makeText(
+                        context,
+                        "백업 파일을 저장했습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                is BackupUiEvent.ExportFailure -> {
+                    Toast.makeText(
+                        context,
+                        event.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                BackupUiEvent.RestoreSuccess -> {
+                    Toast.makeText(
+                        context,
+                        "백업 데이터를 복원했습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    // 복원된 차량 정보를 기준으로 알림 작업 재등록
+                    if (notificationEnabled) {
+                        WeeklyMileageWorkScheduler.rescheduleNext(context)
+                    }
+
+                    // 사용하는 위젯 갱신 함수가 있다면 여기에 추가
+                    // CarStatusWidget().updateAll(context)
+                }
+
+                is BackupUiEvent.RestoreFailure -> {
+                    Toast.makeText(
+                        context,
+                        event.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 
@@ -150,7 +234,9 @@ fun SettingsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(
+                        onClick = onBackClick
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "뒤로가기"
@@ -207,25 +293,62 @@ fun SettingsScreen(
 
                 item {
                     SettingsMenuItem(
-                        icon = Icons.Outlined.Backup,
+                        icon = Icons.Outlined.TableView,
                         title = "엑셀 내보내기",
                         subtitle = "차량을 선택하여 정비내역을 엑셀 파일로 저장",
+                        enabled = !backupUiState.isExporting &&
+                                !backupUiState.isRestoring,
                         onClick = onExcelExportClick
                     )
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SettingsSectionTitle("준비 중")
-                }
-
+                /**
+                 * JSON 백업
+                 */
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.Backup,
-                        title = "백업 / 복원",
-                        subtitle = "데이터 백업 기능 예정",
-                        badgeText = "준비중",
-                        onClick = showNotReadyToast
+                        title = if (backupUiState.isExporting) {
+                            "백업 파일 생성 중"
+                        } else {
+                            "백업 파일 만들기"
+                        },
+                        subtitle = if (backupUiState.isExporting) {
+                            "차량과 정비 기록을 저장하고 있습니다."
+                        } else {
+                            "전체 데이터를 JSON 백업 파일로 저장"
+                        },
+                        enabled = !backupUiState.isExporting &&
+                                !backupUiState.isRestoring,
+                        onClick = {
+                            backupFileLauncher.launch(
+                                createBackupFileName()
+                            )
+                        }
+                    )
+                }
+
+                /**
+                 * JSON 복원
+                 */
+                item {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Restore,
+                        title = if (backupUiState.isRestoring) {
+                            "백업 복원 중"
+                        } else {
+                            "백업 파일 복원"
+                        },
+                        subtitle = if (backupUiState.isRestoring) {
+                            "백업 데이터를 적용하고 있습니다."
+                        } else {
+                            "JSON 백업 파일에서 전체 데이터를 복원"
+                        },
+                        enabled = !backupUiState.isRestoring &&
+                                !backupUiState.isExporting,
+                        onClick = {
+                            showRestoreDialog = true
+                        }
                     )
                 }
             }
@@ -234,11 +357,66 @@ fun SettingsScreen(
                 text = "v${viewModel.appVersion}",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 14.dp),
+                    .padding(
+                        end = 16.dp,
+                        bottom = 14.dp
+                    ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+
+    /**
+     * 복원 전 경고 다이얼로그
+     */
+    if (showRestoreDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!backupUiState.isRestoring) {
+                    showRestoreDialog = false
+                }
+            },
+            title = {
+                Text("백업 파일 복원")
+            },
+            text = {
+                Text(
+                    text = "현재 저장된 차량, 정비 기록, 주행거리 기록이 모두 삭제되고 " +
+                            "선택한 백업 파일의 데이터로 교체됩니다.\n\n" +
+                            "복원을 계속하시겠습니까?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !backupUiState.isRestoring,
+                    onClick = {
+                        showRestoreDialog = false
+
+                        restoreFileLauncher.launch(
+                            arrayOf(
+                                "application/json",
+                                "text/json",
+                                "text/plain",
+                                "application/octet-stream"
+                            )
+                        )
+                    }
+                ) {
+                    Text("복원")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !backupUiState.isRestoring,
+                    onClick = {
+                        showRestoreDialog = false
+                    }
+                ) {
+                    Text("취소")
+                }
+            }
+        )
     }
 }
 
@@ -261,10 +439,12 @@ fun SettingsMenuItem(
     title: String,
     subtitle: String? = null,
     badgeText: String? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
@@ -276,17 +456,24 @@ fun SettingsMenuItem(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = if (enabled) 0.7f else 0.35f
+                )
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp),
+                    modifier = Modifier.size(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (enabled) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.5f
+                            )
+                        }
                     )
                 }
             }
@@ -300,15 +487,24 @@ fun SettingsMenuItem(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = 0.5f
+                        )
+                    }
                 )
 
                 if (!subtitle.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = if (enabled) 1f else 0.5f
+                        )
                     )
                 }
             }
@@ -318,11 +514,13 @@ fun SettingsMenuItem(
                 Spacer(modifier = Modifier.width(8.dp))
             }
 
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (enabled) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 
@@ -413,4 +611,15 @@ fun SettingsBadge(text: String) {
             fontWeight = FontWeight.SemiBold
         )
     }
+}
+
+private fun createBackupFileName(): String {
+    val formatter = DateTimeFormatter.ofPattern(
+        "yyyy-MM-dd_HHmmss"
+    )
+
+    val dateTimeText = LocalDateTime.now()
+        .format(formatter)
+
+    return "AutoLog_Backup_$dateTimeText.json"
 }
