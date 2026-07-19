@@ -19,10 +19,13 @@ build/
 *.aar
 
 # =========================
-# Android Studio / IntelliJ
+# Android Studio / IntelliJ (전부 무시 — IDE가 재생성)
 # =========================
 .idea/
 *.iml
+captures/
+.externalNativeBuild/
+.cxx/
 
 # =========================
 # Local config / secrets
@@ -33,43 +36,15 @@ keystore/
 *.keystore
 *.p12
 
-# properties는 기본적으로 무시
+# properties는 기본적으로 무시하되, 공통 Gradle 설정만 포함
 *.properties
-
-# 단, 프로젝트 공통 Gradle 설정은 Git에 포함
 !gradle.properties
 !gradle/wrapper/gradle-wrapper.properties
 
 # =========================
-# Android Studio / IntelliJ
-# =========================
-.idea/
-*.iml
-
-# 혹시 .idea 전체를 추적하지 않고 일부만 관리하고 싶지 않다면 위의 .idea/만으로 충분합니다.
-# 아래는 .idea가 이미 일부 노출되는 경우를 위한 추가 안전장치입니다.
-.idea/libraries/
-.idea/shelf/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/usage.statistics.xml
-.idea/dictionaries/
-.idea/caches/
-.idea/deploymentTargetDropDown.xml
-.idea/gradle.xml
-.idea/misc.xml
-
-# Shelved changes
-shelf/
-*.patch
-
-# =========================
-# Kotlin / Android temporary files
+# Kotlin / temporary
 # =========================
 .kotlin/
-captures/
-.externalNativeBuild/
-.cxx/
 
 # =========================
 # OS files
@@ -84,3 +59,7 @@ Thumbs.db
 *.hprof
 hs_err_pid*
 replay_pid*
+
+# Shelved changes
+shelf/
+*.patch
