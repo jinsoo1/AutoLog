@@ -113,6 +113,8 @@ fun AddMaintenanceScreen(
     var mileageRaw by remember {
         mutableStateOf<Int?>(null)
     }
+    // 사용자가 주행거리를 직접 입력했는지 여부(자동 채움이 사용자 입력을 덮어쓰지 않도록)
+    var mileageTouched by remember { mutableStateOf(false) }
     var placeText by rememberSaveable { mutableStateOf("") }
     var costText by rememberSaveable { mutableStateOf("") }
     var memoText by rememberSaveable { mutableStateOf("") }
@@ -145,14 +147,21 @@ fun AddMaintenanceScreen(
             dateText = suggested.toString()
         }
 
-//        if (lastMileage != null) {
-//            val minMileage = lastMileage + 1
-//            val current = mileageRaw
-//            if (current == null || current <= lastMileage) {
-//                mileageRaw = minMileage
-//                mileageText = minMileage.formatKm()
-//            }
-//        }
+    }
+
+    // 주행거리 기본값 자동 채움: 사용자가 아직 직접 입력하지 않았다면 현재 차량 주행거리로 채운다.
+    LaunchedEffect(currentMileage, selected?.settingId) {
+        if (mileageTouched) return@LaunchedEffect
+        val cm = currentMileage ?: return@LaunchedEffect
+        // 이전 정비 기록보다는 커야 하므로 필요 시 보정
+        val base = if (lastMileage != null && cm <= lastMileage) lastMileage + 1 else cm
+        if (base <= 0) return@LaunchedEffect
+        mileageRaw = base
+        val formatted = base.formatKm()
+        mileageTextFieldValue = TextFieldValue(
+            text = formatted,
+            selection = TextRange(formatted.length)
+        )
     }
 
     // 검증(기존 그대로)
@@ -165,6 +174,12 @@ fun AddMaintenanceScreen(
     val mileageValid = mileageRaw != null &&
             mileageValue!! > 0 &&
                 (lastMileage == null || mileageValue > lastMileage)
+
+    // 자릿수 오타(예: 38,950 → 389,500) 감지용 소프트 경고 (저장은 막지 않음)
+    val mileageSuspiciousHigh = mileageValue != null && mileageValid && (
+            (currentMileage != null && currentMileage > 0 && mileageValue >= currentMileage * 5) ||
+                    mileageValue > 1_000_000
+            )
 
     val canSave = itemValid && dateValid && mileageValid
 
@@ -397,6 +412,7 @@ fun AddMaintenanceScreen(
                     OutlinedTextField(
                         value = mileageTextFieldValue,
                         onValueChange = { input ->
+                            mileageTouched = true
                             val digits = input.text.filter { it.isDigit() }
                             val raw = digits.toIntOrNull()
 
@@ -451,6 +467,15 @@ fun AddMaintenanceScreen(
                                     Text(
                                         text = err,
                                         color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+
+                                if (mileageSuspiciousHigh) {
+                                    Text(
+                                        text = "입력한 주행거리가 현재 값보다 많이 큽니다. 자릿수를 확인해주세요.",
+                                        color = MaterialTheme.colorScheme.tertiary,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold
                                     )
