@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Error
@@ -42,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -72,6 +74,7 @@ fun CarListScreen(
     viewModel: CarListViewModel = hiltViewModel()
 ) {
     val uiCars by viewModel.uiCars.collectAsStateWithLifecycle()
+    val showBackupBanner by viewModel.showBackupBanner.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -92,7 +95,8 @@ fun CarListScreen(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize(),
-                onAdd = onAddCarClick
+                onAdd = onAddCarClick,
+                onRestore = onSettingsClick
             )
         } else {
             Column(
@@ -100,6 +104,12 @@ fun CarListScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
+                if (showBackupBanner) {
+                    BackupReminderBanner(
+                        onBackup = onSettingsClick,
+                        onDismiss = { viewModel.dismissBackupBanner() }
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -384,9 +394,47 @@ private fun Int.formatComma(): String =
     java.text.NumberFormat.getIntegerInstance().format(this)
 
 @Composable
+private fun BackupReminderBanner(
+    onBackup: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 6.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "백업을 권장해요",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = "기기를 바꾸거나 앱을 지우면 기록이 사라져요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            TextButton(onClick = onBackup) { Text("백업") }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "닫기")
+            }
+        }
+    }
+}
+
+@Composable
 fun EmptyCarView(
     modifier: Modifier = Modifier,
-    onAdd: () -> Unit
+    onAdd: () -> Unit,
+    onRestore: () -> Unit
 ) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -398,6 +446,9 @@ fun EmptyCarView(
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("차량 추가")
+            }
+            TextButton(onClick = onRestore) {
+                Text("이전에 쓰던 기록이 있나요? 백업에서 복원")
             }
         }
     }

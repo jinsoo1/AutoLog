@@ -7,6 +7,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,8 +101,41 @@ fun AutoLogNavHost(
             )
         ) { backStackEntry ->
             val isFirst = backStackEntry.arguments?.getBoolean("first") ?: false
+            val context = LocalContext.current
+
+            // 온보딩(첫 차량) 화면에서 백업 파일(SAF)로 복원
+            val restoreLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument()
+            ) { uri: Uri? ->
+                uri ?: return@rememberLauncherForActivityResult
+                viewModel.restoreBackup(uri) { success, message ->
+                    if (success) {
+                        navController.navigate(Routes.CAR_LIST) {
+                            popUpTo("add_car?first=true") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            message ?: "복원에 실패했습니다.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
 
             AddCarScreen(
+                isFirst = isFirst,
+                onRestore = {
+                    restoreLauncher.launch(
+                        arrayOf(
+                            "application/json",
+                            "text/json",
+                            "text/plain",
+                            "application/octet-stream"
+                        )
+                    )
+                },
                 onSave = { car ->
                     viewModel.addCar(car)
 

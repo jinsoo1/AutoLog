@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -64,7 +65,9 @@ import com.jsworld.android.autolog.domain.model.Car
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCarScreen(
-    onSave: (Car) -> Unit
+    onSave: (Car) -> Unit,
+    isFirst: Boolean = false,
+    onRestore: () -> Unit = {}
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var plate by rememberSaveable { mutableStateOf("") }
@@ -122,6 +125,16 @@ fun AddCarScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+
+                    if (isFirst) {
+                        Spacer(Modifier.height(4.dp))
+                        TextButton(
+                            onClick = onRestore,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("이전에 쓰던 기록이 있나요? 백업에서 복원")
+                        }
                     }
                 }
             }

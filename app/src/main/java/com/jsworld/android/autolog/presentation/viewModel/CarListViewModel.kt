@@ -9,6 +9,7 @@ import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.NoticeReadRepository
 import com.jsworld.android.autolog.domain.repository.NoticeRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -30,6 +31,7 @@ class CarListViewModel @Inject constructor(
     private val carMaintenanceRepository: CarMaintenanceRepository,
     private val noticeRepo: NoticeRepository,
     private val readRepo: NoticeReadRepository,
+    private val userPrefsRepository: UserPrefsRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
 
@@ -90,6 +92,31 @@ class CarListViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 백업 리마인더 배너 노출 여부.
+     * 데이터가 있는데 한 번도 백업하지 않았거나, 마지막 백업이 오래됐고,
+     * 배너를 닫은 지도 충분히 지났을 때만 노출.
+     */
+    val showBackupBanner: StateFlow<Boolean> = combine(
+        repository.getAllCars(),
+        userPrefsRepository.observeLastBackupAt(),
+        userPrefsRepository.observeBackupBannerDismissedAt()
+    ) { cars, lastBackup, dismissedAt ->
+        val now = System.currentTimeMillis()
+        val hasData = cars.isNotEmpty()
+        val staleBackup = lastBackup == 0L || (now - lastBackup) > BACKUP_REMIND_INTERVAL_MS
+        val notDismissedRecently = (now - dismissedAt) > BANNER_SNOOZE_MS
+        hasData && staleBackup && notDismissedRecently
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    fun dismissBackupBanner() {
+        viewModelScope.launch {
+            userPrefsRepository.setBackupBannerDismissedAt(System.currentTimeMillis())
+        }
+    }
 
+    companion object {
+        private const val BACKUP_REMIND_INTERVAL_MS = 14L * 24 * 60 * 60 * 1000
+        private const val BANNER_SNOOZE_MS = 7L * 24 * 60 * 60 * 1000
+    }
 }
