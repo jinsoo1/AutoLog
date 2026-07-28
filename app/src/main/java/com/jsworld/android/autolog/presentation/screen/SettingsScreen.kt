@@ -466,14 +466,24 @@ fun SettingsScreen(
                 if (!backupUiState.isRestoring) pendingRestoreUri = null
             },
             title = {
-                Text("백업 파일 복원")
+                Text("⚠️ 백업 복원 주의")
             },
             text = {
-                Text(
-                    text = "현재 저장된 차량, 정비 기록, 주행거리 기록이 모두 삭제되고 " +
-                            "선택한 백업 파일의 데이터로 교체됩니다.\n\n" +
-                            "복원을 계속하시겠습니까?"
-                )
+                Column {
+                    Text(
+                        text = "현재 저장된 모든 데이터(차량 · 정비 기록 · 주행거리 기록)가 " +
+                                "삭제됩니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "선택한 백업 파일의 데이터로 완전히 교체되며, 이 작업은 " +
+                                "되돌릴 수 없습니다.\n\n복원을 계속하시겠습니까?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
@@ -483,7 +493,11 @@ fun SettingsScreen(
                         viewModel.restoreBackup(uri)
                     }
                 ) {
-                    Text("복원")
+                    Text(
+                        text = "삭제하고 복원",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
