@@ -4,10 +4,16 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +32,7 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TableView
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,8 +65,6 @@ import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.presentation.viewModel.SettingsViewModel
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -76,23 +81,10 @@ fun SettingsScreen(
     val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
         .collectAsStateWithLifecycle(initialValue = false)
 
-    var showRestoreDialog by remember {
-        mutableStateOf(false)
-    }
-
-    /**
-     * JSON 백업 파일 저장 위치 선택
-     */
-    val backupFileLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.CreateDocument(
-                mimeType = "application/json"
-            )
-        ) { uri ->
-            uri ?: return@rememberLauncherForActivityResult
-
-            viewModel.exportBackup(uri)
-        }
+    // 복원 대상 선택(목록) 다이얼로그 표시 여부
+    var showRestorePicker by remember { mutableStateOf(false) }
+    // 복원 확인 대상(폴더 목록 또는 SAF에서 선택된 파일)
+    var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
 
     /**
      * JSON 백업 파일 선택
@@ -103,7 +95,7 @@ fun SettingsScreen(
         ) { uri ->
             uri ?: return@rememberLauncherForActivityResult
 
-            viewModel.restoreBackup(uri)
+            pendingRestoreUri = uri
         }
 
     val enableWeeklyNotification: () -> Unit = remember(context) {
@@ -180,12 +172,11 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.backupEvent.collect { event ->
             when (event) {
-                BackupUiEvent.ExportSuccess -> {
-                    Toast.makeText(
-                        context,
-                        "백업 파일을 저장했습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                is BackupUiEvent.ExportSuccess -> {
+                    val msg = event.location
+                        ?.let { "백업을 저장했습니다.\n$it" }
+                        ?: "백업 파일을 저장했습니다."
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
 
                 is BackupUiEvent.ExportFailure -> {
@@ -316,14 +307,12 @@ fun SettingsScreen(
                         subtitle = if (backupUiState.isExporting) {
                             "차량과 정비 기록을 저장하고 있습니다."
                         } else {
-                            "전체 데이터를 JSON 백업 파일로 저장"
+                            "다운로드 > AutoLog 폴더에 저장돼요 (복원이 쉬워요)"
                         },
                         enabled = !backupUiState.isExporting &&
                                 !backupUiState.isRestoring,
                         onClick = {
-                            backupFileLauncher.launch(
-                                createBackupFileName()
-                            )
+                            viewModel.exportToFolder()
                         }
                     )
                 }
@@ -342,12 +331,13 @@ fun SettingsScreen(
                         subtitle = if (backupUiState.isRestoring) {
                             "백업 데이터를 적용하고 있습니다."
                         } else {
-                            "JSON 백업 파일에서 전체 데이터를 복원"
+                            "AutoLog 폴더의 백업 목록에서 복원"
                         },
                         enabled = !backupUiState.isRestoring &&
                                 !backupUiState.isExporting,
                         onClick = {
-                            showRestoreDialog = true
+                            viewModel.refreshBackups()
+                            showRestorePicker = true
                         }
                     )
                 }
@@ -368,14 +358,112 @@ fun SettingsScreen(
     }
 
     /**
-     * 복원 전 경고 다이얼로그
+     * 복원 대상 선택: AutoLog 폴더의 백업 목록 + 다른 파일에서 복원(SAF)
      */
-    if (showRestoreDialog) {
+    if (showRestorePicker) {
+        AlertDialog(
+            onDismissRequest = { showRestorePicker = false },
+            title = { Text("백업에서 복원") },
+            text = {
+                Column {
+                    when {
+                        backupUiState.isLoadingBackups -> {
+                            Text(
+                                text = "불러오는 중…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        backupUiState.backups.isEmpty() -> {
+                            Text(
+                                text = "이 목록에 표시할 백업이 없습니다.\n\n" +
+                                        "앱을 다시 설치했거나 기기를 바꾼 경우, 예전 백업은 " +
+                                        "목록에 나타나지 않을 수 있어요. 하지만 파일은 " +
+                                        "'다운로드 > AutoLog' 폴더에 그대로 남아 있습니다.\n\n" +
+                                        "'다른 파일에서 복원'을 눌러 그 파일을 직접 선택하면 복원할 수 있어요.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        else -> {
+                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = 280.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                backupUiState.backups.forEach { info ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    showRestorePicker = false
+                                                    pendingRestoreUri = info.uri
+                                                }
+                                                .padding(vertical = 12.dp)
+                                        ) {
+                                            Text(
+                                                text = formatBackupDate(info.dateMillis),
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = info.displayName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        IconButton(onClick = { shareBackup(context, info.uri) }) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Share,
+                                                contentDescription = "백업 공유"
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRestorePicker = false
+                        restoreFileLauncher.launch(
+                            arrayOf(
+                                "application/json",
+                                "text/json",
+                                "text/plain",
+                                "application/octet-stream"
+                            )
+                        )
+                    }
+                ) {
+                    Text("다른 파일에서 복원")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestorePicker = false }) {
+                    Text("닫기")
+                }
+            }
+        )
+    }
+
+    /**
+     * 복원 전 경고(전체 교체) 확인 다이얼로그
+     */
+    pendingRestoreUri?.let { uri ->
         AlertDialog(
             onDismissRequest = {
-                if (!backupUiState.isRestoring) {
-                    showRestoreDialog = false
-                }
+                if (!backupUiState.isRestoring) pendingRestoreUri = null
             },
             title = {
                 Text("백업 파일 복원")
@@ -391,16 +479,8 @@ fun SettingsScreen(
                 TextButton(
                     enabled = !backupUiState.isRestoring,
                     onClick = {
-                        showRestoreDialog = false
-
-                        restoreFileLauncher.launch(
-                            arrayOf(
-                                "application/json",
-                                "text/json",
-                                "text/plain",
-                                "application/octet-stream"
-                            )
-                        )
+                        pendingRestoreUri = null
+                        viewModel.restoreBackup(uri)
                     }
                 ) {
                     Text("복원")
@@ -409,9 +489,7 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(
                     enabled = !backupUiState.isRestoring,
-                    onClick = {
-                        showRestoreDialog = false
-                    }
+                    onClick = { pendingRestoreUri = null }
                 ) {
                     Text("취소")
                 }
@@ -613,13 +691,19 @@ fun SettingsBadge(text: String) {
     }
 }
 
-private fun createBackupFileName(): String {
-    val formatter = DateTimeFormatter.ofPattern(
-        "yyyy-MM-dd_HHmmss"
+private fun shareBackup(context: android.content.Context, uri: Uri) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/json"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "백업 공유"))
+}
+
+private fun formatBackupDate(millis: Long): String {
+    val formatter = java.text.SimpleDateFormat(
+        "yyyy.MM.dd HH:mm",
+        java.util.Locale.getDefault()
     )
-
-    val dateTimeText = LocalDateTime.now()
-        .format(formatter)
-
-    return "AutoLog_Backup_$dateTimeText.json"
+    return formatter.format(java.util.Date(millis))
 }

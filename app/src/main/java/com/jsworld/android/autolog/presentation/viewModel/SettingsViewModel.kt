@@ -43,6 +43,9 @@ class SettingsViewModel @Inject constructor(
     val weeklyMileageNotificationEnabled: Flow<Boolean> =
         userPrefsRepository.observeWeeklyMileageNotificationEnabled()
 
+    val lastBackupAt: Flow<Long> =
+        userPrefsRepository.observeLastBackupAt()
+
     private val _backupUiState = MutableStateFlow(
         BackupUiState()
     )
@@ -72,8 +75,9 @@ class SettingsViewModel @Inject constructor(
 
             backupRepository.exportBackup(uri)
                 .onSuccess {
+                    userPrefsRepository.setLastBackupAt(System.currentTimeMillis())
                     _backupEvent.send(
-                        BackupUiEvent.ExportSuccess
+                        BackupUiEvent.ExportSuccess()
                     )
                 }
                 .onFailure { throwable ->
@@ -89,6 +93,48 @@ class SettingsViewModel @Inject constructor(
                 it.copy(isExporting = false)
             }
         }
+    }
+
+    /** Download/AutoLog 폴더에 바로 저장 (위치 선택 불필요) */
+    fun exportToFolder() {
+        if (_backupUiState.value.isExporting) return
+
+        viewModelScope.launch {
+            _backupUiState.update { it.copy(isExporting = true) }
+
+            backupRepository.exportToAutoLogFolder()
+                .onSuccess { path ->
+                    userPrefsRepository.setLastBackupAt(System.currentTimeMillis())
+                    _backupEvent.send(BackupUiEvent.ExportSuccess(path))
+                    refreshBackupsInternal()
+                }
+                .onFailure { throwable ->
+                    _backupEvent.send(
+                        BackupUiEvent.ExportFailure(
+                            message = throwable.message
+                                ?: "백업 파일 생성에 실패했습니다."
+                        )
+                    )
+                }
+
+            _backupUiState.update { it.copy(isExporting = false) }
+        }
+    }
+
+    /** 복원 목록용: Download/AutoLog 폴더의 백업 파일 조회 */
+    fun refreshBackups() {
+        viewModelScope.launch {
+            _backupUiState.update { it.copy(isLoadingBackups = true) }
+            val list = runCatching { backupRepository.listAutoLogBackups() }
+                .getOrDefault(emptyList())
+            _backupUiState.update { it.copy(backups = list, isLoadingBackups = false) }
+        }
+    }
+
+    private suspend fun refreshBackupsInternal() {
+        val list = runCatching { backupRepository.listAutoLogBackups() }
+            .getOrDefault(emptyList())
+        _backupUiState.update { it.copy(backups = list) }
     }
 
     fun restoreBackup(

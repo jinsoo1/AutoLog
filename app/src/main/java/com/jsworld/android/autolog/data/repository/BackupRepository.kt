@@ -1,7 +1,11 @@
 package com.jsworld.android.autolog.data.repository
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.room.withTransaction
 import com.jsworld.android.autolog.data.repository.AutoLogBackup
 import com.jsworld.android.autolog.data.repository.toBackup
@@ -187,10 +191,111 @@ class BackupRepository @Inject constructor(
             }
         }
 
+    /**
+     * Download/AutoLog 폴더에 JSON 백업을 저장한다. (사용자가 저장 위치를 직접 고르지 않아도 됨)
+     * @return 저장된 상대 경로 (예: "Download/AutoLog/AutoLog_Backup_...json")
+     */
+    suspend fun exportToAutoLogFolder(): Result<String> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val backup = createBackup()
+                val jsonText = json.encodeToString(backup)
+
+                val fileName = buildBackupFileName()
+                val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/$BACKUP_DIR_NAME"
+                val resolver = context.contentResolver
+                val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                    put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+
+                val itemUri = resolver.insert(collection, values)
+                    ?: throw IllegalStateException("백업 파일을 만들 수 없습니다.")
+
+                try {
+                    resolver.openOutputStream(itemUri)
+                        ?.bufferedWriter(Charsets.UTF_8)
+                        ?.use { it.write(jsonText) }
+                        ?: throw IllegalStateException("백업 파일을 열 수 없습니다.")
+
+                    values.clear()
+                    values.put(MediaStore.Downloads.IS_PENDING, 0)
+                    resolver.update(itemUri, values, null, null)
+                } catch (t: Throwable) {
+                    // 쓰기 도중 실패하면 보이지 않는 미완성(pending) 파일이 남으므로 정리한다.
+                    runCatching { resolver.delete(itemUri, null, null) }
+                    throw t
+                }
+
+                "$relativePath/$fileName"
+            }
+        }
+
+    /**
+     * Download/AutoLog 폴더에서 이 앱이 만든 백업 파일 목록을 최신순으로 가져온다.
+     */
+    suspend fun listAutoLogBackups(): List<BackupFileInfo> =
+        withContext(Dispatchers.IO) {
+            val resolver = context.contentResolver
+            val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+
+            val projection = arrayOf(
+                MediaStore.Downloads._ID,
+                MediaStore.Downloads.DISPLAY_NAME,
+                MediaStore.Downloads.DATE_MODIFIED
+            )
+            val selection =
+                "${MediaStore.Downloads.RELATIVE_PATH} LIKE ? AND " +
+                        "${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
+            val args = arrayOf("%$BACKUP_DIR_NAME/%", "AutoLog_Backup%")
+            val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
+
+            val result = mutableListOf<BackupFileInfo>()
+            resolver.query(collection, projection, selection, args, sortOrder)?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val uri = ContentUris.withAppendedId(collection, id)
+                    result.add(
+                        BackupFileInfo(
+                            uri = uri,
+                            displayName = cursor.getString(nameCol),
+                            dateMillis = cursor.getLong(dateCol) * 1000L
+                        )
+                    )
+                }
+            }
+            result
+        }
+
+    private fun buildBackupFileName(): String {
+        val formatter = java.text.SimpleDateFormat(
+            "yyyy-MM-dd_HHmmss",
+            java.util.Locale.getDefault()
+        )
+        return "AutoLog_Backup_${formatter.format(java.util.Date())}.json"
+    }
+
     companion object {
         /**
          * 실제 AutoLogDatabase의 현재 버전과 동일하게 맞춘다.
          */
         const val DATABASE_VERSION = 2
+
+        /** Download 하위 백업 폴더 이름 */
+        const val BACKUP_DIR_NAME = "AutoLog"
     }
 }
+
+/** Download/AutoLog 폴더의 백업 파일 정보 */
+data class BackupFileInfo(
+    val uri: Uri,
+    val displayName: String,
+    val dateMillis: Long
+)

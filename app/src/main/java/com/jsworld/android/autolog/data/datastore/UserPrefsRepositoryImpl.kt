@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -42,5 +43,27 @@ class UserPrefsRepositoryImpl @Inject constructor(
 
     override suspend fun setWeeklyMileageNotificationEnabled(enabled: Boolean) {
         dataStore.edit { it[weeklyMileageNotificationEnabledKey] = enabled }
+    }
+
+
+    /**
+     * 백업 리마인더용 시각 기록
+     */
+    private val lastBackupAtKey = longPreferencesKey("last_backup_at")
+
+    override fun observeLastBackupAt(): Flow<Long> =
+        dataStore.data.map { it[lastBackupAtKey] ?: 0L }
+
+    override suspend fun setLastBackupAt(millis: Long) {
+        dataStore.edit { it[lastBackupAtKey] = millis }
+    }
+
+    private val backupBannerDismissedAtKey = longPreferencesKey("backup_banner_dismissed_at")
+
+    override fun observeBackupBannerDismissedAt(): Flow<Long> =
+        dataStore.data.map { it[backupBannerDismissedAtKey] ?: 0L }
+
+    override suspend fun setBackupBannerDismissedAt(millis: Long) {
+        dataStore.edit { it[backupBannerDismissedAtKey] = millis }
     }
 }
