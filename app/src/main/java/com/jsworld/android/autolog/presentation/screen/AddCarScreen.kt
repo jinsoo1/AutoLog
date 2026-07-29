@@ -1,12 +1,11 @@
 package com.jsworld.android.autolog.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,11 +17,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
@@ -31,20 +29,18 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Button
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,12 +50,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.domain.model.Car
+import java.text.NumberFormat
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +65,17 @@ import com.jsworld.android.autolog.domain.model.Car
 fun AddCarScreen(
     onSave: (Car) -> Unit,
     isFirst: Boolean = false,
-    onRestore: () -> Unit = {}
+    onRestore: () -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var plate by rememberSaveable { mutableStateOf("") }
     var year by rememberSaveable { mutableStateOf("") }
+    // 주행거리는 숫자만 보관하고, 표시용 TextFieldValue 로 콤마 포맷을 유지한다
     var mileage by rememberSaveable { mutableStateOf("") }
+    var mileageField by remember {
+        mutableStateOf(TextFieldValue(mileage.toIntOrNull()?.let { it.formatCommaLocal() } ?: ""))
+    }
     var fuelType by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
 
@@ -81,7 +84,18 @@ fun AddCarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("차량 등록") }
+                title = { Text(if (isFirst) "첫 차량 등록" else "차량 등록") },
+                navigationIcon = {
+                    // 온보딩(첫 실행)에서는 돌아갈 화면이 없으므로 숨긴다
+                    if (!isFirst) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "뒤로가기"
+                            )
+                        }
+                    }
+                }
             )
         },
         bottomBar = {
@@ -110,8 +124,7 @@ fun AddCarScreen(
                         enabled = isValid,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
+                            .height(56.dp)
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -150,12 +163,11 @@ fun AddCarScreen(
         ) {
 
             item {
-                // 안내 카드
+                // 안내 카드 (온보딩/일반 추가 구분)
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Row(
                         Modifier
@@ -176,9 +188,15 @@ fun AddCarScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("차량 정보를 입력해주세요", fontWeight = FontWeight.Bold)
                             Text(
-                                "등록 후 정비 주기와 알림을 설정할 수 있어요.",
+                                if (isFirst) "첫 차량을 등록해볼까요?" else "차량 정보를 입력해주세요",
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                if (isFirst)
+                                    "등록하면 정비 주기를 계산해 알려드려요. 이름과 번호판만 있으면 시작할 수 있어요."
+                                else
+                                    "등록 후 정비 주기와 알림을 설정할 수 있어요.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -194,6 +212,7 @@ fun AddCarScreen(
                         label = "차량 이름 *",
                         value = name,
                         onValueChange = { name = it },
+                        placeholder = "예: 그랜저",
                         leadingIcon = Icons.Default.Badge
                     )
 
@@ -201,6 +220,7 @@ fun AddCarScreen(
                         label = "번호판 *",
                         value = plate,
                         onValueChange = { plate = it },
+                        placeholder = "예: 12가 3456",
                         leadingIcon = Icons.Default.ConfirmationNumber
                     )
 
@@ -217,18 +237,35 @@ fun AddCarScreen(
 
             item {
                 // 주행/연료 섹션
-                SectionCard(title = "주행/연료") {
-                    CarTextField2(
-                        label = "현재 주행거리",
-                        value = mileage,
-                        onValueChange = { mileage = it.filter(Char::isDigit) },
-                        keyboardType = KeyboardType.Number,
-                        placeholder = "예: 37900",
-                        leadingIcon = Icons.Default.Route,
-                        trailingText = "km"
+                SectionCard(title = "주행 · 연료") {
+                    OutlinedTextField(
+                        value = mileageField,
+                        onValueChange = { input ->
+                            val digits = input.text.filter { it.isDigit() }
+                            mileage = digits
+                            val formatted = digits.toIntOrNull()?.formatCommaLocal() ?: ""
+                            mileageField = TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
+                        },
+                        label = { Text("현재 주행거리") },
+                        placeholder = { Text("예: 37,900") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
+                        trailingIcon = { Text("km", style = MaterialTheme.typography.labelMedium) },
+                        supportingText = {
+                            Text(
+                                "정비 시기 계산에 사용돼요. 나중에 언제든 수정할 수 있어요.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
-                    FuelTypeDropdown2(
+                    FuelTypeChips(
                         selected = fuelType,
                         onSelected = { fuelType = it }
                     )
@@ -263,8 +300,8 @@ private fun SectionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Column(
             Modifier
@@ -298,7 +335,6 @@ private fun CarTextField2(
         singleLine = singleLine,
         minLines = minLines,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
         leadingIcon = {
             if (leadingIcon != null) {
@@ -313,47 +349,47 @@ private fun CarTextField2(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 연료 타입 선택 칩.
+ * 드롭다운 대신 모든 선택지를 한눈에 보여주고 한 번의 탭으로 고른다.
+ * 선택된 칩을 다시 누르면 해제된다(선택 항목이 아니므로).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FuelTypeDropdown2(
+internal fun FuelTypeChips(
     selected: String,
     onSelected: (String) -> Unit
 ) {
     val fuelTypes = listOf("가솔린", "디젤", "LPG", "하이브리드", "전기", "수소", "기타")
-    var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        OutlinedTextField(
-            value = selected,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("연료 타입") },
-            placeholder = { Text("선택") },
-            leadingIcon = { Icon(Icons.Default.LocalGasStation, contentDescription = null) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            shape = RoundedCornerShape(16.dp)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.LocalGasStation,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Text(
+                "연료 타입",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             fuelTypes.forEach { type ->
-                DropdownMenuItem(
-                    text = { Text(type) },
-                    onClick = {
-                        onSelected(type)
-                        expanded = false
-                    }
+                FilterChip(
+                    selected = selected == type,
+                    onClick = { onSelected(if (selected == type) "" else type) },
+                    label = { Text(type) }
                 )
             }
         }
     }
 }
 
+private fun Int.formatCommaLocal(): String =
+    NumberFormat.getIntegerInstance().format(this)

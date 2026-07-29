@@ -27,20 +27,15 @@ import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,9 +56,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.presentation.viewModel.EditCarViewModel
 import java.text.NumberFormat
@@ -110,7 +109,11 @@ fun EditCarScreen(
     var name by rememberSaveable(car!!.id) { mutableStateOf(car!!.name) }
     var plate by rememberSaveable(car!!.id) { mutableStateOf(car!!.plate) }
     var year by rememberSaveable(car!!.id) { mutableStateOf(car!!.year ?: "") }
+    // 주행거리: 숫자만 보관하고, 표시용 TextFieldValue 로 콤마 포맷 유지(커서 점프 방지)
     var mileageText by rememberSaveable(car!!.id) { mutableStateOf(car!!.mileage.toString()) }
+    var mileageField by remember(car!!.id) {
+        mutableStateOf(TextFieldValue(car!!.mileage.formatKm()))
+    }
     var fuelType by rememberSaveable(car!!.id) { mutableStateOf(car!!.fuelType ?: "") }
     var notes by rememberSaveable(car!!.id) { mutableStateOf(car!!.notes ?: "") }
     var isPrimary by rememberSaveable(car!!.id) { mutableStateOf(car!!.isPrimary) }
@@ -214,14 +217,14 @@ fun EditCarScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            shape = MaterialTheme.shapes.large
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DirectionsCar,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp)
+                                tint = Color.White,
+                                modifier = Modifier.padding(9.dp)
                             )
                         }
 
@@ -241,11 +244,18 @@ fun EditCarScreen(
                         }
 
                         if (isPrimary) {
-                            AssistChip(
-                                onClick = { },
-                                enabled = false,
-                                label = { Text("대표") }
-                            )
+                            Surface(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Text(
+                                    "대표",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
@@ -256,8 +266,8 @@ fun EditCarScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(
                         modifier = Modifier
@@ -305,23 +315,22 @@ fun EditCarScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlinedTextField(
-                                value = year,
-                                onValueChange = { input -> year = input.filter(Char::isDigit).take(4) },
-                                label = { Text("연식") },
-                                leadingIcon = { Icon(Icons.Default.DateRange, null) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(0.8f)
-                            )
+                        OutlinedTextField(
+                            value = year,
+                            onValueChange = { input -> year = input.filter(Char::isDigit).take(4) },
+                            label = { Text("연식") },
+                            placeholder = { Text("예: 2021") },
+                            leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                            FuelTypeDropdown(
-                                fuelType = fuelType,
-                                onFuelTypeChange = { fuelType = it },
-                                modifier = Modifier.weight(1.2f)
-                            )
-                        }
+                        // 차량 추가 화면과 동일한 연료 선택 칩(한눈에 보고 한 번에 선택)
+                        FuelTypeChips(
+                            selected = fuelType,
+                            onSelected = { fuelType = it }
+                        )
 
                         Row(
                             Modifier.fillMaxWidth(),
@@ -346,8 +355,8 @@ fun EditCarScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(
                         modifier = Modifier
@@ -358,8 +367,16 @@ fun EditCarScreen(
                         SectionHeader(title = "주행 / 메모", icon = Icons.Default.Route)
 
                         OutlinedTextField(
-                            value = mileageText,
-                            onValueChange = { mileageText = it.filter(Char::isDigit) },
+                            value = mileageField,
+                            onValueChange = { input ->
+                                val digits = input.text.filter(Char::isDigit)
+                                mileageText = digits
+                                val formatted = digits.toIntOrNull()?.formatKm() ?: ""
+                                mileageField = TextFieldValue(
+                                    text = formatted,
+                                    selection = TextRange(formatted.length)
+                                )
+                            },
                             label = { Text("총 주행거리(km) *") },
                             leadingIcon = { Icon(Icons.Default.Route, null) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -409,9 +426,21 @@ fun EditCarScreen(
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("차량 삭제", fontWeight = FontWeight.Bold) },
+                title = { Text("⚠️ 차량 삭제", fontWeight = FontWeight.Bold) },
                 text = {
-                    Text("이 차량을 삭제할까요?\n삭제하면 관련 정비 설정/내역도 함께 제거됩니다.")
+                    Column {
+                        Text(
+                            "이 차량의 정비 설정·정비 내역·주행거리 기록이 모두 삭제됩니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
@@ -419,14 +448,18 @@ fun EditCarScreen(
                     }
                 },
                 confirmButton = {
-                    Button(
+                    TextButton(
                         onClick = {
                             showDeleteDialog = false
                             // 실제 삭제 + 리스트로(스택 정리)
                             viewModel.deleteCar(car!!, onDone = onDeletedGoToList)
                         }
                     ) {
-                        Text("삭제")
+                        Text(
+                            "삭제",
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             )
@@ -459,60 +492,6 @@ private fun SectionHeader(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FuelTypeDropdown(
-    fuelType: String,
-    onFuelTypeChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val options = listOf("가솔린", "디젤", "LPG", "하이브리드", "전기", "수소", "기타")
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = modifier
-    ) {
-        OutlinedTextField(
-            value = fuelType,
-            onValueChange = {}, // 직접 입력 불가
-            readOnly = true,
-            singleLine = true,
-            label = { Text("연료") },
-            leadingIcon = { Icon(Icons.Default.LocalGasStation, null) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { opt ->
-                DropdownMenuItem(
-                    text = { Text(opt) },
-                    onClick = {
-                        onFuelTypeChange(opt)
-                        expanded = false
-                    }
-                )
-            }
-
-            // 선택 해제(빈 값)
-            DropdownMenuItem(
-                text = { Text("선택 안함") },
-                onClick = {
-                    onFuelTypeChange("")
-                    expanded = false
-                }
-            )
-        }
     }
 }
 
