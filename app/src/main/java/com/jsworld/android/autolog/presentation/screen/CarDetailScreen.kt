@@ -10,6 +10,12 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +23,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -51,7 +57,6 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -86,7 +91,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -95,7 +99,6 @@ import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
-import com.jsworld.android.autolog.presentation.theme.Notice
 import com.jsworld.android.autolog.presentation.theme.StatusNormal
 import com.jsworld.android.autolog.presentation.theme.StatusOverdue
 import com.jsworld.android.autolog.presentation.theme.StatusSoon
@@ -331,10 +334,11 @@ fun CarHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showMileageDialog = true },
-                shape = RectangleShape,
-                tonalElevation = 0.dp
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.medium
             ) {
                 Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
@@ -370,7 +374,10 @@ fun CarHeader(
             }
 
 
-            if (hasNotes) {
+            // 연료/연식/메모 중 하나라도 있으면 상세 토글 노출
+            // (기존에는 메모가 없으면 연료·연식도 볼 수 없었다)
+            val hasDetail = hasNotes || !car.fuelType.isNullOrBlank() || !car.year.isNullOrBlank()
+            if (hasDetail) {
                 // 상세 토글 (연료/연식 + 메모를 한 번에)
                 Row(
                     modifier = Modifier
@@ -466,8 +473,12 @@ private fun MileageQuickEditDialog(
     onDismiss: () -> Unit,
     onSave: (Int) -> Unit
 ) {
-    var text by rememberSaveable(currentMileage) { mutableStateOf(currentMileage.toString()) }
-    val parsed = text.toIntOrNull()
+    // 숫자만 보관하고, 표시용 TextFieldValue 로 콤마 포맷을 유지한다(커서 점프 방지)
+    var digits by rememberSaveable(currentMileage) { mutableStateOf(currentMileage.toString()) }
+    var field by remember(currentMileage) {
+        mutableStateOf(TextFieldValue(currentMileage.formatKm()))
+    }
+    val parsed = digits.toIntOrNull()
 
     val isBelowMin = minAllowedMileage != null && parsed != null && parsed < minAllowedMileage
     val canSave = parsed != null && parsed >= 0 && !isBelowMin
@@ -486,14 +497,23 @@ private fun MileageQuickEditDialog(
                 )
 
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it.filter(Char::isDigit) },
+                    value = field,
+                    onValueChange = { input ->
+                        val d = input.text.filter(Char::isDigit)
+                        digits = d
+                        val formatted = d.toIntOrNull()?.formatKm() ?: ""
+                        field = TextFieldValue(
+                            text = formatted,
+                            selection = TextRange(formatted.length)
+                        )
+                    },
                     label = { Text("새 주행거리(km)") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = isBelowMin,
                     supportingText = {
                         when {
-                            text.isBlank() -> Text("숫자만 입력해 주세요.")
+                            digits.isBlank() -> Text("숫자만 입력해 주세요.")
                             parsed == null -> Text("올바른 숫자를 입력해 주세요.")
                             isBelowMin -> Text(
                                 "가장 최근 정비 기록(${minText} km)보다 낮게 설정할 수 없어요.",
@@ -537,13 +557,11 @@ fun MaintenanceStatusCard(item: MaintenanceUiModel) {
         MaintenanceStatus.OVERDUE -> StatusOverdue
     }
 
-    val container = statusColor.copy(alpha = 0.14f) // 배경 틴트(디자인 유지)
-    val border = statusColor
+    val container = statusColor.copy(alpha = 0.10f) // 배경 틴트(디자인 유지)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = container),
-        border = BorderStroke(1.dp, border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
@@ -553,8 +571,8 @@ fun MaintenanceStatusCard(item: MaintenanceUiModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = border.copy(alpha = 0.12f),
-                shape = MaterialTheme.shapes.large
+                color = statusColor,
+                shape = CircleShape
             ) {
                 Icon(
                     imageVector = when (item.status) {
@@ -563,8 +581,10 @@ fun MaintenanceStatusCard(item: MaintenanceUiModel) {
                         MaintenanceStatus.OVERDUE -> Icons.Default.Error
                     },
                     contentDescription = null,
-                    tint = border,
-                    modifier = Modifier.padding(8.dp)
+                    tint = Color.White,
+                    modifier = Modifier
+                        .padding(5.dp)
+                        .size(16.dp)
                 )
             }
 
@@ -590,15 +610,18 @@ fun MaintenanceStatusCard(item: MaintenanceUiModel) {
                 MaintenanceStatus.OVERDUE -> "필요"
             }
 
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(chipText) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                    labelColor = MaterialTheme.colorScheme.onSurface
+            Surface(
+                color = statusColor,
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text(
+                    chipText,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
-            )
+            }
         }
     }
 }
@@ -651,28 +674,30 @@ fun MaintenanceStatusHeader(
             )
         }
 
+        // 상태 배지: 위험이 있으면 솔리드, 정상은 틴트 (홈 카드와 동일 언어)
+        Surface(
+            color = if (isDanger) statusColor else container,
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text(
+                label,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isDanger) Color.White else statusColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
         // GoodMaintenanceCard 상태면 버튼 자체를 숨김
         if (canToggle) {
             IconButton(onClick = onToggle) {
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
-                    contentDescription = null,
+                    contentDescription = if (expanded) "접기" else "펼치기",
                     modifier = Modifier.rotate(rotation)
                 )
             }
         }
-
-        AssistChip(
-            onClick = {},          // 클릭 안 쓰더라도 넣어야 함
-            enabled = false,       // 계속 비활성로 둘 거면
-            label = { Text(label) },
-            colors = AssistChipDefaults.assistChipColors(
-                containerColor = container,
-                labelColor = statusColor,
-                disabledContainerColor = container,
-                disabledLabelColor = statusColor
-            )
-        )
     }
 }
 
@@ -680,21 +705,26 @@ fun MaintenanceStatusHeader(
 fun GoodMaintenanceCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        elevation = CardDefaults.cardElevation(1.dp)
+        colors = CardDefaults.cardColors(containerColor = StatusNormal.copy(alpha = 0.10f)),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(12.dp))
+            Surface(color = StatusNormal, shape = CircleShape) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .padding(5.dp)
+                        .size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(10.dp))
 
             Column(Modifier.weight(1f)) {
                 Text("차량 관리가 잘 되고 있어요", fontWeight = FontWeight.Bold)
@@ -705,12 +735,6 @@ fun GoodMaintenanceCard() {
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text("정상") }
-            )
         }
     }
 }
@@ -790,14 +814,14 @@ fun MaintenanceSettingsHeader(
                 Text("항목")
             }
         }
-        Spacer(Modifier.height(5.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
-            "  ※ 정비내역이 없는 항목은 정렬 되지 않습니다.",
-            color = Notice,
-            style = MaterialTheme.typography.bodySmall
+            "정비 내역이 없는 항목은 정렬되지 않아요.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall
         )
         Spacer(Modifier.height(10.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
     }
 }
 
@@ -888,14 +912,9 @@ fun MaintenanceSettingItem(
         else -> StatusNormal
     }
 
-    val statusContainer = statusColor.copy(alpha = 0.16f)
-    val statusContent = statusColor
+    val statusContainer = statusColor.copy(alpha = 0.14f)
     val accent = statusColor
-
-    val stripColor: Color? = when {
-        isOverdue || isDue -> statusColor
-        else -> null
-    }
+    val isDanger = isOverdue || isDue
 
     // --------------------------
     // 표시 텍스트
@@ -954,32 +973,14 @@ fun MaintenanceSettingItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(1.dp)
+        elevation = CardDefaults.cardElevation(1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
     ) {
-        Row(Modifier.fillMaxWidth()) {
-
-            if (stripColor != null) {
-                Box(
-                    modifier = Modifier
-                        .width(6.dp)
-                        .fillMaxHeight()
-                        .padding(vertical = 12.dp)
-                ) {
-                    Surface(
-                        color = stripColor,
-                        shape = MaterialTheme.shapes.large,
-                        modifier = Modifier.fillMaxSize()
-                    ) {}
-                }
-            } else {
-                Spacer(Modifier.width(6.dp))
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(16.dp)
-            ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -998,19 +999,23 @@ fun MaintenanceSettingItem(
                         )
                     }
 
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(statusLabel) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = statusContainer,
-                            labelColor = statusContent
+                    // 상태 배지: 위험(초과/도래)은 솔리드, 정상은 틴트
+                    Surface(
+                        color = if (isDanger) statusColor else statusContainer,
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Text(
+                            statusLabel,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isDanger) Color.White else statusColor,
+                            fontWeight = FontWeight.Bold
                         )
-                    )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 Spacer(Modifier.height(12.dp))
 
                 InfoLine(
@@ -1019,15 +1024,17 @@ fun MaintenanceSettingItem(
                     value = lastInfoValue
                 )
 
-                Spacer(Modifier.height(8.dp))
-
-                InfoLine(
-                    icon = Icons.Default.Route,
-                    title = "잔여",
-                    value = "$remainKmText / $remainDayText",
-                    valueColor = accent,
-                    boldValue = isOverdue || isDue
-                )
+                // 진행바가 하나도 없을 때만 텍스트로 잔여 표시(진행바와 중복 방지)
+                if (kmProgress == null && dayProgress == null) {
+                    Spacer(Modifier.height(8.dp))
+                    InfoLine(
+                        icon = Icons.Default.Route,
+                        title = "잔여",
+                        value = "$remainKmText / $remainDayText",
+                        valueColor = accent,
+                        boldValue = isDanger
+                    )
+                }
 
                 // ProgressBar(거리/기간) 추가
                 if (kmProgress != null) {
@@ -1059,7 +1066,6 @@ fun MaintenanceSettingItem(
                         valueColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
         }
     }
 }
@@ -1077,17 +1083,12 @@ private fun InfoLine(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = MaterialTheme.shapes.large
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
 
         Spacer(Modifier.width(10.dp))
 
@@ -1135,6 +1136,7 @@ private fun ProgressLine(
             progress = { progress },
             color = color,
             trackColor = color.copy(alpha = 0.18f),
+            strokeCap = StrokeCap.Round,
             modifier = Modifier.fillMaxWidth()
         )
     }
