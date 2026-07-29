@@ -40,8 +40,6 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Upgrade
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.presentation.state.EditSettingUiState
 import com.jsworld.android.autolog.presentation.viewModel.EditMaintenanceSettingViewModel
 import java.text.NumberFormat
@@ -198,7 +197,8 @@ fun EditMaintenanceSettingScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
+                    elevation = CardDefaults.cardElevation(1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(16.dp)
@@ -236,21 +236,24 @@ fun EditMaintenanceSettingScreen(
                                 )
                             }
 
-                            AssistChip(
-                                onClick = { },
-                                enabled = false,
-                                label = { Text(if (isUsingDefault) "기본" else "사용자 설정") },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (isUsingDefault)
-                                        MaterialTheme.colorScheme.secondaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.tertiaryContainer,
-                                    labelColor = if (isUsingDefault)
+                            Surface(
+                                color = if (isUsingDefault)
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                else
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Text(
+                                    if (isUsingDefault) "기본" else "사용자 설정",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isUsingDefault)
                                         MaterialTheme.colorScheme.onSecondaryContainer
                                     else
-                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                        MaterialTheme.colorScheme.onTertiaryContainer,
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                            )
+                            }
                         }
 
                         // 마지막 정비 내역(접힘/펼침)
@@ -363,8 +366,8 @@ fun EditMaintenanceSettingScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(Modifier.padding(14.dp)) {
                         Text("기본 주기", fontWeight = FontWeight.SemiBold)
@@ -397,8 +400,8 @@ fun EditMaintenanceSettingScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -409,6 +412,7 @@ fun EditMaintenanceSettingScreen(
                             leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                             placeholder = { Text(ui.defaultKm?.toString() ?: "") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = ThousandsSeparatorTransformation,
                             supportingText = {
                                 Text(
                                     text = if (kmText.isBlank()) "비워두면 기본값($defKmText) 사용"
@@ -496,8 +500,8 @@ private fun LastMaintenanceSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        elevation = CardDefaults.cardElevation(1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
     ) {
         Column(Modifier.padding(14.dp)) {
 

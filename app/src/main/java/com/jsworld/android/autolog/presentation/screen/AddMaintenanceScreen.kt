@@ -33,6 +33,9 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Upgrade
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -78,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.domain.model.SettingOption
 import com.jsworld.android.autolog.presentation.viewModel.AddMaintenanceViewModel
 import com.jsworld.android.autolog.presentation.viewModel.PendingMaintenanceSave
@@ -271,25 +275,52 @@ fun AddMaintenanceScreen(
             // 상단 안내 카드(가독성)
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    ),
                     elevation = CardDefaults.cardElevation(0.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text("입력 규칙", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "정비 날짜/주행거리는 이전 정비 기록보다 반드시 커야 해요.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .padding(5.dp)
+                                    .size(16.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("입력 규칙", fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "정비 날짜와 주행거리는 이전 정비 기록보다 커야 해요.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
             // 필수 입력 섹션
             item {
-                SectionHeader(title = "필수 입력", subtitle = "정비 항목 · 날짜 · 주행거리")
+                SectionHeader(
+                    title = "필수 입력",
+                    subtitle = "정비 항목 · 날짜 · 주행거리",
+                    icon = Icons.Default.Build
+                )
             }
 
             item {
@@ -489,7 +520,11 @@ fun AddMaintenanceScreen(
 
             // 선택 입력 섹션
             item {
-                SectionHeader(title = "선택 입력", subtitle = "장소 · 비용 · 메모")
+                SectionHeader(
+                    title = "선택 입력",
+                    subtitle = "장소 · 비용 · 메모",
+                    icon = Icons.AutoMirrored.Filled.Notes
+                )
             }
 
             item {
@@ -509,7 +544,9 @@ fun AddMaintenanceScreen(
                         onValueChange = { costText = it.filter { ch -> ch.isDigit() } },
                         label = { Text("비용") },
                         leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
+                        trailingIcon = { Text("원", style = MaterialTheme.typography.labelMedium) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = ThousandsSeparatorTransformation,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -530,7 +567,7 @@ fun AddMaintenanceScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Row(
@@ -593,29 +630,43 @@ private fun FormCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(1.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp),
             content = content
         )
     }
 }
 
+/**
+ * 차량 상세화면의 섹션 헤더와 동일한 형태(아이콘 + 제목 + 보조설명 + 구분선).
+ */
 @Composable
 private fun SectionHeader(
     title: String,
-    subtitle: String
+    subtitle: String,
+    icon: ImageVector
 ) {
     Column(Modifier.fillMaxWidth()) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(6.dp))
         Text(
             subtitle,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.height(10.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
     }
 }
 
@@ -820,8 +871,7 @@ private fun MileageUpdateDialog(
                 // 3칸 요약 카드
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MileageRow(
@@ -850,8 +900,8 @@ private fun MileageUpdateDialog(
                 // “다음부터 자동 업데이트” 체크박스(설정 저장)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(0.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Row(
                         modifier = Modifier

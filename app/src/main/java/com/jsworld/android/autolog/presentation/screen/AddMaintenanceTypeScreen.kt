@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -35,7 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.presentation.viewModel.AddMaintenanceTypeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,8 +130,8 @@ fun AddMaintenanceTypeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                elevation = CardDefaults.cardElevation(0.dp)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                elevation = CardDefaults.cardElevation(1.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -151,6 +154,8 @@ fun AddMaintenanceTypeScreen(
                             value = defaultKmText,
                             onValueChange = { defaultKmText = it.filter(Char::isDigit) },
                             label = { Text("기본 km") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = ThousandsSeparatorTransformation,
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -158,6 +163,7 @@ fun AddMaintenanceTypeScreen(
                             value = defaultMonthsText,
                             onValueChange = { defaultMonthsText = it.filter(Char::isDigit) },
                             label = { Text("기본 개월") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -184,6 +190,8 @@ fun AddMaintenanceTypeScreen(
                                 value = carKmText,
                                 onValueChange = { carKmText = it.filter(Char::isDigit) },
                                 label = { Text("차량 km") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                visualTransformation = ThousandsSeparatorTransformation,
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
@@ -191,6 +199,7 @@ fun AddMaintenanceTypeScreen(
                                 value = carMonthsText,
                                 onValueChange = { carMonthsText = it.filter(Char::isDigit) },
                                 label = { Text("차량 개월") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )

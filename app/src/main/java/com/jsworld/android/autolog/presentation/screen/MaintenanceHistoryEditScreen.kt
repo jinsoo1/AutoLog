@@ -62,8 +62,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.presentation.viewModel.MaintenanceHistoryEditViewModel
 import java.text.NumberFormat
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,8 +86,25 @@ fun MaintenanceHistoryEditScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
 
+    // 정비 날짜 달력 선택
+    var showDatePicker by remember { mutableStateOf(false) }
+
     BackHandler(enabled = ui.showUpdateCarDialog) {
         viewModel.dismissUpdateCarDialog()
+    }
+
+    if (showDatePicker) {
+        HistoryDatePickerDialog(
+            initialDate = ui.date.toLocalDateOrNull(),
+            // 이전/다음 내역 사이(경계 제외)만 선택 가능. 다음 내역이 없으면 오늘까지.
+            minDate = ui.prevDate?.plusDays(1),
+            maxDate = ui.nextDate?.minusDays(1) ?: LocalDate.now(),
+            onDismiss = { showDatePicker = false },
+            onSelected = { picked ->
+                viewModel.onDateChange(picked.toString())
+                showDatePicker = false
+            }
+        )
     }
 
     LaunchedEffect(historyId) {
@@ -230,7 +259,9 @@ fun MaintenanceHistoryEditScreen(
             // 입력 폼 카드
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(1.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -248,20 +279,30 @@ fun MaintenanceHistoryEditScreen(
                         label = { Text("정비 날짜") },
                         placeholder = { Text("yyyy-MM-dd") },
                         leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+                        // 직접 입력도 가능하지만, 달력으로 고르는 편이 빠르고 실수도 없다
+                        trailingIcon = {
+                            IconButton(onClick = { showDatePicker = true }) {
+                                Icon(
+                                    Icons.Default.CalendarMonth,
+                                    contentDescription = "날짜 선택"
+                                )
+                            }
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = ui.mileage,
-                        onValueChange = viewModel::onMileageChange,
+                        onValueChange = { viewModel.onMileageChange(it.filter(Char::isDigit)) },
                         label = { Text("정비 주행거리") },
-                        placeholder = { Text("예: 37900") },
+                        placeholder = { Text("예: 37,900") },
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                         trailingIcon = { Text("km", style = MaterialTheme.typography.labelMedium) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = ThousandsSeparatorTransformation
                     )
 
                     OutlinedTextField(
@@ -276,14 +317,15 @@ fun MaintenanceHistoryEditScreen(
 
                     OutlinedTextField(
                         value = ui.cost,
-                        onValueChange = viewModel::onCostChange,
+                        onValueChange = { viewModel.onCostChange(it.filter(Char::isDigit)) },
                         label = { Text("비용") },
-                        placeholder = { Text("예: 120000") },
+                        placeholder = { Text("예: 120,000") },
                         leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
                         trailingIcon = { Text("원", style = MaterialTheme.typography.labelMedium) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = ThousandsSeparatorTransformation
                     )
 
                     OutlinedTextField(
@@ -430,8 +472,7 @@ private fun MileageUpdateDialog(
                 // 3칸 요약 카드
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MileageRow(
@@ -460,8 +501,8 @@ private fun MileageUpdateDialog(
                 // “다음부터 자동 업데이트” 체크박스(설정 저장)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(0.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -542,3 +583,58 @@ private fun MileageRow(
 }
 
 private fun Int.formatKm(): String = NumberFormat.getIntegerInstance().format(this)
+
+private fun String.toLocalDateOrNull(): LocalDate? =
+    runCatching { LocalDate.parse(this) }.getOrNull()
+
+/**
+ * 정비 날짜 선택 달력.
+ * 이전/다음 정비 내역 사이의 날짜만 선택할 수 있도록 제한한다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryDatePickerDialog(
+    initialDate: LocalDate?,
+    minDate: LocalDate?,
+    maxDate: LocalDate?,
+    onDismiss: () -> Unit,
+    onSelected: (LocalDate) -> Unit
+) {
+    val minMillis = remember(minDate) {
+        minDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli() ?: Long.MIN_VALUE
+    }
+    // 상한은 해당 날짜를 포함하도록 다음날 0시 직전까지 허용
+    val maxExclusiveMillis = remember(maxDate) {
+        maxDate?.plusDays(1)?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+            ?: Long.MAX_VALUE
+    }
+
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initialDate
+            ?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                utcTimeMillis >= minMillis && utcTimeMillis < maxExclusiveMillis
+        }
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val millis = state.selectedDateMillis ?: return@TextButton
+                    val picked = Instant.ofEpochMilli(millis)
+                        .atZone(ZoneOffset.UTC)
+                        .toLocalDate()
+                    onSelected(picked)
+                }
+            ) { Text("확인") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("취소") }
+        }
+    ) {
+        DatePicker(state = state)
+    }
+}
