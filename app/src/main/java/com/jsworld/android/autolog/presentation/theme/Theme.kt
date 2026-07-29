@@ -104,6 +104,7 @@ fun AutoLogTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = AutoLogShapes,
         content = content
     )
 }
