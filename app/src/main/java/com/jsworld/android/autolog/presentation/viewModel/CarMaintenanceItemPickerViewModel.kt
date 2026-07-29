@@ -6,6 +6,7 @@ import com.jsworld.android.autolog.domain.model.MaintenanceType
 import com.jsworld.android.autolog.domain.model.MaintenanceTypePickUi
 import com.jsworld.android.autolog.presentation.model.PickerItemUi
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceTypeRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,8 +25,13 @@ import kotlin.collections.filter
 class CarMaintenanceItemPickerViewModel @Inject constructor(
     private val maintenanceTypeRepository: MaintenanceTypeRepository,
     private val carMaintenanceSettingRepository: CarMaintenanceRepository,
+    private val carRepository: CarRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
+
+    /** 차량 연료 타입(연료별 항목 필터링용) */
+    fun observeCarFuelType(carId: Long): Flow<String?> =
+        carRepository.getCarById(carId).map { it?.fuelType }
 
     private val _events = MutableSharedFlow<PickerUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<PickerUiEvent> = _events.asSharedFlow()

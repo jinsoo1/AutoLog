@@ -47,13 +47,18 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.jsworld.android.autolog.presentation.model.isItemApplicableToFuel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -83,9 +88,20 @@ fun CarMaintenanceItemPickerScreen(
     val restore by viewModel.observeRestoreItems(carId).collectAsState(initial = emptyList())
     val addable by viewModel.observeAddableItems(carId).collectAsState(initial = emptyList())
 
+    // 연료 타입에 맞는 항목만 제안(예: 전기차에 엔진오일 숨김).
+    // 관리중/복원 목록은 사용자가 직접 고른 것이므로 필터하지 않는다.
+    val fuelType by viewModel.observeCarFuelType(carId).collectAsState(initial = null)
+    var showAllAddable by rememberSaveable { mutableStateOf(false) }
+
+    val addableVisible = remember(addable, fuelType, showAllAddable) {
+        if (showAllAddable) addable
+        else addable.filter { isItemApplicableToFuel(it.typeName, fuelType) }
+    }
+    val hiddenCount = addable.size - addableVisible.size
+
     val managingGroups = remember(managing) { groupByCategory(managing) }
     val restoreGroups = remember(restore) { groupByCategory(restore) }
-    val addableGroups = remember(addable) { groupByCategory(addable) }
+    val addableGroups = remember(addableVisible) { groupByCategory(addableVisible) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { e ->
@@ -165,9 +181,13 @@ fun CarMaintenanceItemPickerScreen(
             item {
                 PickerSectionHeader(
                     title = "추가 가능한 항목",
-                    subtitle = "체크하면 관리 목록에 추가됩니다.",
+                    subtitle = if (!showAllAddable && hiddenCount > 0) {
+                        "${fuelType} 차량에 맞는 항목만 보여드려요."
+                    } else {
+                        "체크하면 관리 목록에 추가됩니다."
+                    },
                     icon = Icons.Default.Add,
-                    count = addable.size
+                    count = addableVisible.size
                 )
             }
             sectionWithCategoryGroups(
@@ -179,6 +199,21 @@ fun CarMaintenanceItemPickerScreen(
                     viewModel.setChecked(carId, item.typeId, checked)
                 }
             )
+
+            // 연료 타입과 무관해 숨긴 항목 보기/접기 토글
+            if (hiddenCount > 0 || showAllAddable) {
+                item {
+                    TextButton(
+                        onClick = { showAllAddable = !showAllAddable },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (showAllAddable) "이 차량에 맞는 항목만 보기"
+                            else "숨겨진 항목 ${hiddenCount}개 모두 보기"
+                        )
+                    }
+                }
+            }
 
             item { Spacer(Modifier.height(8.dp)) }
         }
@@ -257,8 +292,8 @@ private fun CategoryGroupCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Column(Modifier.fillMaxWidth()) {
 
