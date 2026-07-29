@@ -1,7 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -37,7 +36,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,6 +78,7 @@ fun CarListScreen(
     Scaffold(
         topBar = {
             CarListTopBar(
+                carCount = uiCars.size,
                 onSettingsClick = onSettingsClick
             )
         },
@@ -110,32 +110,10 @@ fun CarListScreen(
                         onDismiss = { viewModel.dismissBackupBanner() }
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Spacer(Modifier.weight(1f))
-
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                        shape = MaterialTheme.shapes.large,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                    ) {
-                        Text(
-                            text = "${uiCars.size}대",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
+                // 대수 표기는 상단바 서브타이틀("N대 관리 중")로 이동
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiCars, key = { it.car.id }) { ui ->
@@ -166,44 +144,33 @@ private fun CarSummaryCard(
         MaintenanceStatus.NORMAL -> Triple(StatusNormal, "정상", Icons.Default.CheckCircle)
     }
 
-    val showStrip = summary.status != MaintenanceStatus.NORMAL
+    // 반투명 색을 그대로 카드 배경에 쓰면 카드 그림자(elevation)가 배경 밑으로 비쳐
+    // 딤이 낀 것처럼 보인다. surface 위에 미리 합성해 불투명한 색으로 만든다.
     val container = if (car.isPrimary)
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            .compositeOver(MaterialTheme.colorScheme.surface)
     else
         MaterialTheme.colorScheme.surface
-
-    val badgeText = if (ui.dangerCount > 0) "위험 ${ui.dangerCount}" else "정상"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = container),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // 왼쪽 상태 스트립(임박/초과일 때만)
-            if (showStrip) {
-                Box(
-                    modifier = Modifier
-                        .width(6.dp)
-                        .fillMaxHeight()
-                        .background(statusColor)
-                )
-            } else {
-                Spacer(Modifier.width(6.dp))
-            }
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // 상단: 차량명/대표 + 별
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -211,8 +178,10 @@ private fun CarSummaryCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = car.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                             if (car.isPrimary) {
@@ -277,52 +246,66 @@ private fun CarSummaryCard(
                     )
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                // 하단: 정비 요약(1개)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = statusColor.copy(alpha = 0.12f),
-                        shape = MaterialTheme.shapes.large
+                // 하단: 정비 요약(1개) — 상태색 틴트 컨테이너
+                Surface(
+                    color = statusColor.copy(alpha = 0.10f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = statusIcon,
-                            contentDescription = null,
-                            tint = statusColor,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.width(10.dp))
-
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            summary.title,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            summary.detail,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    // 칩 대신 더 미니멀한 상태 배지
-                    Surface(
-                        color = statusColor.copy(alpha = 0.14f),
-                        shape = MaterialTheme.shapes.large
-                    ) {
-                        Text(
-                            badgeText, // "위험 3" / "정상"
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
+                        Surface(
                             color = statusColor,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = statusIcon,
+                                contentDescription = statusLabel,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .padding(5.dp)
+                                    .size(16.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(10.dp))
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                summary.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                summary.detail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        // 위험 개수가 있을 때만 배지 노출
+                        if (ui.dangerCount > 0) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(
+                                color = statusColor,
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Text(
+                                    "위험 ${ui.dangerCount}",
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -338,19 +321,18 @@ private fun InfoPill(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        shape = CircleShape
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(15.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
@@ -367,15 +349,25 @@ private fun InfoPill(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarListTopBar(
+    carCount: Int,
     onSettingsClick: () -> Unit
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = "내 차량",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = "내 차량",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                if (carCount > 0) {
+                    Text(
+                        text = "${carCount}대 관리 중",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         },
         actions = {
             IconButton(onClick = onSettingsClick) {
