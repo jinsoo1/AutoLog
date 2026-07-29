@@ -1,6 +1,5 @@
 package com.jsworld.android.autolog.presentation.navigation
 
-import android.net.http.SslCertificate.saveState
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -19,7 +18,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -126,6 +124,7 @@ fun AutoLogNavHost(
 
             AddCarScreen(
                 isFirst = isFirst,
+                onBack = { navController.popBackStack() },
                 onRestore = {
                     restoreLauncher.launch(
                         arrayOf(
@@ -211,7 +210,11 @@ fun AutoLogNavHost(
                 },
 
                 onGoToList = {
-                    navController.navigateToCarListRoot()
+                    // 스택에 이미 있는 리스트로 되돌아간다(새 인스턴스를 쌓지 않음).
+                    // 리스트가 스택에 없는 진입 경로(스플래시→대표차량 상세 등)만 리셋 이동.
+                    if (!navController.popBackStack(Routes.CAR_LIST, inclusive = false)) {
+                        navController.navigateToCarListRoot()
+                    }
                 },
 
                 onEditCar = { id ->
@@ -402,7 +405,9 @@ fun SplashRoute(
 
 fun NavHostController.navigateToCarListRoot() {
     navigate(Routes.CAR_LIST) {
-        popUpTo(graph.findStartDestination().id) { inclusive = true }
+        // 시작 지점(SPLASH)은 이미 스택에서 제거된 상태라 startDestination 기준 popUpTo는
+        // 아무것도 지우지 못한다(스택 누적 버그). 그래프 전체를 비우고 리스트를 루트로 만든다.
+        popUpTo(graph.id) { inclusive = true }
         launchSingleTop = true
         restoreState = false
     }
