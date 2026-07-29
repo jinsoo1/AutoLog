@@ -70,7 +70,6 @@ fun NoticeScreen(
                         Surface(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                             shape = MaterialTheme.shapes.large,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.padding(end = 6.dp)
                         ) {
                             Text(
@@ -143,8 +142,8 @@ private fun NoticeCard(
             .clickable(onClick = onToggle)
             .animateContentSize(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -209,8 +208,7 @@ private fun NoticeCard(
                 if (notice.next.isNotEmpty()) {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                        shape = MaterialTheme.shapes.large,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        shape = MaterialTheme.shapes.large
                     ) {
                         Text(
                             text = "다음 버전 추가 기능 예정 ${notice.next.size}개",
