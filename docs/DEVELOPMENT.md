@@ -2,6 +2,33 @@
 
 혼자 개발하며 잊기 쉬운, 데이터와 관련된 주의사항을 모아둔 문서입니다.
 
+## 0. 빌드 툴체인 (AGP 9 전환기 구성) ⚠️
+
+| 항목 | 버전 |
+|---|---|
+| AGP | 9.2.1 (최소 Gradle **9.4.1** 요구) |
+| Gradle | 9.4.1 |
+| Kotlin | 2.3.0 |
+| KSP | 2.3.0 (Kotlin 과 버전 동일해야 함) |
+| Hilt | 2.60.1 (2.57.x 는 AGP 9 비호환 — `BaseExtension not found`) |
+| JDK | 17 |
+
+### 애노테이션 처리는 kapt 가 아니라 KSP
+AGP 9 로 올리며 kapt → KSP 로 전환했다. Room·Hilt 모두 KSP 를 지원한다.
+`kapt(...)` 대신 `ksp(...)` 를 쓰고, kapt 전용 옵션(`correctErrorTypes`)은 필요 없다.
+
+### `android.builtInKotlin=false`, `android.newDsl=false` 는 임시 설정
+AGP 9 는 Kotlin 지원을 내장(built-in Kotlin)하지만, **KSP·kapt 가 아직 내장 Kotlin 과 호환되지 않는다.**
+그래서 내장 Kotlin 과 새 DSL 을 끄고 기존 `kotlin.android` 플러그인 경로를 쓰고 있다.
+
+- 두 플래그 모두 **AGP 10 에서 제거**된다(빌드 시 deprecation 경고가 뜬다).
+- KSP 가 내장 Kotlin 을 지원하게 되면:
+  1. `gradle.properties` 의 두 플래그 제거
+  2. `kotlin.android` 플러그인 제거 (root/app 양쪽)
+  3. `kotlin { compilerOptions {} }` → `android { kotlin { compilerOptions {} } }` 로 이동
+  4. `compileSdk { version = release(36) }` 등 새 DSL 문법 확인
+- 참고: https://kotl.in/gradle/agp-built-in-kotlin
+
 ## 1. DB 스키마를 바꿀 때 (Room)
 
 DB가 로컬에만 있으므로, 스키마 변경은 **기존 사용자의 데이터 유실**로 직결될 수 있습니다.

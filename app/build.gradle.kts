@@ -1,13 +1,15 @@
-import com.android.build.gradle.ProguardFiles.getDefaultProguardFile
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    // AGP 9는 Kotlin 지원을 내장하지만 아직 kapt/KSP 와 호환되지 않는다.
+    // gradle.properties 의 android.builtInKotlin=false 로 내장 Kotlin 을 끄고
+    // 기존 Kotlin Gradle 플러그인 + KSP 조합을 사용한다.
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.ksp)
 }
 
 val localProperties = Properties().apply {
@@ -76,9 +78,6 @@ android {
     buildFeatures {
         compose = true
     }
-    kapt {
-        correctErrorTypes = true
-    }
 }
 
 dependencies {
@@ -99,7 +98,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.hilt.common)
     implementation(libs.androidx.hilt.work)
-    kapt(libs.androidx.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
     debugImplementation(libs.compose.ui.tooling)
 
     // Navigation
@@ -108,14 +107,14 @@ dependencies {
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
 
     // Coroutines
     implementation(libs.coroutines.core)
 
     // Hilt
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.datastore.preferences)
