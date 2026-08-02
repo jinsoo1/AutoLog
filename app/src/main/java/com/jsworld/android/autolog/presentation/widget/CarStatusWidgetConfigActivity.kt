@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.datastore.preferences.core.Preferences
+import com.jsworld.android.autolog.presentation.theme.AutoLogTheme
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
@@ -48,6 +49,8 @@ class CarStatusWidgetConfigActivity : ComponentActivity() {
         setContent {
             val cars by ep.carRepository().getAllCars().collectAsState(initial = emptyList())
 
+            // 앱 테마(Pretendard·색·모양) 적용 — 없으면 Material 기본값으로 렌더되어 앱과 다르게 보인다
+            AutoLogTheme {
             CarWidgetPickerScreen(
                 cars = cars,
                 onPick = { car ->
@@ -90,6 +93,7 @@ class CarStatusWidgetConfigActivity : ComponentActivity() {
                     finish()
                 }
             )
+            }
         }
     }
 }
