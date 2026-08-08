@@ -6,36 +6,30 @@ import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
 import com.jsworld.android.autolog.domain.model.MaintenanceType
-import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.SettingOption
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.CarSortPreferenceRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceTypeRepository
-import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
 
 @HiltViewModel
 class CarDetailViewModel @Inject constructor(
     private val carRepository: CarRepository,
     private val carMaintenanceRepository: CarMaintenanceRepository,
     private val maintenanceTypeRepository: MaintenanceTypeRepository,
-    private val carSortPrefRepository: CarSortPreferenceRepository,
-    private val widgetUpdater: WidgetUpdater
+    private val carSortPrefRepository: CarSortPreferenceRepository
 ) : ViewModel() {
 
     // carId별 캐시
     private val carFlowMap = mutableMapOf<Long, StateFlow<Car?>>()
-    private val statusFlowMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()
     private val sortFlowMap = mutableMapOf<Long, StateFlow<MaintenanceSort>>()
     private val settingsFlowMap = mutableMapOf<Long, StateFlow<List<CarMaintenanceSetting>>>()
     private val optionsFlowMap = mutableMapOf<Long, StateFlow<List<SettingOption>>>() // 타입은 실제 리턴 타입으로
@@ -48,12 +42,6 @@ class CarDetailViewModel @Inject constructor(
         carFlowMap.getOrPut(carId) {
             carRepository.getCarById(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-        }
-
-    fun maintenanceStatusState(carId: Long): StateFlow<List<MaintenanceUiModel>> =
-        statusFlowMap.getOrPut(carId) {
-            carMaintenanceRepository.observeMaintenanceStatusList(carId)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
 
     fun sortState(carId: Long): StateFlow<MaintenanceSort> =
@@ -84,11 +72,4 @@ class CarDetailViewModel @Inject constructor(
         viewModelScope.launch { carSortPrefRepository.setSort(carId, sort) }
     }
 
-    fun updateCarMileage(carId: Long, newMileage: Int) {
-        viewModelScope.launch {
-            if (newMileage < 0) return@launch
-            carMaintenanceRepository.updateCarMileage(carId, newMileage)
-            widgetUpdater.requestUpdate()
-        }
-    }
 }

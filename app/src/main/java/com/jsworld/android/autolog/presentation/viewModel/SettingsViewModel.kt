@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.BackupUiState
+import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
 import com.jsworld.android.autolog.data.repository.BackupRepository
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -135,6 +136,36 @@ class SettingsViewModel @Inject constructor(
         val list = runCatching { backupRepository.listAutoLogBackups() }
             .getOrDefault(emptyList())
         _backupUiState.update { it.copy(backups = list) }
+    }
+
+    /**
+     * 복원 확인 다이얼로그에 보여줄 백업 요약. 파일을 읽기만 하고 적용하지 않는다.
+     */
+    private val _restorePreview = MutableStateFlow<RestorePreviewUiState?>(null)
+    val restorePreview: StateFlow<RestorePreviewUiState?> = _restorePreview
+
+    fun loadRestorePreview(uri: Uri) {
+        _restorePreview.value = RestorePreviewUiState(loading = true)
+        viewModelScope.launch {
+            backupRepository.peekBackup(uri)
+                .onSuccess { preview ->
+                    _restorePreview.value = RestorePreviewUiState(
+                        loading = false,
+                        preview = preview
+                    )
+                }
+                .onFailure { throwable ->
+                    _restorePreview.value = RestorePreviewUiState(
+                        loading = false,
+                        // 여기서 실패하면 복원도 실패할 파일이다. 미리 알려준다.
+                        error = throwable.message ?: "백업 파일을 읽을 수 없습니다."
+                    )
+                }
+        }
+    }
+
+    fun clearRestorePreview() {
+        _restorePreview.value = null
     }
 
     fun restoreBackup(

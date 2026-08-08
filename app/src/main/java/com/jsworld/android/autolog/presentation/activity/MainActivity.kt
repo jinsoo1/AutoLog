@@ -9,10 +9,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.jsworld.android.autolog.presentation.theme.AutoLogTheme
-import com.jsworld.android.autolog.presentation.navigation.Routes
 import com.jsworld.android.autolog.presentation.navigation.AutoLogNavHost
+import com.jsworld.android.autolog.presentation.navigation.navigateToMainRoot
 import com.jsworld.android.autolog.core.util.Constant.ACTION_OPEN_CAR_DETAIL
 import com.jsworld.android.autolog.core.util.Constant.EXTRA_CAR_ID
+import com.jsworld.android.autolog.presentation.viewModel.CarContextViewModel
 import com.jsworld.android.autolog.presentation.viewModel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,20 +37,22 @@ class MainActivity : ComponentActivity() {
                 val vm: MainViewModel = hiltViewModel()
                 LaunchedEffect(Unit) { vm.ensureDefaults() }
 
+                // 탭 화면들이 공유하는 "현재 차량". 액티비티 스코프여야 탭을 옮겨도 유지된다.
+                val carContextViewModel: CarContextViewModel = hiltViewModel()
+
                 val navController = rememberNavController()
 
-                // 앱이 이미 살아있는 상태에서 위젯 클릭 시 이동
+                // 앱이 이미 살아있는 상태에서 위젯 클릭 시: 그 차량으로 전환하고 탭 셸로
                 LaunchedEffect(Unit) {
                     widgetNavRequests.collect { carId ->
-                        navController.navigate(Routes.carDetail(carId)) {
-                            launchSingleTop = true
-                            popUpTo(Routes.SPLASH) { inclusive = true } // 스플래시 떠있으면 제거
-                        }
+                        carContextViewModel.selectCar(carId)
+                        navController.navigateToMainRoot()
                     }
                 }
 
                 AutoLogNavHost(
                     navController = navController,
+                    carContextViewModel = carContextViewModel,
                     initialWidgetCarId = initialWidgetCarId,
                     onConsumeInitialWidget = { /* 필요하면 여기서 처리 */ }
                 )

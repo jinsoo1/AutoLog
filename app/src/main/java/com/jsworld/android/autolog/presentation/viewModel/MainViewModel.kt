@@ -39,18 +39,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 차량이 하나도 없으면 온보딩, 있으면 탭 셸.
+     * 어느 차량을 볼지는 [CarContextViewModel] 이 결정하므로 여기서 다루지 않는다.
+     */
     val startDestination: StateFlow<String?> =
-        combine(
-            carRepository.getAllCars(),
-            carRepository.getPrimaryCar()
-        ) { cars, primary ->
-
-            when {
-                cars.isEmpty() -> Routes.ADD_CAR
-                primary == null -> Routes.CAR_LIST
-                else -> "car_detail/${primary.id}"
-            }
-        }.stateIn(
+        carRepository.getAllCars()
+            .map { cars -> if (cars.isEmpty()) Routes.ADD_CAR else Routes.MAIN }
+            .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             null

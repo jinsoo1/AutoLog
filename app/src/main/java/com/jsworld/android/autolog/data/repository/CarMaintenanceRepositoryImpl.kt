@@ -153,19 +153,32 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 else -> MaintenanceStatus.NORMAL
             }
 
-            // 위험 목록은 SOON/OVERDUE만 노출
-            if (finalStatus == MaintenanceStatus.NORMAL) return@mapNotNull null
-
             val remainingText = buildString {
                 append(parts.joinToString(" · ") { it.second })
-                // 원하면 “표시되는 경우에만” 첫기록 안내를 붙이기
-                if (hasNoHistory) append(" · 첫 기록이 필요해요(0km/오늘 기준)")
+                // 첫 기록이 없으면 계산 기준(0km/오늘)을 밝혀준다 — 임박한 항목에만 붙인다.
+                if (hasNoHistory && finalStatus != MaintenanceStatus.NORMAL) {
+                    append(" · 첫 기록이 필요해요(0km/오늘 기준)")
+                }
             }
 
+            // 주기 소진율 — km·개월 둘 다 있으면 더 많이 소진된 쪽을 쓴다(상태 판정과 같은 기준).
+            val kmRatio = if (intervalKm != null && intervalKm > 0) {
+                ((carMileage - baseLastMileage).toFloat() / intervalKm).coerceIn(0f, 1f)
+            } else null
+
+            val dayRatio = if (intervalMonths != null) {
+                val dueDate = baseDateForCalc.plusMonths(intervalMonths.toLong())
+                val total = ChronoUnit.DAYS.between(baseDateForCalc, dueDate).coerceAtLeast(1)
+                val used = ChronoUnit.DAYS.between(baseDateForCalc, today)
+                (used.toFloat() / total).coerceIn(0f, 1f)
+            } else null
+
             MaintenanceUiModel(
+                settingId = setting.id,
                 name = name,
                 status = finalStatus,
-                remainingText = remainingText
+                remainingText = remainingText,
+                progressRatio = listOfNotNull(kmRatio, dayRatio).maxOrNull()
             )
         }
     }
@@ -205,8 +218,32 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                     roomItems = roomItems,
                     typeMap = typeMap,
                     today = LocalDate.now()
-                )
+                ).filter { it.status != MaintenanceStatus.NORMAL }
             }
+        }
+    }
+
+    /**
+     * 정상 항목까지 포함한 전체 정비 상태. 임박한 순서(URGENT_MIN)로 정렬된다.
+     * 홈 탭의 "다음 정비", 항목 상세의 진행률이 이걸 쓴다.
+     */
+    override fun observeMaintenanceOverview(carId: Long): Flow<List<MaintenanceUiModel>> {
+        val carFlow = carDao.getCarById(carId)
+        val settingsFlow = fullDao.getSettingsWithHistoryOrderByCombined(carId)
+
+        return combine(carFlow, settingsFlow) { carEntity, roomItems ->
+            val carMileage = carEntity?.mileage ?: return@combine emptyList()
+
+            val typeIds = roomItems.map { it.setting.maintenanceTypeId }.distinct()
+            val typeMap = if (typeIds.isEmpty()) emptyMap()
+            else maintenanceTypeDao.getTypesByIds(typeIds).associateBy { it.id }
+
+            buildMaintenanceUiModelsFromRoom(
+                carMileage = carMileage,
+                roomItems = roomItems,
+                typeMap = typeMap,
+                today = LocalDate.now()
+            )
         }
     }
 
@@ -376,7 +413,7 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 roomItems = roomItems,
                 typeMap = typeMap,
                 today = today
-            )
+            ).filter { it.status != MaintenanceStatus.NORMAL }
 
             val top = dangerList.firstOrNull()
             val summary = if (top == null) {
@@ -462,6 +499,42 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
         )
 
         return typeId
+    }
+
+    override suspend fun getOrCreateRepairSetting(carId: Long, name: String): Long {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty()) { "수리 이름이 비어있어요" }
+
+        // 같은 이름의 항목이 있으면 재사용한다 — 이름 unique 제약 때문이기도 하지만,
+        // 같은 부품을 다시 수리했을 때 이력이 한 항목에 쌓이는 게 맞다.
+        // (그 항목에 주기가 있다면 주기 정비로 기록되는데, 그것도 올바른 동작이다)
+        val typeId = maintenanceTypeDao.findByName(trimmed)?.id
+            ?: maintenanceTypeDao.insertType(
+                MaintenanceTypeEntity(
+                    id = 0,
+                    name = trimmed,
+                    // 주기 없음 = 수리. 임박 계산에서 제외된다.
+                    defaultIntervalKm = null,
+                    defaultIntervalMonths = null
+                )
+            )
+
+        val existing = settingDao.getOneByCarIdAndTypeId(carId, typeId)
+        if (existing != null) {
+            if (!existing.isActive) settingDao.setActive(existing.id, true)
+            return existing.id
+        }
+
+        return settingDao.insertSetting(
+            CarMaintenanceSettingEntity(
+                id = 0,
+                carId = carId,
+                maintenanceTypeId = typeId,
+                intervalKm = null,
+                intervalMonths = null,
+                isActive = true
+            )
+        )
     }
 
     override suspend fun addMaintenanceTypeAndEnableForCarRejectDuplicate(

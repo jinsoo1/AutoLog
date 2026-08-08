@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import com.jsworld.android.autolog.data.local.entity.CarMaintenanceRecordRow
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -80,4 +81,29 @@ interface MaintenanceHistoryDao {
 
     @Query("DELETE FROM maintenance_history WHERE id = :id")
     suspend fun deleteHistoryById(id: Long)
+
+    /**
+     * 차량의 모든 정비 기록을 항목 이름과 함께 최신순으로 조회한다.
+     * 정비 탭의 통합 타임라인용 — 항목별로 흩어진 기록을 한 화면에서 보기 위한 쿼리다.
+     */
+    @Query("""
+        SELECT h.id            AS historyId,
+               h.settingId     AS settingId,
+               s.maintenanceTypeId AS typeId,
+               t.name          AS typeName,
+               h.serviceDate   AS serviceDate,
+               h.serviceMileage AS serviceMileage,
+               h.place         AS place,
+               h.cost          AS cost,
+               h.memo          AS memo,
+               CASE WHEN s.intervalKm IS NULL AND s.intervalMonths IS NULL
+                     AND t.defaultIntervalKm IS NULL AND t.defaultIntervalMonths IS NULL
+                    THEN 1 ELSE 0 END AS isRepair
+        FROM maintenance_history h
+        JOIN car_maintenance_settings s ON s.id = h.settingId
+        JOIN maintenance_types t ON t.id = s.maintenanceTypeId
+        WHERE s.carId = :carId
+        ORDER BY h.serviceDate DESC, h.serviceMileage DESC, h.id DESC
+    """)
+    fun observeCarRecords(carId: Long): Flow<List<CarMaintenanceRecordRow>>
 }

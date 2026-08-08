@@ -58,6 +58,19 @@ class UserPrefsRepositoryImpl @Inject constructor(
         dataStore.edit { it[lastBackupAtKey] = millis }
     }
 
+    /**
+     * 탭 화면의 현재 차량
+     */
+    private val selectedCarIdKey = longPreferencesKey("selected_car_id")
+
+    override fun observeSelectedCarId(): Flow<Long?> =
+        dataStore.data.map { prefs -> prefs[selectedCarIdKey]?.takeIf { it > 0L } }
+
+    override suspend fun setSelectedCarId(carId: Long) {
+        dataStore.edit { it[selectedCarIdKey] = carId }
+    }
+
+
     private val backupBannerDismissedAtKey = longPreferencesKey("backup_banner_dismissed_at")
 
     override fun observeBackupBannerDismissedAt(): Flow<Long> =

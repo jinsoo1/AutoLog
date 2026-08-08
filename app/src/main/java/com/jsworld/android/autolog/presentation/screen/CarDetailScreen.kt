@@ -1,27 +1,13 @@
 package com.jsworld.android.autolog.presentation.screen
 
-import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,80 +16,55 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
-import com.jsworld.android.autolog.domain.model.MaintenanceStatus
-import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.presentation.theme.StatusNormal
 import com.jsworld.android.autolog.presentation.theme.StatusOverdue
 import com.jsworld.android.autolog.presentation.theme.StatusSoon
 import com.jsworld.android.autolog.presentation.viewModel.CarDetailViewModel
-import kotlinx.coroutines.flow.collectLatest
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -112,90 +73,55 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+/**
+ * 정비 항목 관리 — 이 차량에 켜둔 항목과 각 항목의 주기를 다룬다.
+ *
+ * 차량 요약·정비 상태는 홈 탭, 기록 열람은 정비 탭이 담당하므로 여기서는 항목만 다룬다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarDetailScreen(
     carId: Long,
     viewModel: CarDetailViewModel,
     onBack: () -> Unit,
-    onGoToList: () -> Unit,
-    onEditCar: (Long) -> Unit,
-    onAddMaintenance: (Long) -> Unit,
     onAddMaintenanceItem: (Long) -> Unit,
-    onEditMaintenanceSetting: (Long) -> Unit, // settingId
+    onOpenItemDetail: (Long) -> Unit, // settingId
 ) {
     val listState = rememberLazyListState()
-
-    var fabVisible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(listState) {
-        var prevIndex = listState.firstVisibleItemIndex
-        var prevOffset = listState.firstVisibleItemScrollOffset
-
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collectLatest { (index, offset) ->
-                val scrollingDown = index > prevIndex || (index == prevIndex && offset > prevOffset)
-                val scrollingUp = index < prevIndex || (index == prevIndex && offset < prevOffset)
-
-                if (scrollingDown) fabVisible = false
-                else if (scrollingUp) fabVisible = true
-
-                prevIndex = index
-                prevOffset = offset
-            }
-    }
 
     val car by viewModel.carState(carId).collectAsState()
     val sort by viewModel.sortState(carId).collectAsState()
     val settings by viewModel.sortedSettingsState(carId).collectAsState()
     val types by viewModel.maintenanceTypesState().collectAsState()
-    val uiStatusList by viewModel.maintenanceStatusState(carId).collectAsState()
 
-    val typeNameMap = remember(types) { types.associate { it.id to it.name } }
-    val typeDefaultMap = remember(types) { types.associateBy({ it.id }, { it }) } // 기본주기까지 쓰고 싶으면
-
+    val typeDefaultMap = remember(types) { types.associateBy({ it.id }, { it }) }
 
     val options by viewModel.settingOptionsState(carId).collectAsState()
     val optionMap = remember(options) { options.associateBy { it.settingId } }
 
-    val minAllowedMileage: Int? = remember(options) {
-        options.mapNotNull { it.lastServiceMileage }.maxOrNull()
-    }
-
-    var statusExpanded by rememberSaveable(carId) { mutableStateOf(false) }
-    val worstStatus: MaintenanceStatus? = remember(uiStatusList) {
-        when {
-            uiStatusList.any { it.status == MaintenanceStatus.OVERDUE } -> MaintenanceStatus.OVERDUE
-            uiStatusList.any { it.status == MaintenanceStatus.SOON } -> MaintenanceStatus.SOON
-            else -> null
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(car?.name ?: "차량 정보") },
-                navigationIcon = { /* 동일 */ },
-                actions = {
-                    // 기존 목록 버튼
-                    IconButton(onClick = onGoToList) {
-                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "목록으로")
+                title = {
+                    Column {
+                        Text(
+                            "정비 항목",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            car?.name ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = fabVisible,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                ExtendedFloatingActionButton(
-                    onClick = { onAddMaintenance(carId) },
-                    icon = { Icon(Icons.Default.Build, null) },
-                    text = { Text("정비 기록 추가") }
-                )
-            }
         }
     ) { padding ->
 
@@ -221,36 +147,6 @@ fun CarDetailScreen(
             contentPadding = PaddingValues(16.dp)
         ) {
             item {
-                CarHeader(
-                    car = car!!,
-                    onEditCar = { onEditCar(carId) },
-                    minAllowedMileage = minAllowedMileage,
-                    onUpdateMileage = { newMileage ->
-                        viewModel.updateCarMileage(carId, newMileage)
-                    }
-                )
-            }
-
-            item {
-                MaintenanceStatusHeader(
-                    dangerCount = uiStatusList.size,
-                    worstStatus = worstStatus,
-                    expanded = statusExpanded,
-                    onToggle = { statusExpanded = !statusExpanded }
-                )
-            }
-
-            if (uiStatusList.isEmpty()) {
-                item { GoodMaintenanceCard() }
-            } else {
-                if (statusExpanded) {
-                    items(uiStatusList) { model ->
-                        MaintenanceStatusCard(model)
-                    }
-                }
-            }
-
-            item {
                 MaintenanceSettingsHeader(
                     currentSort = sort,
                     onSortSelected = { selectedSort: MaintenanceSort ->
@@ -273,471 +169,15 @@ fun CarDetailScreen(
                     carMileage = car!!.mileage,
                     lastServiceDate = opt?.lastServiceDate,
                     lastServiceMileage = opt?.lastServiceMileage,
-                    onClick = { onEditMaintenanceSetting(setting.id) }
+                    onClick = { onOpenItemDetail(setting.id) }
                 )
             }
         }
     }
 }
 
-@Composable
-fun CarHeader(
-    car: Car,
-    minAllowedMileage: Int?,
-    onEditCar: () -> Unit,
-    onUpdateMileage: (Int) -> Unit,   // 주행거리 저장 콜백
-) {
-    val hasNotes = !car.notes.isNullOrBlank()
-    var notesExpanded by rememberSaveable(car.id) { mutableStateOf(false) }
-    var detailExpanded by rememberSaveable(car.id) { mutableStateOf(false) }
-    var showMileageDialog by rememberSaveable(car.id) { mutableStateOf(false) }
-
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-
-            // 1) 상단: 차량명/번호판 + 편집
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        car.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                    Text(
-                        car.plate,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-
-                IconButton(onClick = onEditCar) {
-                    Icon(Icons.Default.Edit, contentDescription = "차량 정보 편집")
-                }
-            }
-
-            // 2) 현재 주행거리 "강조 블록" + 즉시 업데이트
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showMileageDialog = true },
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "현재 주행거리",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "${car.mileage.formatKm()} km",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "탭해서 업데이트",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        )
-                    }
-
-                    // 오른쪽 작은 업데이트 버튼(탭 유도)
-                    FilledTonalButton(
-                        onClick = { showMileageDialog = true },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
-                    ) {
-                        Text("업데이트", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
 
 
-            // 연료/연식/메모 중 하나라도 있으면 상세 토글 노출
-            // (기존에는 메모가 없으면 연료·연식도 볼 수 없었다)
-            val hasDetail = hasNotes || !car.fuelType.isNullOrBlank() || !car.year.isNullOrBlank()
-            if (hasDetail) {
-                // 상세 토글 (연료/연식 + 메모를 한 번에)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { detailExpanded = !detailExpanded }
-                        .padding(top = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        if (detailExpanded) "상세 접기" else "상세 보기",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Icon(
-                        imageVector = if (detailExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = detailExpanded,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-
-                        // 연료/연식
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            InfoText(label = "연료", value = car.fuelType ?: "-")
-                            InfoText(label = "연식", value = car.year ?: "-")
-                        }
-
-                        // 메모(있을 때만)
-                        if (hasNotes) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                shape = MaterialTheme.shapes.medium
-                            ) {
-                                Text(
-                                    text = car.notes.orEmpty(),
-                                    modifier = Modifier.padding(12.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showMileageDialog) {
-        MileageQuickEditDialog(
-            currentMileage = car.mileage,
-            minAllowedMileage = minAllowedMileage,
-            onDismiss = { showMileageDialog = false },
-            onSave = { newMileage ->
-                onUpdateMileage(newMileage)
-                showMileageDialog = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun RowScope.InfoText(label: String, value: String) {
-    Column(Modifier.weight(1f)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1
-        )
-    }
-}
-
-@Composable
-private fun MileageQuickEditDialog(
-    currentMileage: Int,
-    minAllowedMileage: Int?,   // nullable
-    onDismiss: () -> Unit,
-    onSave: (Int) -> Unit
-) {
-    // 숫자만 보관하고, 표시용 TextFieldValue 로 콤마 포맷을 유지한다(커서 점프 방지)
-    var digits by rememberSaveable(currentMileage) { mutableStateOf(currentMileage.toString()) }
-    var field by remember(currentMileage) {
-        mutableStateOf(TextFieldValue(currentMileage.formatKm()))
-    }
-    val parsed = digits.toIntOrNull()
-
-    val isBelowMin = minAllowedMileage != null && parsed != null && parsed < minAllowedMileage
-    val canSave = parsed != null && parsed >= 0 && !isBelowMin
-
-    val minText = minAllowedMileage?.formatKm()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("주행거리 업데이트", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "현재 값: ${currentMileage.formatKm()} km",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                OutlinedTextField(
-                    value = field,
-                    onValueChange = { input ->
-                        val d = input.text.filter(Char::isDigit)
-                        digits = d
-                        val formatted = d.toIntOrNull()?.formatKm() ?: ""
-                        field = TextFieldValue(
-                            text = formatted,
-                            selection = TextRange(formatted.length)
-                        )
-                    },
-                    label = { Text("새 주행거리(km)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = isBelowMin,
-                    supportingText = {
-                        when {
-                            digits.isBlank() -> Text("숫자만 입력해 주세요.")
-                            parsed == null -> Text("올바른 숫자를 입력해 주세요.")
-                            isBelowMin -> Text(
-                                "가장 최근 정비 기록(${minText} km)보다 낮게 설정할 수 없어요.",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            minAllowedMileage == null -> Text(
-                                "정비 기록이 아직 없어서 자유롭게 입력할 수 있어요.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            else -> Text(
-                                "정비 기록(최소 ${minText} km) 이상으로 입력해 주세요.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = canSave,
-                onClick = {
-                    val v = parsed ?: return@Button
-                    if (minAllowedMileage != null && v < minAllowedMileage) return@Button // 방어
-                    onSave(v)
-                }
-            ) { Text("저장") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("취소") }
-        }
-    )
-}
-
-@Composable
-fun MaintenanceStatusCard(item: MaintenanceUiModel) {
-
-    val statusColor = when (item.status) {
-        MaintenanceStatus.NORMAL -> StatusNormal
-        MaintenanceStatus.SOON -> StatusSoon
-        MaintenanceStatus.OVERDUE -> StatusOverdue
-    }
-
-    val container = statusColor.copy(alpha = 0.10f) // 배경 틴트(디자인 유지)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = container),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                color = statusColor,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = when (item.status) {
-                        MaintenanceStatus.NORMAL -> Icons.Default.Info
-                        MaintenanceStatus.SOON -> Icons.Default.Warning
-                        MaintenanceStatus.OVERDUE -> Icons.Default.Error
-                    },
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(5.dp)
-                        .size(16.dp)
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text(
-                    item.name,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    item.remainingText,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            val chipText = when (item.status) {
-                MaintenanceStatus.NORMAL -> "정상"
-                MaintenanceStatus.SOON -> "임박"
-                MaintenanceStatus.OVERDUE -> "필요"
-            }
-
-            Surface(
-                color = statusColor,
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    chipText,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MaintenanceStatusHeader(
-    dangerCount: Int,
-    worstStatus: MaintenanceStatus?, // 추가 (OVERDUE / SOON / null)
-    expanded: Boolean,
-    onToggle: () -> Unit
-) {
-    val canToggle = dangerCount > 0 // 위험 항목 있을 때만 토글 가능(버튼 노출)
-
-    val rotation by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        label = "expandRotation"
-    )
-
-    val isDanger = dangerCount > 0
-    val label = if (!isDanger) "정상" else "위험 $dangerCount"
-
-    // 위험도에 따른 색상 (초과=빨강, 임박=노랑, 정상=초록/기본)
-    val statusColor = when (worstStatus) {
-        MaintenanceStatus.OVERDUE -> StatusOverdue
-        MaintenanceStatus.SOON -> StatusSoon
-        else -> StatusNormal
-    }
-    val container = statusColor.copy(alpha = 0.16f)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (canToggle) Modifier.clickable { onToggle() } else Modifier),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Shield,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "정비 상태",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // 상태 배지: 위험이 있으면 솔리드, 정상은 틴트 (홈 카드와 동일 언어)
-        Surface(
-            color = if (isDanger) statusColor else container,
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(
-                label,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (isDanger) Color.White else statusColor,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // GoodMaintenanceCard 상태면 버튼 자체를 숨김
-        if (canToggle) {
-            IconButton(onClick = onToggle) {
-                Icon(
-                    imageVector = Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "접기" else "펼치기",
-                    modifier = Modifier.rotate(rotation)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun GoodMaintenanceCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = StatusNormal.copy(alpha = 0.10f)),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(color = StatusNormal, shape = CircleShape) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(5.dp)
-                        .size(16.dp)
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text("차량 관리가 잘 되고 있어요", fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "현재 위험 항목이 없습니다.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun MaintenanceSettingsHeader(

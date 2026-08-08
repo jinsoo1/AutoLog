@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
@@ -70,6 +71,7 @@ fun CarListScreen(
     onAddCarClick: () -> Unit,
     onCarClick: (Car) -> Unit,
     onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: CarListViewModel = hiltViewModel()
 ) {
     val uiCars by viewModel.uiCars.collectAsStateWithLifecycle()
@@ -79,7 +81,8 @@ fun CarListScreen(
         topBar = {
             CarListTopBar(
                 carCount = uiCars.size,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onBack = onBack
             )
         },
         floatingActionButton = {
@@ -350,9 +353,20 @@ private fun InfoPill(
 @Composable
 fun CarListTopBar(
     carCount: Int,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null
 ) {
     TopAppBar(
+        navigationIcon = {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로"
+                    )
+                }
+            }
+        },
         title = {
             Column {
                 Text(

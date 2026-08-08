@@ -3,6 +3,7 @@ package com.jsworld.android.autolog.presentation.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.Car
+import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.SettingOption
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
@@ -29,6 +30,10 @@ class AddMaintenanceViewModel @Inject constructor(
 
     fun observeSettingOptions(carId: Long): Flow<List<SettingOption>> =
         carMaintenanceRepository.observeSettingOptions(carId)
+
+    /** 항목 선택 시트에서 임박한 항목을 위로 올리고 상태 배지를 보여주기 위해 쓴다. */
+    fun observeMaintenanceOverview(carId: Long): Flow<List<MaintenanceUiModel>> =
+        carMaintenanceRepository.observeMaintenanceOverview(carId)
 
     fun save(
         settingId: Long,
@@ -78,6 +83,37 @@ class AddMaintenanceViewModel @Inject constructor(
             maxHistoryMileage = maxHistory,
             newMileage = newMileage
         )
+    }
+
+    /**
+     * 일회성 수리 저장. 수리 이름으로 주기 없는 항목을 찾거나 만들어 기록을 남긴다.
+     * 주기가 없으므로 임박 알림·다음 정비에는 나타나지 않는다.
+     */
+    fun saveRepairWithOptionalMileageUpdate(
+        carId: Long,
+        repairName: String,
+        pending: PendingMaintenanceSave,
+        updateCarMileage: Boolean,
+        onDone: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val settingId = carMaintenanceRepository.getOrCreateRepairSetting(carId, repairName)
+
+            maintenanceHistoryRepository.insert(
+                settingId = settingId,
+                serviceDate = pending.serviceDate,
+                serviceMileage = pending.serviceMileage,
+                place = pending.place,
+                cost = pending.cost,
+                memo = pending.memo
+            )
+
+            if (updateCarMileage) {
+                carRepository.updateMileage(carId, pending.serviceMileage)
+            }
+            widgetUpdater.requestUpdate()
+            onDone()
+        }
     }
 
     /** 저장 + (선택) 차량 주행거리 업데이트 */

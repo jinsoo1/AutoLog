@@ -19,12 +19,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Payments
@@ -33,9 +33,6 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Upgrade
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -43,11 +40,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,6 +74,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.jsworld.android.autolog.presentation.component.MaintenanceItemPickSheet
+import com.jsworld.android.autolog.presentation.component.previousServiceLabel
 import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.domain.model.SettingOption
 import com.jsworld.android.autolog.presentation.viewModel.AddMaintenanceViewModel
@@ -100,14 +98,31 @@ fun AddMaintenanceScreen(
     carId: Long,
     viewModel: AddMaintenanceViewModel,
     onGoToItemPicker: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    preselectedSettingId: Long? = null
 ) {
-    val options by viewModel.observeSettingOptions(carId).collectAsState(initial = emptyList())
-    val car by viewModel.getCar(carId).collectAsState(initial = null)
+    // Flow 를 만드는 함수들이라 remember 로 고정한다(리컴포지션마다 재구독되지 않도록).
+    val optionsFlow = remember(carId) { viewModel.observeSettingOptions(carId) }
+    val carFlow = remember(carId) { viewModel.getCar(carId) }
+    val autoMileageFlow = remember(carId) { viewModel.observeAutoMileageUpdate(carId) }
+
+    val options by optionsFlow.collectAsState(initial = emptyList())
+    val car by carFlow.collectAsState(initial = null)
     val currentMileage = car?.mileage
 
     var expanded by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<SettingOption?>(null) }
+
+    // 일회성 수리 모드 — 항목을 고르는 대신 수리 이름을 직접 적는다.
+    // 주기 없는 항목으로 저장되므로 임박 알림·다음 정비에 나타나지 않는다.
+    var repairMode by rememberSaveable { mutableStateOf(false) }
+    var repairName by rememberSaveable { mutableStateOf("") }
+
+    // 임박 카드/항목 상세에서 들어온 경우 그 항목을 미리 골라둔다.
+    LaunchedEffect(preselectedSettingId, options) {
+        if (preselectedSettingId == null || selected != null) return@LaunchedEffect
+        selected = options.firstOrNull { it.settingId == preselectedSettingId }
+    }
 
     var dateText by rememberSaveable { mutableStateOf("") }
     var mileageTextFieldValue by remember {
@@ -123,7 +138,6 @@ fun AddMaintenanceScreen(
     var costText by rememberSaveable { mutableStateOf("") }
     var memoText by rememberSaveable { mutableStateOf("") }
 
-    var triedSave by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -136,7 +150,7 @@ fun AddMaintenanceScreen(
     var pendingSave by remember { mutableStateOf<PendingMaintenanceSave?>(null) }
     var mileageDecision by remember { mutableStateOf<UpdateMileageDecision?>(null) }
 
-    val autoMileageUpdate by viewModel.observeAutoMileageUpdate(carId).collectAsState(initial = false)
+    val autoMileageUpdate by autoMileageFlow.collectAsState(initial = false)
 
     // 선택 변경 시 자동 보정 로직(기존 그대로)
     LaunchedEffect(selected?.settingId) {
@@ -168,8 +182,8 @@ fun AddMaintenanceScreen(
         )
     }
 
-    // 검증(기존 그대로)
-    val itemValid = selected != null
+    // 검증(기존 그대로) — 수리 모드에서는 이름이 항목을 대신한다.
+    val itemValid = if (repairMode) repairName.isNotBlank() else selected != null
 
     val pickedDate = dateText.toLocalDateOrNull()
     val dateValid = pickedDate != null && (lastDate == null || pickedDate.isAfter(lastDate))
@@ -179,6 +193,9 @@ fun AddMaintenanceScreen(
             mileageValue!! > 0 &&
                 (lastMileage == null || mileageValue > lastMileage)
 
+    // 입력된 값이 규칙(이전 기록보다 커야 함)을 실제로 어긴 상태
+    val mileageRuleBroken = mileageValue != null && lastMileage != null && mileageValue <= lastMileage
+
     // 자릿수 오타(예: 38,950 → 389,500) 감지용 소프트 경고 (저장은 막지 않음)
     val mileageSuspiciousHigh = mileageValue != null && mileageValid && (
             (currentMileage != null && currentMileage > 0 && mileageValue >= currentMileage * 5) ||
@@ -186,6 +203,18 @@ fun AddMaintenanceScreen(
             )
 
     val canSave = itemValid && dateValid && mileageValid
+
+    // 저장 버튼이 무엇이 모자란지 직접 말한다(눌러서 스낵바로 혼나지 않도록).
+    val saveLabel = when {
+        // 수리는 항목 목록이 비어 있어도 기록할 수 있어야 한다.
+        !repairMode && options.isEmpty() -> "먼저 정비 항목을 추가해주세요"
+        repairMode && !itemValid -> "수리 이름을 입력해주세요"
+        !itemValid -> "항목을 선택해주세요"
+        !dateValid -> "정비 날짜를 확인해주세요"
+        mileageRuleBroken -> "주행거리를 확인해주세요"
+        !mileageValid -> "주행거리를 입력해주세요"
+        else -> "저장"
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -214,16 +243,10 @@ fun AddMaintenanceScreen(
                 ) {
                     Button(
                         onClick = {
-                            triedSave = true
-                            if (!canSave) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("필수 항목/조건(이전 기록보다 큰 값)을 확인해주세요.")
-                                }
-                                return@Button
-                            }
-
+                            // 저장 버튼은 canSave 일 때만 활성화되므로 여기서 다시 막을 필요가 없다.
+                            // 수리 모드에서는 settingId 를 저장 시점에 만들므로 자리만 채운다.
                             val pending = PendingMaintenanceSave(
-                                settingId = selected!!.settingId,
+                                settingId = if (repairMode) -1L else selected!!.settingId,
                                 serviceDate = dateText,
                                 serviceMileage = mileageRaw!!,
                                 place = placeText.takeIf { it.isNotBlank() },
@@ -231,18 +254,31 @@ fun AddMaintenanceScreen(
                                 memo = memoText.takeIf { it.isNotBlank() }
                             )
 
+                            // 수리/일반을 한 곳에서 분기해 두 저장 경로가 갈라지지 않게 한다.
+                            fun doSave(updateCarMileage: Boolean) {
+                                if (repairMode) {
+                                    viewModel.saveRepairWithOptionalMileageUpdate(
+                                        carId, repairName, pending, updateCarMileage, onDone = onBack
+                                    )
+                                } else {
+                                    viewModel.saveWithOptionalMileageUpdate(
+                                        carId, pending, updateCarMileage, onDone = onBack
+                                    )
+                                }
+                            }
+
                             scope.launch {
                                 val decision = viewModel.checkMileageUpdateSuggestion(carId, pending.serviceMileage)
 
                                 // 물어볼 필요 없으면 바로 저장
                                 if (decision == null || !decision.shouldAsk) {
-                                    viewModel.saveWithOptionalMileageUpdate(carId, pending, updateCarMileage = false, onDone = onBack)
+                                    doSave(updateCarMileage = false)
                                     return@launch
                                 }
 
                                 // 자동 업데이트 설정이면: 다이얼로그 없이 차량 주행거리도 같이 올림
                                 if (autoMileageUpdate) {
-                                    viewModel.saveWithOptionalMileageUpdate(carId, pending, updateCarMileage = true, onDone = onBack)
+                                    doSave(updateCarMileage = true)
                                     // (선택) 안내 스낵바
                                     snackbarHostState.showSnackbar("차량 주행거리도 ${pending.serviceMileage}km로 업데이트했어요.")
                                     return@launch
@@ -254,10 +290,10 @@ fun AddMaintenanceScreen(
                                 showMileageDialog = true
                             }
                         },
-                        enabled = options.isNotEmpty(),
+                        enabled = canSave,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("저장")
+                        Text(saveLabel, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -272,157 +308,76 @@ fun AddMaintenanceScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
-            // 상단 안내 카드(가독성)
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    ),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(5.dp)
-                                    .size(16.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("입력 규칙", fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                "정비 날짜와 주행거리는 이전 정비 기록보다 커야 해요.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 필수 입력 섹션
+            // 입력 규칙은 화면 상단에 상주시키지 않는다. 각 필드 아래에서, 어겼을 때만 알려준다.
             item {
                 SectionHeader(
-                    title = "필수 입력",
-                    subtitle = "정비 항목 · 날짜 · 주행거리",
+                    title = "무엇을 정비했나요",
+                    subtitle = "항목 · 날짜 · 주행거리",
                     icon = Icons.Default.Build
                 )
             }
 
             item {
                 FormCard {
-                    // 정비 항목 선택(드롭다운)
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
-                    ) {
+                    if (repairMode) {
+                        // 일회성 수리 — 항목 대신 수리 이름을 직접 적는다.
+                        OutlinedTextField(
+                            value = repairName,
+                            onValueChange = { repairName = it },
+                            label = { Text("수리 이름") },
+                            placeholder = { Text("예: 써모스탯 교체") },
+                            leadingIcon = { Icon(Icons.Default.Handyman, contentDescription = null) },
+                            trailingIcon = {
+                                IconButton(onClick = { expanded = true }) {
+                                    Icon(Icons.Default.ExpandMore, contentDescription = "항목 목록에서 선택")
+                                }
+                            },
+                            supportingText = { Text("탭하면 항목 목록으로 돌아갈 수 있어요") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(horizontal = 13.dp, vertical = 10.dp)) {
+                                Text(
+                                    "주기 없이 저장돼요",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    "임박 알림이나 다음 정비 목록에 나타나지 않아요. " +
+                                        "필요하면 나중에 항목 상세에서 주기를 설정할 수 있어요.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+                    } else {
+                        // 정비 항목 선택 — 좁은 드롭다운 대신 바텀시트를 띄운다.
+                        // 항목이 늘어나도 이전 정비·상태를 한눈에 비교할 수 있어야 하기 때문이다.
                         OutlinedTextField(
                             value = selected?.typeName ?: "",
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("정비 항목 *") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Build, contentDescription = null)
-                            },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                            isError = triedSave && !itemValid,
+                            enabled = false,
+                            label = { Text("정비 항목") },
+                            placeholder = { Text("항목을 선택해주세요") },
+                            leadingIcon = { Icon(Icons.Default.Build, contentDescription = null) },
+                            trailingIcon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
                             supportingText = {
-                                Column {
-                                    // 현재 차량 주행거리
-                                    val curText = currentMileage?.let { "${it.formatKm()}km" } ?: "불러오는 중…"
-                                    Text(
-                                        text = "현재 주행거리: $curText",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    // 이전 정비 주행거리
-                                    val prevText = lastMileage?.let { "${it.formatKm()}km" } ?: "없음"
-                                    Text(
-                                        text = "이전 주행거리: $prevText",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    // 에러 메시지(상황별)
-                                    if (triedSave && !mileageValid) {
-                                        val err = when {
-                                            mileageRaw == null -> "주행거리를 숫자로 입력해주세요."
-                                            mileageRaw!! <= 0 -> "주행거리는 0보다 큰 값이어야 해요."
-                                            lastMileage != null && mileageRaw!! <= lastMileage ->
-                                                "이전 정비 주행거리(${lastMileage.formatKm()}km)보다 큰 값을 입력해주세요."
-                                            else -> "주행거리를 확인해주세요."
-                                        }
-
-                                        Text(
-                                            text = err,
-                                            color = MaterialTheme.colorScheme.error,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
+                                selected?.previousServiceLabel()?.let { Text(it) }
                             },
+                            colors = disabledFieldReadsAsEnabled(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .clickable { expanded = true }
                         )
-
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            options.forEach { opt ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(opt.typeName, fontWeight = FontWeight.Bold)
-                                            val d = opt.lastServiceDate ?: "없음"
-                                            val m = opt.lastServiceMileage?.let { "${it}km" } ?: "없음"
-                                            Text(
-                                                "이전 정비: $d · $m",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        selected = opt
-                                        expanded = false
-                                    }
-                                )
-                            }
-
-                            HorizontalDivider()
-
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Add, contentDescription = null)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("정비 항목 추가")
-                                    }
-                                },
-                                onClick = {
-                                    expanded = false
-                                    onGoToItemPicker()
-                                }
-                            )
-                        }
                     }
 
                     Spacer(Modifier.height(12.dp))
@@ -431,7 +386,6 @@ fun AddMaintenanceScreen(
                     DatePickerField(
                         dateText = dateText,
                         onDateSelected = { dateText = it },
-                        triedSave = triedSave,
                         lastDate = lastDate,
                         snackbarHostState = snackbarHostState
                     )
@@ -466,51 +420,29 @@ fun AddMaintenanceScreen(
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number
                         ),
-                        isError = triedSave && !mileageValid,
+                        // 값이 실제로 규칙을 어긴 순간부터 빨갛게 알린다(비어 있을 때는 저장을 눌렀을 때만).
+                        isError = mileageRuleBroken,
                         supportingText = {
-                            Column {
-                                val cur = currentMileage?.let { "${it.formatKm()}km" } ?: "불러오는 중…"
-
-                                Text(
-                                    text = "현재 주행거리: $cur",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall
+                            when {
+                                mileageRuleBroken -> Text(
+                                    text = "이전 정비 ${lastMileage!!.formatKm()}km보다 커야 해요",
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.SemiBold
                                 )
 
-                                val prev = lastMileage?.let { "${it.formatKm()}km" } ?: "없음"
-
-                                Text(
-                                    text = "이전 주행거리: $prev",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall
+                                mileageSuspiciousHigh -> Text(
+                                    text = "현재 값보다 많이 큽니다. 자릿수를 확인해주세요.",
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    fontWeight = FontWeight.SemiBold
                                 )
 
-                                if (triedSave && !mileageValid) {
-                                    val err = when {
-                                        mileageRaw == null -> "주행거리를 숫자로 입력해주세요."
-                                        mileageRaw!! <= 0 -> "주행거리는 0보다 큰 값이어야 해요."
-                                        lastMileage != null && mileageRaw!! <= lastMileage ->
-                                            "이전 정비 주행거리(${lastMileage.formatKm()}km)보다 큰 값을 입력해주세요."
+                                // 자동으로 채워둔 값이면 그렇다고 밝혀준다.
+                                !mileageTouched && currentMileage != null && mileageRaw == currentMileage ->
+                                    Text("차량 주행거리를 그대로 넣었어요")
 
-                                        else -> "주행거리를 확인해주세요."
-                                    }
+                                lastMileage != null -> Text("이전 정비 ${lastMileage.formatKm()}km 이후 값")
 
-                                    Text(
-                                        text = err,
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-
-                                if (mileageSuspiciousHigh) {
-                                    Text(
-                                        text = "입력한 주행거리가 현재 값보다 많이 큽니다. 자릿수를 확인해주세요.",
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                                else -> Unit
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -518,11 +450,10 @@ fun AddMaintenanceScreen(
                 }
             }
 
-            // 선택 입력 섹션
             item {
                 SectionHeader(
-                    title = "선택 입력",
-                    subtitle = "장소 · 비용 · 메모",
+                    title = "더 남길 내용",
+                    subtitle = "정비소 · 비용 · 메모 (선택)",
                     icon = Icons.AutoMirrored.Filled.Notes
                 )
             }
@@ -597,6 +528,31 @@ fun AddMaintenanceScreen(
         }
     }
 
+    if (expanded) {
+        val overviewFlow = remember(carId) { viewModel.observeMaintenanceOverview(carId) }
+        val statuses by overviewFlow.collectAsState(initial = emptyList())
+
+        MaintenanceItemPickSheet(
+            options = options,
+            statuses = statuses,
+            onSelect = { option ->
+                selected = option
+                repairMode = false
+                expanded = false
+            },
+            onAddItem = {
+                expanded = false
+                onGoToItemPicker()
+            },
+            onAddRepair = {
+                repairMode = true
+                selected = null
+                expanded = false
+            },
+            onDismiss = { expanded = false }
+        )
+    }
+
     if (showMileageDialog && pendingSave != null && mileageDecision != null) {
         val d = mileageDecision!!
         val p = pendingSave!!
@@ -611,16 +567,39 @@ fun AddMaintenanceScreen(
             },
             onConfirmUpdate = {
                 showMileageDialog = false
-                viewModel.saveWithOptionalMileageUpdate(carId, p, updateCarMileage = true, onDone = onBack)
+                if (repairMode) {
+                    viewModel.saveRepairWithOptionalMileageUpdate(carId, repairName, p, updateCarMileage = true, onDone = onBack)
+                } else {
+                    viewModel.saveWithOptionalMileageUpdate(carId, p, updateCarMileage = true, onDone = onBack)
+                }
             },
             onDismissSaveOnly = {
                 showMileageDialog = false
-                viewModel.saveWithOptionalMileageUpdate(carId, p, updateCarMileage = false, onDone = onBack)
+                if (repairMode) {
+                    viewModel.saveRepairWithOptionalMileageUpdate(carId, repairName, p, updateCarMileage = false, onDone = onBack)
+                } else {
+                    viewModel.saveWithOptionalMileageUpdate(carId, p, updateCarMileage = false, onDone = onBack)
+                }
             },
             onDismiss = { showMileageDialog = false }
         )
     }
 }
+
+/**
+ * 탭해서 시트를 띄우는 읽기 전용 필드용 색. `enabled = false` 로 두면 텍스트필드가
+ * 클릭을 삼키지 않지만 기본 색이 흐려지므로, 활성 상태와 같게 보이도록 맞춘다.
+ */
+@Composable
+private fun disabledFieldReadsAsEnabled() = OutlinedTextFieldDefaults.colors(
+    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledBorderColor = MaterialTheme.colorScheme.outline,
+    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+)
 
 @Composable
 private fun FormCard(
@@ -677,7 +656,6 @@ private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE // yy
 private fun DatePickerField(
     dateText: String,
     onDateSelected: (String) -> Unit,
-    triedSave: Boolean,
     lastDate: LocalDate?,
     snackbarHostState: SnackbarHostState
 ) {
@@ -714,7 +692,7 @@ private fun DatePickerField(
         readOnly = true,
         label = { Text("정비 날짜 *") },
         leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
-        isError = triedSave && !dateValid,
+        isError = dateText.isNotBlank() && !dateValid,
         supportingText = {
             Column {
                 Text(
@@ -727,7 +705,7 @@ private fun DatePickerField(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (triedSave && !dateValid) {
+                if (dateText.isNotBlank() && !dateValid) {
                     Text(
                         text = "이전 정비일 이후이며, 오늘까지의 날짜만 선택할 수 있어요.",
                         color = MaterialTheme.colorScheme.error,

@@ -2,6 +2,7 @@ package com.jsworld.android.autolog.data.repository
 
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
 
+import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
 import com.jsworld.android.autolog.data.local.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
@@ -54,6 +55,11 @@ class MaintenanceHistoryRepositoryImpl @Inject constructor(
 
     override fun observeMaxServiceMileageForCar(carId: Long): Flow<Int?> {
         return historyDao.observeMaxServiceMileageForCar(carId)
+    }
+
+    override fun observeCarRecords(carId: Long): Flow<List<CarMaintenanceRecord>> {
+        return historyDao.observeCarRecords(carId)
+            .map { list -> list.map { it.toDomain() } }
     }
 
 

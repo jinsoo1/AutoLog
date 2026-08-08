@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -62,6 +65,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jsworld.android.autolog.presentation.state.BackupUiEvent
+import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.presentation.viewModel.SettingsViewModel
@@ -71,11 +75,15 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
+    showBack: Boolean = true,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
     val backupUiState by viewModel.backupUiState
+        .collectAsStateWithLifecycle()
+
+    val restorePreview by viewModel.restorePreview
         .collectAsStateWithLifecycle()
 
     val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
@@ -215,6 +223,11 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        // 탭으로 열렸을 때(showBack = false)는 MainTabScreen 이 이미 하단 인셋을 뺐다.
+        // 여기서 또 빼면 목록 아래에 빈 공간이 생기므로 상단 인셋만 남긴다.
+        contentWindowInsets =
+            if (showBack) ScaffoldDefaults.contentWindowInsets
+            else ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top),
         topBar = {
             TopAppBar(
                 title = {
@@ -225,13 +238,16 @@ fun SettingsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "뒤로가기"
-                        )
+                    // 탭으로 열렸을 때는 돌아갈 곳이 없으므로 뒤로가기를 숨긴다.
+                    if (showBack) {
+                        IconButton(
+                            onClick = onBackClick
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "뒤로가기"
+                            )
+                        }
                     }
                 }
             )
@@ -461,9 +477,17 @@ fun SettingsScreen(
      * 복원 전 경고(전체 교체) 확인 다이얼로그
      */
     pendingRestoreUri?.let { uri ->
+        // 파일을 미리 읽어 무엇이 들어있는지 보여준다(적용 전).
+        LaunchedEffect(uri) { viewModel.loadRestorePreview(uri) }
+
+        val preview = restorePreview
+
         AlertDialog(
             onDismissRequest = {
-                if (!backupUiState.isRestoring) pendingRestoreUri = null
+                if (!backupUiState.isRestoring) {
+                    pendingRestoreUri = null
+                    viewModel.clearRestorePreview()
+                }
             },
             title = {
                 Text("⚠️ 백업 복원 주의")
@@ -471,7 +495,7 @@ fun SettingsScreen(
             text = {
                 Column {
                     Text(
-                        text = "현재 저장된 모든 데이터(차량 · 정비 기록 · 주행거리 기록)가 " +
+                        text = "현재 저장된 모든 데이터(차량 · 정비 기록 · 주행거리 기록 · 주유 기록)가 " +
                                 "삭제됩니다.",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
@@ -480,16 +504,106 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "선택한 백업 파일의 데이터로 완전히 교체되며, 이 작업은 " +
-                                "되돌릴 수 없습니다.\n\n복원을 계속하시겠습니까?",
+                                "되돌릴 수 없습니다.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    when {
+                        preview == null || preview.loading -> {
+                            Text(
+                                "백업 파일을 확인하는 중…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        preview.error != null -> {
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    "이 파일을 읽을 수 없습니다.\n${preview.error}",
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+
+                        else -> {
+                            val info = preview.preview!!
+
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(
+                                        "이 백업에 들어있는 데이터",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        "차량 ${info.carCount}대 · " +
+                                                "정비 기록 ${info.maintenanceHistoryCount}건 · " +
+                                                "주유 기록 ${info.fuelRecordCount}건",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "저장 시각 ${info.createdAt.toBackupDateText()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // 예전 백업(주유 기록이 없던 버전)을 복원하는 경우 —
+                            // 지금 쌓아둔 주유 기록만 조용히 사라지므로 따로 경고한다.
+                            if (info.losesFuelRecords) {
+                                Spacer(Modifier.height(10.dp))
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(
+                                            "이 백업에는 주유 기록이 없어요",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "복원하면 지금 저장된 주유 기록 " +
+                                                    "${info.currentFuelRecordCount}건이 삭제됩니다. " +
+                                                    "필요하면 먼저 백업을 새로 만들어주세요.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = !backupUiState.isRestoring,
+                    // 읽을 수 없는 파일이면 복원을 시작하지 않는다.
+                    enabled = !backupUiState.isRestoring &&
+                            preview?.loading == false &&
+                            preview.error == null,
                     onClick = {
                         pendingRestoreUri = null
+                        viewModel.clearRestorePreview()
                         viewModel.restoreBackup(uri)
                     }
                 ) {
@@ -503,7 +617,10 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(
                     enabled = !backupUiState.isRestoring,
-                    onClick = { pendingRestoreUri = null }
+                    onClick = {
+                        pendingRestoreUri = null
+                        viewModel.clearRestorePreview()
+                    }
                 ) {
                     Text("취소")
                 }
@@ -721,3 +838,8 @@ private fun formatBackupDate(millis: Long): String {
     )
     return formatter.format(java.util.Date(millis))
 }
+
+/** 백업 저장 시각 표시용. */
+private fun Long.toBackupDateText(): String =
+    java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault())
+        .format(java.util.Date(this))

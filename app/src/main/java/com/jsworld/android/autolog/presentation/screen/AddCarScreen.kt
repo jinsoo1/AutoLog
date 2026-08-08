@@ -360,7 +360,12 @@ internal fun FuelTypeChips(
     selected: String,
     onSelected: (String) -> Unit
 ) {
-    val fuelTypes = listOf("가솔린", "디젤", "LPG", "하이브리드", "전기", "수소", "기타")
+    // "플러그인 하이브리드"는 주유와 충전을 모두 기록하는 유일한 타입이다(FuelUnit.supportedUnits).
+    val fuelTypes = listOf(
+        "가솔린", "디젤", "LPG",
+        "하이브리드", "플러그인 하이브리드",
+        "전기", "수소", "기타"
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
