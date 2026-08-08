@@ -1,6 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.Build
@@ -140,6 +145,7 @@ fun MaintenanceStarterScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StarterPackCard(
     pack: MaintenanceStarterPack,
@@ -218,16 +224,66 @@ private fun StarterPackCard(
                 )
             }
 
-            // 무엇이 켜지는지 몇 개만 보여준다 — 전체 나열은 스크롤만 길어진다.
-            val preview = items.take(4).joinToString(" · ")
-            if (preview.isNotBlank()) {
+            // 기본은 앞 몇 개만, 원하면 펼쳐서 전체 확인.
+            // 카드 탭은 "선택"이므로, 펼치기는 별도 탭 영역으로 분리한다.
+            var expanded by rememberSaveable(pack.name) { mutableStateOf(false) }
+
+            if (items.isNotEmpty()) {
                 Spacer(Modifier.height(9.dp))
-                Text(
-                    if (items.size > 4) "$preview 외 ${items.size - 4}개" else preview,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight
-                )
+
+                if (expanded) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items.forEach { name ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    .compositeOver(MaterialTheme.colorScheme.surface),
+                                shape = CircleShape
+                            ) {
+                                Text(
+                                    name,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val preview = items.take(4).joinToString(" · ")
+                    Text(
+                        if (items.size > 4) "$preview 외 ${items.size - 4}개" else preview,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                    )
+                }
+
+                if (items.size > 4) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier
+                            .clickable { expanded = !expanded }
+                            .padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            if (expanded) "접기" else "항목 모두 보기",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }
