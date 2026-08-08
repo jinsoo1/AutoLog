@@ -63,3 +63,4 @@ replay_pid*
 # Shelved changes
 shelf/
 *.patch
+docs/store/_slides/
