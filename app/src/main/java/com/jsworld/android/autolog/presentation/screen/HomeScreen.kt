@@ -361,7 +361,9 @@ private fun UrgentCard(
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (overdue) "${item.name} 교체 초과" else "${item.name} 교체 임박",
+                    // "타이어 교체"처럼 이름이 이미 '교체/점검'으로 끝나면 겹쳐 붙이지 않는다.
+                    // ("타이어 교체 교체 초과"가 되는 것을 방지)
+                    item.name.withActionSuffix(if (overdue) "초과" else "임박"),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = accent
@@ -614,3 +616,16 @@ internal fun String.toDisplayDateOrNull(): String? = runCatching {
 }.getOrNull()
 
 internal fun Int.formatThousands(): String = NumberFormat.getIntegerInstance().format(this)
+
+/**
+ * "엔진오일" → "엔진오일 교체 초과", "타이어 교체" → "타이어 교체 초과".
+ * 항목 이름이 이미 동작('교체' 등)이나 괄호 설명으로 끝나면 '교체'를 겹쳐 붙이지 않는다.
+ */
+private fun String.withActionSuffix(status: String): String {
+    val trimmed = trimEnd()
+    val core = trimmed.substringBeforeLast('(').trimEnd()  // "PCV 밸브(점검/교환)" 대응
+    val endsWithAction = listOf("교체", "교환", "점검", "보충").any {
+        trimmed.endsWith(it) || core.endsWith(it) || trimmed.endsWith("$it)")
+    }
+    return if (endsWithAction) "$trimmed $status" else "$trimmed 교체 $status"
+}
