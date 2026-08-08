@@ -80,7 +80,20 @@ android {
     }
 }
 
+/**
+ * Room 스키마를 app/schemas 에 내보낸다(`exportSchema = true` 와 짝).
+ *
+ * 스키마 JSON 을 git 에 두면 ⑴ 버전 간 차이를 코드 리뷰에서 볼 수 있고
+ * ⑵ MigrationTestHelper 로 마이그레이션을 테스트할 수 있다.
+ * DB 가 로컬에만 있는 앱이라 마이그레이션 실수는 곧 데이터 유실이므로 반드시 커밋한다.
+ */
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
+    testImplementation(libs.junit)
+
     // Core & Lifecycle
     implementation(libs.android.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)

@@ -8,12 +8,14 @@ import com.jsworld.android.autolog.data.local.dao.BackupDao
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.CarExportDao
 import com.jsworld.android.autolog.data.local.dao.CarMaintenanceSettingDao
+import com.jsworld.android.autolog.data.local.dao.FuelRecordDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceFullDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceTypeDao
 import com.jsworld.android.autolog.data.local.dao.MileageHistoryDao
 import com.jsworld.android.autolog.data.local.entity.CarEntity
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
@@ -25,7 +27,8 @@ import com.jsworld.android.autolog.data.repository.BackupRepository.Companion.DA
         MaintenanceTypeEntity::class,
         CarMaintenanceSettingEntity::class,
         MaintenanceHistoryEntity::class,
-        MileageHistoryEntity::class
+        MileageHistoryEntity::class,
+        FuelRecordEntity::class
     ],
     version = DATABASE_VERSION,
     exportSchema = true
@@ -39,6 +42,7 @@ abstract class AutoLogDatabase : RoomDatabase() {
     abstract fun maintenanceFullDao(): MaintenanceFullDao
     abstract fun mileageHistoryDao(): MileageHistoryDao
     abstract fun carExportDao(): CarExportDao
+    abstract fun fuelRecordDao(): FuelRecordDao
 
     abstract fun backupDao(): BackupDao
 }
@@ -119,6 +123,44 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
                 ELSE NULL
             END
             """.trimIndent()
+        )
+    }
+}
+/**
+ * 주유(충전) 기록 테이블 추가.
+ *
+ * 기존 테이블은 건드리지 않는 순수 추가 마이그레이션이라 데이터 유실 위험이 없다.
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // SQL 은 app/schemas/.../3.json 의 createSql 을 그대로 옮긴 것이다.
+        // 직접 쓰면 컬럼 타입·FK 옵션이 미묘하게 달라져 실행 시
+        // "Migration didn't properly handle" 크래시가 나기 쉽다.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `fuel_records` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`carId` INTEGER NOT NULL, " +
+                "`filledAt` TEXT NOT NULL, " +
+                "`mileage` INTEGER, " +
+                "`amount` INTEGER, " +
+                "`quantity` REAL, " +
+                "`unitPrice` INTEGER, " +
+                "`unit` TEXT NOT NULL, " +
+                "`station` TEXT, " +
+                "`memo` TEXT, " +
+                "`photoPath` TEXT, " +
+                "FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_fuel_records_carId` " +
+                "ON `fuel_records` (`carId`)"
+        )
+
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_fuel_records_carId_filledAt` " +
+                "ON `fuel_records` (`carId`, `filledAt`)"
         )
     }
 }

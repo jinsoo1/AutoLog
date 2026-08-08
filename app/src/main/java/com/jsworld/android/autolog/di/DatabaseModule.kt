@@ -6,12 +6,14 @@ import com.jsworld.android.autolog.data.local.dao.BackupDao
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.CarExportDao
 import com.jsworld.android.autolog.data.local.dao.CarMaintenanceSettingDao
+import com.jsworld.android.autolog.data.local.dao.FuelRecordDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceFullDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceTypeDao
 import com.jsworld.android.autolog.data.local.dao.MileageHistoryDao
 import com.jsworld.android.autolog.data.local.db.AutoLogDatabase
 import com.jsworld.android.autolog.data.local.db.MIGRATION_1_2
+import com.jsworld.android.autolog.data.local.db.MIGRATION_2_3
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,7 +36,7 @@ object DatabaseModule {
             AutoLogDatabase::class.java,
             "autolog_db"
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
 
@@ -64,6 +66,10 @@ object DatabaseModule {
     @Provides
     fun provideCarExportDao(db: AutoLogDatabase): CarExportDao =
         db.carExportDao()
+
+    @Provides
+    fun provideFuelRecordDao(db: AutoLogDatabase): FuelRecordDao =
+        db.fuelRecordDao()
 
     @Provides
     @Singleton

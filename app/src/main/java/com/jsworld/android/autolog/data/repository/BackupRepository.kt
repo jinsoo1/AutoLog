@@ -78,6 +78,9 @@ class BackupRepository @Inject constructor(
                     .map { it.toBackup() },
                 mileageHistories = backupDao
                     .getAllMileageHistories()
+                    .map { it.toBackup() },
+                fuelRecords = backupDao
+                    .getAllFuelRecords()
                     .map { it.toBackup() }
             )
         }
@@ -131,6 +134,11 @@ class BackupRepository @Inject constructor(
 
             require(it.carId in carIds)
         }
+
+        backup.fuelRecords.forEach {
+
+            require(it.carId in carIds)
+        }
     }
 
     suspend fun restoreBackup(
@@ -150,6 +158,7 @@ class BackupRepository @Inject constructor(
                     // 삭제
                     //
 
+                    backupDao.deleteAllFuelRecords()
                     backupDao.deleteAllMaintenanceHistories()
                     backupDao.deleteAllMileageHistories()
                     backupDao.deleteAllMaintenanceSettings()
@@ -184,6 +193,12 @@ class BackupRepository @Inject constructor(
 
                     backupDao.insertMileageHistories(
                         backup.mileageHistories.map {
+                            it.toEntity()
+                        }
+                    )
+
+                    backupDao.insertFuelRecords(
+                        backup.fuelRecords.map {
                             it.toEntity()
                         }
                     )
@@ -274,6 +289,30 @@ class BackupRepository @Inject constructor(
             result
         }
 
+    /**
+     * 복원하기 **전에** 백업 파일의 내용을 훑어본다(적용하지 않음).
+     *
+     * 복원은 전체 교체라서, 예컨대 주유 기록이 없던 예전 백업을 복원하면
+     * 지금 쌓아둔 주유 기록이 사라진다. 사용자가 그걸 모르고 누르지 않도록
+     * 확인 다이얼로그에서 미리 보여주기 위한 조회다.
+     */
+    suspend fun peekBackup(uri: Uri): Result<BackupPreview> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val backup = readBackup(uri)
+
+                BackupPreview(
+                    createdAt = backup.createdAt,
+                    backupVersion = backup.backupVersion,
+                    databaseVersion = backup.databaseVersion,
+                    carCount = backup.cars.size,
+                    maintenanceHistoryCount = backup.maintenanceHistories.size,
+                    fuelRecordCount = backup.fuelRecords.size,
+                    currentFuelRecordCount = backupDao.countFuelRecords()
+                )
+            }
+        }
+
     private fun buildBackupFileName(): String {
         val formatter = java.text.SimpleDateFormat(
             "yyyy-MM-dd_HHmmss",
@@ -286,11 +325,31 @@ class BackupRepository @Inject constructor(
         /**
          * 실제 AutoLogDatabase의 현재 버전과 동일하게 맞춘다.
          */
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
 
         /** Download 하위 백업 폴더 이름 */
         const val BACKUP_DIR_NAME = "AutoLog"
     }
+}
+
+/**
+ * 복원 전에 보여줄 백업 요약.
+ *
+ * [fuelRecordCount] 가 0 인데 [currentFuelRecordCount] 가 0 보다 크면,
+ * 복원하면 현재 주유 기록이 사라진다는 뜻이다.
+ */
+data class BackupPreview(
+    val createdAt: Long,
+    val backupVersion: Int,
+    val databaseVersion: Int,
+    val carCount: Int,
+    val maintenanceHistoryCount: Int,
+    val fuelRecordCount: Int,
+    val currentFuelRecordCount: Int
+) {
+    /** 복원 시 현재 주유 기록만 사라지는 상황인지 */
+    val losesFuelRecords: Boolean
+        get() = fuelRecordCount == 0 && currentFuelRecordCount > 0
 }
 
 /** Download/AutoLog 폴더의 백업 파일 정보 */

@@ -2,13 +2,20 @@ package com.jsworld.android.autolog.data.mapper
 
 import android.R.attr.type
 import com.jsworld.android.autolog.domain.model.Car
+import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
+import com.jsworld.android.autolog.domain.model.FuelRecord
+import com.jsworld.android.autolog.domain.model.FuelUnit
+import com.jsworld.android.autolog.domain.model.MonthlyFuelCost
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
 import com.jsworld.android.autolog.domain.model.MaintenanceType
 import com.jsworld.android.autolog.domain.model.SettingOption
 import com.jsworld.android.autolog.domain.model.SettingWithHistory as ItemSettingWithHistory
 import com.jsworld.android.autolog.data.local.entity.CarEntity
+import com.jsworld.android.autolog.data.local.entity.CarMaintenanceRecordRow
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
+import com.jsworld.android.autolog.data.local.entity.MonthlyFuelCostRow
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.data.local.entity.SettingOptionRow
@@ -106,3 +113,56 @@ fun SettingOptionRow.toDomain(): SettingOption {
         lastServiceMileage = lastServiceMileage
     )
 }
+
+fun CarMaintenanceRecordRow.toDomain(): CarMaintenanceRecord {
+    return CarMaintenanceRecord(
+        historyId = historyId,
+        settingId = settingId,
+        typeId = typeId,
+        typeName = typeName,
+        serviceDate = serviceDate,
+        serviceMileage = serviceMileage,
+        place = place,
+        cost = cost,
+        memo = memo,
+        isRepair = isRepair
+    )
+}
+
+fun FuelRecordEntity.toDomain(): FuelRecord =
+    FuelRecord(
+        id = id,
+        carId = carId,
+        filledAt = filledAt,
+        mileage = mileage,
+        amount = amount,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        unit = FuelUnit.fromSymbol(unit),
+        station = station,
+        memo = memo,
+        photoPath = photoPath
+    )
+
+fun FuelRecord.toEntity(): FuelRecordEntity =
+    FuelRecordEntity(
+        id = id,
+        carId = carId,
+        filledAt = filledAt,
+        mileage = mileage,
+        amount = amount,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        unit = unit.symbol,
+        station = station,
+        memo = memo,
+        photoPath = photoPath
+    )
+
+fun MonthlyFuelCostRow.toDomain(): MonthlyFuelCost =
+    MonthlyFuelCost(
+        month = month,
+        unit = FuelUnit.fromSymbol(unit),
+        totalAmount = totalAmount,
+        totalQuantity = totalQuantity
+    )

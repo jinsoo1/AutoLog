@@ -23,10 +23,14 @@ class CarExportRepository @Inject constructor(
         val mileageHistories =
             carExportDao.getMileageHistoriesForExport(carId)
 
+        val fuelRecords =
+            carExportDao.getFuelRecordsForExport(carId)
+
         return CarExportData(
             car = car,
             settingsWithHistory = settingsWithHistory,
-            mileageHistories = mileageHistories
+            mileageHistories = mileageHistories,
+            fuelRecords = fuelRecords
         )
     }
 }

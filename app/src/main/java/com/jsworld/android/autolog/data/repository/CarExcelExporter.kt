@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.HorizontalAlignment
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -59,6 +60,9 @@ class CarExcelExporter @Inject constructor(
 
             android.util.Log.d("CarExcelExporter", "createMileageHistorySheet start")
             createMileageHistorySheet(workbook, data)
+
+            android.util.Log.d("CarExcelExporter", "createFuelSheet start")
+            createFuelSheet(workbook, data)
 
             android.util.Log.d("CarExcelExporter", "write workbook start")
 
@@ -445,6 +449,151 @@ class CarExcelExporter @Inject constructor(
         sheet.setColumnWidth(1, 18 * 256) // 주행거리
         sheet.setColumnWidth(2, 22 * 256) // 이전 기록 대비 증가
         sheet.setColumnWidth(3, 35 * 256) // 메모
+    }
+
+    /**
+     * 주유(충전) 기록 시트.
+     *
+     * 연비는 계산하지 않는 대신 "이전 기록 이후 주행거리"를 함께 적어
+     * 스프레드시트에서 사용자가 직접 따져볼 수 있게 한다.
+     */
+    private fun createFuelSheet(
+        workbook: XSSFWorkbook,
+        data: CarExportData
+    ) {
+        if (data.fuelRecords.isEmpty()) {
+            createFuelSheetForUnit(workbook, "L", emptyList(), emptyMap())
+            return
+        }
+
+        // ⚠️ 단위(L / kWh / kg)가 섞인 기록을 한 시트에 담으면
+        // "총 주유량 = 22.6L + 28.4kWh" 처럼 말이 안 되는 합계가 나온다.
+        // 플러그인 하이브리드는 항상 섞이므로 **종류별로 시트를 나눈다.**
+        // 종류가 하나면 시트도 하나라 기존과 똑같다.
+        // "이전 기록 이후 주행"은 종류를 섞어 계산해야 한다.
+        // 주유든 충전이든 그 사이에 실제로 달린 거리이기 때문이다.
+        val drivenById = data.fuelRecords.drivenDistancesById()
+
+        data.fuelRecords
+            .groupBy { it.unit }
+            .toList()
+            .sortedBy { (unit, _) -> if (unit == "L") 0 else 1 }
+            .forEach { (unitLabel, unitRecords) ->
+                createFuelSheetForUnit(workbook, unitLabel, unitRecords, drivenById)
+            }
+    }
+
+    private fun createFuelSheetForUnit(
+        workbook: XSSFWorkbook,
+        unitLabel: String,
+        unitRecords: List<FuelRecordEntity>,
+        drivenById: Map<Long, Int>
+    ) {
+        val actionLabel = if (unitLabel == "L") "주유" else "충전"
+        val placeLabel = if (unitLabel == "L") "주유소" else "충전소"
+
+        val sheet = workbook.createSheet("${actionLabel}기록")
+
+        val titleStyle = createTitleStyle(workbook)
+        val sectionStyle = createSectionStyle(workbook)
+        val headerStyle = createHeaderStyle(workbook)
+
+        createRow(sheet, 0, listOf("${actionLabel}기록"), titleStyle)
+
+        // 최신순으로 들어오지만 방어적으로 다시 정렬한다.
+        val sorted = unitRecords.sortedWith(
+            compareByDescending<FuelRecordEntity> { it.filledAt }.thenByDescending { it.id }
+        )
+
+        val totalAmount = sorted.sumOf { it.amount ?: 0 }
+        val totalQuantity = sorted.sumOf { it.quantity ?: 0.0 }
+        // 이 시트는 단위가 하나뿐이라 합계·평균이 성립한다.
+        val averageUnitPrice =
+            if (totalQuantity > 0.0) (totalAmount / totalQuantity).toInt() else null
+
+        createRow(sheet, 2, listOf("전체 요약"), sectionStyle)
+        createRow(sheet, 3, listOf("총 기록 수", "${sorted.size}건"))
+        createRow(sheet, 4, listOf("총 지출", "$totalAmount 원"))
+        createRow(sheet, 5, listOf("총 ${actionLabel}량", "$totalQuantity $unitLabel"))
+        createRow(
+            sheet, 6,
+            listOf("평균 단가", averageUnitPrice?.let { "$it 원/$unitLabel" } ?: "")
+        )
+
+        createRow(sheet, 8, listOf("${actionLabel} 기록"), sectionStyle)
+
+        createRow(
+            sheet = sheet,
+            rowIndex = 9,
+            values = listOf(
+                "날짜",
+                "주행거리",
+                "이전 기록 이후 주행",
+                "금액",
+                "${actionLabel}량",
+                "단가",
+                placeLabel,
+                "메모"
+            ),
+            style = headerStyle
+        )
+
+        if (sorted.isEmpty()) {
+            createRow(
+                sheet = sheet,
+                rowIndex = 10,
+                values = listOf("${actionLabel} 기록이 없습니다.", "", "", "", "", "", "", "")
+            )
+            setFuelColumnWidths(sheet)
+            return
+        }
+
+        sorted.forEachIndexed { index, record ->
+            createRow(
+                sheet = sheet,
+                rowIndex = 10 + index,
+                values = listOf(
+                    record.filledAt,
+                    record.mileage?.let { "$it km" } ?: "",
+                    drivenById[record.id]?.let { "$it km" } ?: "",
+                    record.amount?.let { "$it 원" } ?: "",
+                    record.quantity?.let { "$it $unitLabel" } ?: "",
+                    record.unitPrice?.let { "$it 원/$unitLabel" } ?: "",
+                    record.station ?: "",
+                    record.memo ?: ""
+                )
+            )
+        }
+
+        setFuelColumnWidths(sheet)
+    }
+
+    /**
+     * 각 기록의 "이전 기록 이후 주행거리". 종류(주유/충전)를 섞어 최신순으로 비교한다.
+     */
+    private fun List<FuelRecordEntity>.drivenDistancesById(): Map<Long, Int> {
+        val sorted = sortedWith(
+            compareByDescending<FuelRecordEntity> { it.filledAt }.thenByDescending { it.id }
+        )
+        val result = mutableMapOf<Long, Int>()
+        sorted.forEachIndexed { index, record ->
+            val current = record.mileage ?: return@forEachIndexed
+            val previous = sorted.getOrNull(index + 1)?.mileage ?: return@forEachIndexed
+            val delta = current - previous
+            if (delta > 0) result[record.id] = delta
+        }
+        return result
+    }
+
+    private fun setFuelColumnWidths(sheet: Sheet) {
+        sheet.setColumnWidth(0, 14 * 256) // 날짜
+        sheet.setColumnWidth(1, 14 * 256) // 주행거리
+        sheet.setColumnWidth(2, 20 * 256) // 이전 기록 이후 주행
+        sheet.setColumnWidth(3, 14 * 256) // 금액
+        sheet.setColumnWidth(4, 14 * 256) // 주유량
+        sheet.setColumnWidth(5, 16 * 256) // 단가
+        sheet.setColumnWidth(6, 22 * 256) // 주유소
+        sheet.setColumnWidth(7, 30 * 256) // 메모
     }
 
     private fun createMaintenanceSettingSheet(

@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.jsworld.android.autolog.data.local.entity.CarEntity
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
@@ -27,6 +28,13 @@ interface BackupDao {
 
     @Query("SELECT * FROM mileage_history ORDER BY id ASC")
     suspend fun getAllMileageHistories(): List<MileageHistoryEntity>
+
+    @Query("SELECT * FROM fuel_records ORDER BY id ASC")
+    suspend fun getAllFuelRecords(): List<FuelRecordEntity>
+
+    /** 복원 전 경고에 쓰는 현재 주유 기록 수 */
+    @Query("SELECT COUNT(*) FROM fuel_records")
+    suspend fun countFuelRecords(): Int
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertCars(cars: List<CarEntity>)
@@ -50,6 +58,14 @@ interface BackupDao {
     suspend fun insertMileageHistories(
         histories: List<MileageHistoryEntity>
     )
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertFuelRecords(
+        records: List<FuelRecordEntity>
+    )
+
+    @Query("DELETE FROM fuel_records")
+    suspend fun deleteAllFuelRecords()
 
     @Query("DELETE FROM maintenance_history")
     suspend fun deleteAllMaintenanceHistories()

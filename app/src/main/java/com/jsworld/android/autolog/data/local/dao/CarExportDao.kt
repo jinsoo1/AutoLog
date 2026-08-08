@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
 import com.jsworld.android.autolog.data.local.entity.CarEntity
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.SettingWithHistoryEntity
 
@@ -51,4 +52,17 @@ interface CarExportDao {
     suspend fun getMileageHistoriesForExport(
         carId: Long
     ): List<MileageHistoryEntity>
+
+    /**
+     * 차량의 주유(충전) 기록
+     */
+    @Query("""
+        SELECT *
+        FROM fuel_records
+        WHERE carId = :carId
+        ORDER BY filledAt DESC, id DESC
+    """)
+    suspend fun getFuelRecordsForExport(
+        carId: Long
+    ): List<FuelRecordEntity>
 }

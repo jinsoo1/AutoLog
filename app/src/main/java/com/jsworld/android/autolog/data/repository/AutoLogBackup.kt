@@ -2,6 +2,7 @@ package com.jsworld.android.autolog.data.repository
 
 import com.jsworld.android.autolog.data.local.entity.CarEntity
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
@@ -25,7 +26,16 @@ data class AutoLogBackup(
     val maintenanceTypes: List<MaintenanceTypeBackup>,
     val maintenanceSettings: List<MaintenanceSettingBackup>,
     val maintenanceHistories: List<MaintenanceHistoryBackup>,
-    val mileageHistories: List<MileageHistoryBackup>
+    val mileageHistories: List<MileageHistoryBackup>,
+    /**
+     * 주유(충전) 기록.
+     *
+     * ⚠️ 기본값을 반드시 유지할 것. 이 필드가 없던 과거 백업도 그대로 복원돼야 한다.
+     * (기본값이 있으므로 CURRENT_BACKUP_VERSION 을 올리지 않는다)
+     *
+     * 영수증 사진은 백업에 담지 않는다 — photoPath 만 남으므로 복원 후 파일이 없을 수 있다.
+     */
+    val fuelRecords: List<FuelRecordBackup> = emptyList()
 ) {
     companion object {
         const val CURRENT_BACKUP_VERSION = 1
@@ -72,6 +82,22 @@ data class MaintenanceHistoryBackup(
     val place: String?,
     val cost: Int?,
     val memo: String?
+)
+
+@Serializable
+data class FuelRecordBackup(
+    val id: Long,
+    val carId: Long,
+    val filledAt: String,
+    val mileage: Int?,
+    val amount: Int?,
+    val quantity: Double?,
+    val unitPrice: Int?,
+    val unit: String,
+    val station: String?,
+    val memo: String?,
+    /** 파일 자체는 백업되지 않는다. 복원 후 존재하지 않을 수 있는 경로다. */
+    val photoPath: String? = null
 )
 
 @Serializable
@@ -183,4 +209,34 @@ fun MileageHistoryBackup.toEntity(): MileageHistoryEntity =
         mileage = mileage,
         recordedAt = recordedAt,
         memo = memo
+    )
+
+fun FuelRecordEntity.toBackup(): FuelRecordBackup =
+    FuelRecordBackup(
+        id = id,
+        carId = carId,
+        filledAt = filledAt,
+        mileage = mileage,
+        amount = amount,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        unit = unit,
+        station = station,
+        memo = memo,
+        photoPath = photoPath
+    )
+
+fun FuelRecordBackup.toEntity(): FuelRecordEntity =
+    FuelRecordEntity(
+        id = id,
+        carId = carId,
+        filledAt = filledAt,
+        mileage = mileage,
+        amount = amount,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        unit = unit,
+        station = station,
+        memo = memo,
+        photoPath = photoPath
     )
