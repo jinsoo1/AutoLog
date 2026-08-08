@@ -39,6 +39,7 @@ import com.jsworld.android.autolog.presentation.screen.EditMaintenanceSettingScr
 import com.jsworld.android.autolog.presentation.screen.ExcelExportScreen
 import com.jsworld.android.autolog.presentation.screen.FuelRecordEditScreen
 import com.jsworld.android.autolog.presentation.screen.MainTabScreen
+import com.jsworld.android.autolog.presentation.screen.MaintenanceStarterScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceHistoryEditScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceItemDetailScreen
 import com.jsworld.android.autolog.presentation.screen.NoticeScreen
@@ -134,12 +135,17 @@ fun AutoLogNavHost(
                     )
                 },
                 onSave = { car ->
-                    viewModel.addCar(car)
-
                     if (isFirst) {
-                        // 최초 진입 → AddCar 스택 제거 후 탭 셸로
-                        navController.navigateToMainRoot()
+                        // 최초 진입 → 저장이 끝나면 정비 항목 추천 화면으로.
+                        // (새 차량은 켜진 항목이 0개라 이 단계가 없으면 빈 정비 탭을 만난다)
+                        viewModel.addCar(car) { carId ->
+                            navController.navigate(Routes.maintenanceStarter(carId)) {
+                                popUpTo("add_car?first=true") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     } else {
+                        viewModel.addCar(car)
                         // 일반 추가 → 뒤로
                         navController.popBackStack()
                     }
@@ -358,6 +364,19 @@ fun AutoLogNavHost(
                 settingId = settingId,
                 viewModel = vm,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 온보딩: 정비 항목 추천 (첫 차량 등록 직후)
+        composable(
+            route = Routes.MAINTENANCE_STARTER,
+            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+        ) { entry ->
+            val carId = entry.arguments!!.getLong("carId")
+            MaintenanceStarterScreen(
+                carId = carId,
+                viewModel = hiltViewModel(),
+                onDone = { navController.navigateToMainRoot() }
             )
         }
 

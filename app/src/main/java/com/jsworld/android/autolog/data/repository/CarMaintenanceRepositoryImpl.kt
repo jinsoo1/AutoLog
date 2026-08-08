@@ -8,6 +8,8 @@ import androidx.room.withTransaction
 import com.jsworld.android.autolog.domain.model.CarMaintenanceDigest
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
+import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
+import com.jsworld.android.autolog.domain.model.isItemApplicableToFuel
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceSummaryUi
 import com.jsworld.android.autolog.domain.model.MaintenanceTypePickUi
@@ -499,6 +501,29 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
         )
 
         return typeId
+    }
+
+    override suspend fun applyStarterPack(
+        carId: Long,
+        pack: MaintenanceStarterPack,
+        fuelType: String?
+    ): Int {
+        val names = when (pack) {
+            MaintenanceStarterPack.LIGHT -> DefaultMaintenanceItems.lightPack
+            MaintenanceStarterPack.STANDARD -> DefaultMaintenanceItems.standardPack
+            MaintenanceStarterPack.FULL -> DefaultMaintenanceItems.fullPack
+        }
+
+        var enabled = 0
+        for (name in names) {
+            // 전기차에 엔진오일을 켜는 일이 없도록 연료 타입 필터를 여기서 건다.
+            if (!isItemApplicableToFuel(name, fuelType)) continue
+            val type = maintenanceTypeDao.findByName(name) ?: continue
+            // 주기는 넘기지 않는다 → 항목 기본 주기를 그대로 쓴다.
+            enableTypeForCar(carId, type.id, intervalKm = null, intervalMonths = null)
+            enabled++
+        }
+        return enabled
     }
 
     override suspend fun getOrCreateRepairSetting(carId: Long, name: String): Long {

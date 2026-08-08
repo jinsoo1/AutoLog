@@ -58,7 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import com.jsworld.android.autolog.presentation.model.isItemApplicableToFuel
+import com.jsworld.android.autolog.domain.model.isItemApplicableToFuel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector

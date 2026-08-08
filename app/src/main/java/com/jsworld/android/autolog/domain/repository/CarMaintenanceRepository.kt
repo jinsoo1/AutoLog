@@ -4,6 +4,7 @@ import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.domain.model.CarMaintenanceDigest
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
+import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
 import com.jsworld.android.autolog.domain.model.MaintenanceTypePickUi
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.SettingOption
@@ -53,6 +54,12 @@ interface CarMaintenanceRepository {
         carIntervalKm: Int?,
         carIntervalMonths: Int?
     ): Long
+    /**
+     * 온보딩 추천 팩을 적용한다 — 팩에 든 항목 중 이 차량의 연료 타입에
+     * 맞는 것들을 기본 주기로 활성화하고, 켠 개수를 반환한다.
+     */
+    suspend fun applyStarterPack(carId: Long, pack: MaintenanceStarterPack, fuelType: String?): Int
+
     /**
      * 일회성 수리 기록용 항목을 찾거나 만든다. 반환값은 settingId.
      *

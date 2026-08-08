@@ -52,6 +52,10 @@ object Routes {
     fun fuelRecord(recordId: Long? = null, unit: String = "L") =
         "fuel_record?recordId=${recordId ?: -1L}&unit=$unit"
 
+    /** 온보딩: 첫 차량 등록 직후 정비 항목 추천 */
+    const val MAINTENANCE_STARTER = "maintenance_starter/{carId}"
+    fun maintenanceStarter(carId: Long) = "maintenance_starter/$carId"
+
     const val SETTINGS = "settings"
     const val NOTICE = "notice"
 

@@ -5,7 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface CarRepository {
     fun getAllCars(): Flow<List<Car>>
-    suspend fun addCar(input: Car)
+    /** @return 새 차량의 id */
+    suspend fun addCar(input: Car): Long
     suspend fun updateMileage(carId: Long, mileage: Int)
     suspend fun deleteCar(car: Car)
     fun getPrimaryCar(): Flow<Car?>

@@ -52,11 +52,12 @@ class MainViewModel @Inject constructor(
             null
         )
 
-    /** 🚗 차량 추가 */
-    fun addCar(car: Car) {
+    /** 🚗 차량 추가. 저장이 끝나면 새 carId 를 돌려준다(온보딩 추천 화면 진입용). */
+    fun addCar(car: Car, onSaved: (Long) -> Unit = {}) {
         viewModelScope.launch {
-            carRepository.addCar(car)
+            val carId = carRepository.addCar(car)
             widgetUpdater.requestUpdate()
+            onSaved(carId)
         }
     }
 

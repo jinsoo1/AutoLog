@@ -26,7 +26,7 @@ class CarRepositoryImpl @Inject constructor(
     override fun getAllCars(): Flow<List<Car>> =
         carDao.getAllCars().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun addCar(input: Car) {
+    override suspend fun addCar(input: Car): Long {
         val carId = carDao.insertCar(input.toEntity())
 
         if (input.mileage > 0) {
@@ -39,6 +39,8 @@ class CarRepositoryImpl @Inject constructor(
                 )
             )
         }
+
+        return carId
     }
 
     override suspend fun updateMileage(carId: Long, mileage: Int) {

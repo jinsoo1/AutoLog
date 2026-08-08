@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
+
 object DefaultMaintenanceItems {
 
     val items = listOf(
@@ -64,4 +66,39 @@ object DefaultMaintenanceItems {
         "보조벨트(팬벨트) 점검/교환" to Pair(60_000, 48),
         "타이밍벨트(벨트식 엔진만)" to Pair(100_000, 60)
     )
+
+
+    /**
+     * 온보딩 추천 팩 — [MaintenanceStarterPack] 단계별로 켤 항목.
+     *
+     * ⚠️ 이름은 위 items 의 이름과 글자까지 정확히 일치해야 한다(이름으로 타입을 찾는다).
+     *    일치 여부는 MaintenanceStarterPackTest 가 검증한다.
+     * 연료 타입 필터(isItemApplicableToFuel)는 적용 시점에 걸리므로
+     * 여기서는 내연기관 기준 전체 목록을 적는다.
+     */
+    val lightPack = listOf(
+        "엔진오일",
+        "엔진오일 필터",
+        "에어컨(캐빈) 필터",
+        "타이어 교체",
+        "배터리",
+        "와이퍼 블레이드"
+    )
+
+    /** 꼼꼼하게 = 가볍게 + 아래 항목 */
+    val standardExtra = listOf(
+        "에어클리너(엔진흡기 필터)",
+        "브레이크패드",
+        "브레이크오일",
+        "냉각수(부동액)",
+        "미션오일(AT/CVT/DCT)",
+        "타이어 위치교환",
+        "점화플러그",
+        "정기점검(정비소 점검)"
+    )
+
+    val standardPack: List<String> get() = lightPack + standardExtra
+
+    /** 빈틈없이 = 기본 항목 전부 */
+    val fullPack: List<String> get() = items.map { it.first }
 }
