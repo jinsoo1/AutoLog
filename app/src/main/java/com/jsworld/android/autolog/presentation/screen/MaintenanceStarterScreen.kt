@@ -95,7 +95,7 @@ fun MaintenanceStarterScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "고른 스타일에 맞춰 정비 항목과 교체 주기를 채워드려요.\n나중에 언제든 항목을 켜고 끌 수 있어요.",
+                    "고른 스타일에 맞춰 정비 항목과 교체 주기를 채워드려요.\n나중에 언제든 켜고 끌 수 있고, 목록에 없는 항목은 직접 추가할 수 있어요.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
