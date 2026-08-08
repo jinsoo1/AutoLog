@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  기본 4x2. 사용자가 2x2 까지 줄일 수 있고, 크기에 따라 레이아웃이 바뀐다
+  (CarStatusWidget 의 SizeMode.Responsive 버킷과 짝).
+  updatePeriodMillis=0 — 갱신은 데이터 변경 시 + 매일 00:05 워커가 담당한다.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/widget_loading"
     android:minWidth="250dp"
     android:minHeight="110dp"
-    android:resizeMode="none"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:description="@string/widget_description"
     android:widgetCategory="home_screen"
     android:configure="com.jsworld.android.autolog.presentation.widget.CarStatusWidgetConfigActivity"
     android:updatePeriodMillis="0" />

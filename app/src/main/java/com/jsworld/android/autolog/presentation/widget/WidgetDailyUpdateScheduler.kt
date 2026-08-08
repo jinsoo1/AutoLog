@@ -1,6 +1,7 @@
 package com.jsworld.android.autolog.presentation.widget
 
 import android.content.Context
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -32,5 +33,22 @@ object WidgetDailyUpdateScheduler {
 
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_WORK)
+    }
+
+    /**
+     * 앱을 열 때마다 호출해 체인을 되살린다.
+     *
+     * 자기 재예약 체인은 강제 종료·OS 정리로 끊길 수 있는데, 끊기면
+     * 위젯을 다시 추가하기 전까지 복구할 곳이 없다. 위젯이 실제로 있을 때만
+     * 다시 예약한다(REPLACE 라 다음 00:05 로 재계산될 뿐, 중복 실행은 없다).
+     */
+    suspend fun ensureScheduled(context: Context) {
+        val hasWidgets = runCatching {
+            GlanceAppWidgetManager(context)
+                .getGlanceIds(CarStatusWidget::class.java)
+                .isNotEmpty()
+        }.getOrDefault(false)
+
+        if (hasWidgets) schedule(context)
     }
 }

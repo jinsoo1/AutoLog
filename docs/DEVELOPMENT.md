@@ -202,6 +202,20 @@ primary·surface 만 바꿔두면 아래 롤들이 보라 기를 띤 채로 앱 
 - 릴리스 APK 에서 아이콘을 확인할 때: `optimizedResourceShrinking` 이 **파일명을 난독화**하므로
   (`res/BW.xml`) 파일명으로 grep 하면 안 나온다. `aapt2 dump resources` 로 리소스 이름을 봐야 한다.
 
+## 0-6. 홈 위젯 (Glance)
+
+- 갱신 경로는 셋: ⑴ 데이터 변경 시 `WidgetUpdater`(500ms 디바운스)
+  ⑵ 매일 00:05 `DailyWidgetRefreshWorker` — "N일 남음"은 날짜가 지나면 낡기 때문
+  ⑶ 앱 실행 시 `ensureScheduled()` 로 체인 복구.
+- ⚠️ 일일 갱신은 **자기 재예약 체인**이다(OS 주기 갱신 `updatePeriodMillis=0`).
+  워커에서 **다음 예약을 갱신보다 먼저** 걸어야 한다 — 갱신 중 예외로 체인이 죽으면
+  위젯을 다시 추가하기 전까지 되살릴 곳이 없다. 앱 실행 시 복구가 이중 안전장치.
+- `sizeMode = SizeMode.Responsive` 필수. 지정하지 않으면 Single 모드라
+  `LocalSize` 가 항상 최소 크기를 돌려줘 크기 분기가 전부 죽은 코드가 된다.
+  버킷: COMPACT(2x2, 요약+최우선 1개) / WIDE(4x2, 요약+목록 3개).
+- 색은 Glance 의 day/night `ColorProvider` 로 다크모드를 따라간다.
+  진행바(RemoteViews)의 트랙 색은 `values-night/colors_widget.xml` 이 담당.
+
 ## 1. DB 스키마를 바꿀 때 (Room)
 
 DB가 로컬에만 있으므로, 스키마 변경은 **기존 사용자의 데이터 유실**로 직결될 수 있습니다.

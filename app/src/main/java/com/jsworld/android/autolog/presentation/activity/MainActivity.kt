@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import com.jsworld.android.autolog.presentation.widget.WidgetDailyUpdateScheduler
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
@@ -31,6 +34,11 @@ class MainActivity : ComponentActivity() {
             ?.getLongExtra(EXTRA_CAR_ID, -1L)
             ?.takeIf { it > 0L }
 
+
+        // 위젯 일일 갱신 체인이 끊겼을 수 있으니(강제 종료 등) 앱을 열 때 되살린다.
+        lifecycleScope.launch {
+            WidgetDailyUpdateScheduler.ensureScheduled(this@MainActivity)
+        }
 
         setContent {
             AutoLogTheme(dynamicColor = false) {

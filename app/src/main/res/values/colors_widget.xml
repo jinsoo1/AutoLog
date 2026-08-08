@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 위젯 진행바 트랙. values-night 에 다크 값이 있다. -->
+    <color name="widget_progress_track">#E2E8F0</color>
+</resources>
