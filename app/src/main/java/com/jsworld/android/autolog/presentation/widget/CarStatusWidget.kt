@@ -72,6 +72,13 @@ private object WColors {
         MaintenanceStatus.NORMAL -> ColorProvider(day = Color(0xFF16A34A), night = Color(0xFF4ADE80))
     }
 
+    /** 정비 행의 옅은 배경 틴트 — 이전 버전의 보기 좋던 요소를 유지한다. */
+    fun rowTint(status: MaintenanceStatus) = when (status) {
+        MaintenanceStatus.OVERDUE -> ColorProvider(day = Color(0xFFFEF2F2), night = Color(0xFF3B1E1E))
+        MaintenanceStatus.SOON -> ColorProvider(day = Color(0xFFFFFBEB), night = Color(0xFF3A2A12))
+        MaintenanceStatus.NORMAL -> ColorProvider(day = Color(0xFFF0FDF4), night = Color(0xFF16291D))
+    }
+
     fun statusBg(status: MaintenanceStatus) = when (status) {
         MaintenanceStatus.OVERDUE -> ColorProvider(day = Color(0xFFFEE2E2), night = Color(0xFF7F1D1D))
         MaintenanceStatus.SOON -> ColorProvider(day = Color(0xFFFEF3C7), night = Color(0xFF78350F))
@@ -91,7 +98,7 @@ class CarStatusWidget : GlanceAppWidget() {
      * 항상 최소 크기를 돌려줘서 크기 적응 코드가 전부 죽은 코드가 된다.
      */
     override val sizeMode = SizeMode.Responsive(
-        setOf(SIZE_COMPACT, SIZE_WIDE)
+        setOf(SIZE_COMPACT, SIZE_WIDE, SIZE_WIDE_TALL)
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -111,7 +118,7 @@ class CarStatusWidget : GlanceAppWidget() {
             // carId가 바뀌면 다시 로드되도록 produceState 사용
             val ui by produceState<CarWidgetUi?>(initialValue = null, key1 = carId) {
                 value = runCatching {
-                    ep.carWidgetRepository().getCarWidgetUiOnce(carId, maxRows = 3)
+                    ep.carWidgetRepository().getCarWidgetUiOnce(carId, maxRows = 4)
                 }.getOrNull()
             }
 
@@ -129,8 +136,11 @@ class CarStatusWidget : GlanceAppWidget() {
         /** 2x2 부근 — 차량명·주행거리·가장 급한 항목 1개 */
         val SIZE_COMPACT = DpSize(110.dp, 110.dp)
 
-        /** 4x2(기본) — 좌측 요약 + 우측 정비 목록 */
+        /** 4x2(기본) — 좌측 요약 + 우측 정비 목록 3개 */
         val SIZE_WIDE = DpSize(250.dp, 110.dp)
+
+        /** 세로로 늘렸을 때 — 목록 4개 */
+        val SIZE_WIDE_TALL = DpSize(250.dp, 160.dp)
     }
 }
 
@@ -197,7 +207,7 @@ private fun CompactLayout(ui: CarWidgetUi) {
             maxLines = 1
         )
 
-        Spacer(GlanceModifier.defaultWeight())
+        Spacer(GlanceModifier.height(10.dp))
 
         // 가장 급한 항목 하나만
         val top = ui.rows.firstOrNull()
@@ -258,7 +268,7 @@ private fun WideLayout(ui: CarWidgetUi) {
                 maxLines = 1
             )
 
-            Spacer(GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.height(12.dp))
 
             StatusBadge(ui)
         }
@@ -271,23 +281,46 @@ private fun WideLayout(ui: CarWidgetUi) {
                 .background(WColors.Divider)
         ) {}
 
-        // RIGHT — 급한 순 정비 목록
+        // RIGHT — 급한 순 정비 목록.
+        // 행 사이는 고정 간격이다. defaultWeight 로 나누면 위젯이 높을 때
+        // 항목들이 위아래로 흩어져 목록으로 읽히지 않는다.
+        val rowCount =
+            if (LocalSize.current.height >= CarStatusWidget.SIZE_WIDE_TALL.height) 4 else 3
+        val shown = ui.rows.take(rowCount)
+
         Column(
             modifier = GlanceModifier
                 .defaultWeight()
                 .fillMaxHeight()
                 .padding(start = 12.dp)
         ) {
-            if (ui.rows.isEmpty()) {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "정비 주기",
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = WColors.TextPrimary),
+                    maxLines = 1
+                )
                 Spacer(GlanceModifier.defaultWeight())
+                Text(
+                    if (shown.isEmpty()) "항목 없음" else "위험 TOP ${shown.size}",
+                    style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary),
+                    maxLines = 1
+                )
+            }
+
+            Spacer(GlanceModifier.height(7.dp))
+
+            if (shown.isEmpty()) {
                 Text("정비 항목이 없어요", style = TextStyle(fontSize = 12.sp, color = WColors.TextSecondary))
                 Spacer(GlanceModifier.height(2.dp))
                 Text("앱에서 항목을 추가해보세요", style = TextStyle(fontSize = 11.sp, color = WColors.TextSecondary))
-                Spacer(GlanceModifier.defaultWeight())
             } else {
-                ui.rows.forEachIndexed { index, row ->
+                shown.forEachIndexed { index, row ->
                     MaintenanceRow(row)
-                    if (index != ui.rows.lastIndex) Spacer(GlanceModifier.defaultWeight())
+                    if (index != shown.lastIndex) Spacer(GlanceModifier.height(5.dp))
                 }
             }
         }
@@ -298,7 +331,7 @@ private fun WideLayout(ui: CarWidgetUi) {
 
 @Composable
 private fun StatusBadge(ui: CarWidgetUi) {
-    val label = if (ui.dangerCount > 0) "확인 ${ui.dangerCount}" else "정상"
+    val label = if (ui.dangerCount > 0) "위험 ${ui.dangerCount}" else "정상"
     Box(
         modifier = GlanceModifier
             .background(WColors.statusBg(ui.overallStatus))
@@ -318,32 +351,40 @@ private fun StatusBadge(ui: CarWidgetUi) {
 
 @Composable
 private fun MaintenanceRow(row: MaintenanceProgressRow) {
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = GlanceModifier
-                    .size(6.dp)
-                    .cornerRadius(3.dp)
-                    .background(WColors.statusColor(row.status))
-            ) {}
-            Spacer(GlanceModifier.width(6.dp))
-            Text(
-                row.name.ellipsize(8),
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
-                maxLines = 1
-            )
-            Spacer(GlanceModifier.defaultWeight())
-            Text(
-                row.remainText,
-                style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary),
-                maxLines = 1
-            )
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .background(WColors.rowTint(row.status))
+            .cornerRadius(10.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = GlanceModifier
+                        .size(6.dp)
+                        .cornerRadius(3.dp)
+                        .background(WColors.statusColor(row.status))
+                ) {}
+                Spacer(GlanceModifier.width(6.dp))
+                Text(
+                    row.name.ellipsize(8),
+                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
+                    maxLines = 1
+                )
+                Spacer(GlanceModifier.defaultWeight())
+                Text(
+                    row.remainText,
+                    style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary),
+                    maxLines = 1
+                )
+            }
+            Spacer(GlanceModifier.height(4.dp))
+            RemoteProgressBar(row.progress, row.status, height = 6.dp)
         }
-        Spacer(GlanceModifier.height(4.dp))
-        RemoteProgressBar(row.progress, row.status, height = 6.dp)
     }
 }
 
