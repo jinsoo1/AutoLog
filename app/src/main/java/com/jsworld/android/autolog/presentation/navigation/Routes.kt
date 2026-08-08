@@ -52,9 +52,14 @@ object Routes {
     fun fuelRecord(recordId: Long? = null, unit: String = "L") =
         "fuel_record?recordId=${recordId ?: -1L}&unit=$unit"
 
-    /** 온보딩: 첫 차량 등록 직후 정비 항목 추천 */
-    const val MAINTENANCE_STARTER = "maintenance_starter/{carId}"
-    fun maintenanceStarter(carId: Long) = "maintenance_starter/$carId"
+    /**
+     * 차량 등록 직후 정비 항목 추천. 모든 차량 추가에 붙는다 —
+     * 새 차량은 켜진 항목이 0개이기 때문. first 는 끝났을 때 돌아갈 곳을 정한다
+     * (첫 차량 = 메인 루트, n번째 = 이전 화면).
+     */
+    const val MAINTENANCE_STARTER = "maintenance_starter/{carId}?first={first}"
+    fun maintenanceStarter(carId: Long, first: Boolean) =
+        "maintenance_starter/$carId?first=$first"
 
     const val SETTINGS = "settings"
     const val NOTICE = "notice"

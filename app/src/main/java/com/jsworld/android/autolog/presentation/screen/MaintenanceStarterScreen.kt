@@ -1,7 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -153,17 +153,19 @@ private fun StarterPackCard(
         if (selected) BorderStroke(2.dp, accent)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
+    // 반투명 색을 그대로 쓰면 그림자·톤과 섞여 딤처럼 보인다(대표차량 카드에서 났던 버그).
+    // compositeOver 로 불투명하게 만들고, elevation 도 선택과 무관하게 고정한다.
+    val container =
+        if (selected) accent.copy(alpha = 0.06f).compositeOver(MaterialTheme.colorScheme.surface)
+        else MaterialTheme.colorScheme.surface
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,   // Modifier.clickable 과 달리 리플이 둥근 모서리 안에 갇힌다
+        modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) accent.copy(alpha = 0.06f)
-            else MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = container),
         border = border,
-        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 0.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

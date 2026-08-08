@@ -135,19 +135,17 @@ fun AutoLogNavHost(
                     )
                 },
                 onSave = { car ->
-                    if (isFirst) {
-                        // 최초 진입 → 저장이 끝나면 정비 항목 추천 화면으로.
-                        // (새 차량은 켜진 항목이 0개라 이 단계가 없으면 빈 정비 탭을 만난다)
-                        viewModel.addCar(car) { carId ->
-                            navController.navigate(Routes.maintenanceStarter(carId)) {
-                                popUpTo("add_car?first=true") { inclusive = true }
-                                launchSingleTop = true
-                            }
+                    // 저장이 끝나면 정비 항목 추천 화면으로 — 첫 차량이든 n번째든.
+                    // (새 차량은 켜진 항목이 0개라 이 단계가 없으면 빈 정비 탭을 만난다)
+                    viewModel.addCar(car) { carId ->
+                        navController.navigate(
+                            Routes.maintenanceStarter(carId, first = isFirst)
+                        ) {
+                            // 등록 화면은 스택에서 걷어낸다 — 추천에서 뒤로 가도
+                            // 빈 등록 폼으로 돌아가지 않게.
+                            popUpTo(ADD_CAR_FIRST) { inclusive = true }
+                            launchSingleTop = true
                         }
-                    } else {
-                        viewModel.addCar(car)
-                        // 일반 추가 → 뒤로
-                        navController.popBackStack()
                     }
                 }
             )
@@ -367,16 +365,31 @@ fun AutoLogNavHost(
             )
         }
 
-        // 온보딩: 정비 항목 추천 (첫 차량 등록 직후)
+        // 차량 등록 직후 정비 항목 추천 (첫 차량이든 n번째든)
         composable(
             route = Routes.MAINTENANCE_STARTER,
-            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("carId") { type = NavType.LongType },
+                navArgument("first") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
         ) { entry ->
             val carId = entry.arguments!!.getLong("carId")
+            val isFirstCar = entry.arguments?.getBoolean("first") ?: false
             MaintenanceStarterScreen(
                 carId = carId,
                 viewModel = hiltViewModel(),
-                onDone = { navController.navigateToMainRoot() }
+                onDone = {
+                    if (isFirstCar) {
+                        // 첫 차량: 등록 화면이 스택에서 빠져 뒤가 없다 → 메인 루트로
+                        navController.navigateToMainRoot()
+                    } else {
+                        // n번째: 차량 추가를 시작했던 화면(메인/차량 관리)으로 복귀
+                        navController.popBackStack()
+                    }
+                }
             )
         }
 
