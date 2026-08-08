@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  AutoLog 런처 아이콘 전경 — 오도미터 게이지의 바늘이 그대로 체크로 이어진다.
-  "주행거리를 기록하고, 정비 상태는 정상"이라는 뜻.
-
-  ⚠️ 모든 좌표는 적응형 아이콘 안전영역(중심 54,54 / 반지름 33) 안에 있어야 한다.
-     현재 최대 반지름 32.4. 게이지 중심은 체크가 꺾이는 지점(= 바늘 축)과 일치시켰다.
-     눈금은 40° 간격(바늘이 지나는 40° 자리는 비움).
+  안드로이드 13+ 테마 아이콘용 단색 전경. 시스템이 사용자 배경색에 맞춰 틴트한다.
+  색을 쓸 수 없으므로 허브는 링(evenOdd로 가운데를 뚫음)으로 표현한다.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -14,55 +10,55 @@
     android:viewportHeight="108">
     <path
         android:pathData="M29.85,70.69 A25.7,25.7 0 1 1 78.15,70.69"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:strokeAlpha="0.3"/>
+        android:strokeAlpha="0.35"/>
     <path
         android:pathData="M29.85,70.69 A25.7,25.7 0 0 1 70.52,42.21"
-        android:strokeColor="#FF38BDF8"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"/>
     <path
         android:pathData="M35.86,68.5 L32.67,69.66"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeAlpha="0.5"/>
     <path
         android:pathData="M35.86,55.3 L32.67,54.14"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeAlpha="0.5"/>
     <path
         android:pathData="M44.35,45.19 L42.65,42.24"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeAlpha="0.5"/>
     <path
         android:pathData="M57.35,42.89 L57.94,39.54"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeAlpha="0.5"/>
     <path
         android:pathData="M72.14,55.3 L75.33,54.14"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeAlpha="0.5"/>
     <path
         android:pathData="M72.14,68.5 L75.33,69.66"
-        android:strokeColor="#FFDBEAFE"
+        android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
@@ -74,9 +70,7 @@
         android:strokeLineCap="round"
         android:strokeLineJoin="round"/>
     <path
-        android:pathData="M54,56.8 a5.1,5.1 0 1 0 0,10.2 a5.1,5.1 0 1 0 0,-10.2 Z"
-        android:fillColor="#FFFFFFFF"/>
-    <path
-        android:pathData="M54,59.7 a2.2,2.2 0 1 0 0,4.4 a2.2,2.2 0 1 0 0,-4.4 Z"
-        android:fillColor="#FF1E3A8A"/>
+        android:pathData="M54,56.8 a5.1,5.1 0 1 0 0,10.2 a5.1,5.1 0 1 0 0,-10.2 Z M54,59.7 a2.2,2.2 0 1 0 0,4.4 a2.2,2.2 0 1 0 0,-4.4 Z"
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"/>
 </vector>

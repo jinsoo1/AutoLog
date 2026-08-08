@@ -87,7 +87,8 @@ class WeeklyMileageReminderWorker @AssistedInject constructor(
             context,
             AutoLogNotificationHelper.WEEKLY_MILEAGE_CHANNEL_ID
         )
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            // 알림 아이콘은 시스템이 단색으로 틴트하므로 컬러 런처 아이콘을 쓰면 뭉개진다.
+            .setSmallIcon(R.drawable.ic_stat_autolog)
             .setContentTitle(title)
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))

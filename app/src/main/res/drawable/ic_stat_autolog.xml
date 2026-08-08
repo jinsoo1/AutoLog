@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  알림 스몰 아이콘. 시스템이 단색으로 틴트하므로 흰색 실루엣만 쓴다.
+  런처 아이콘(108dp, 중앙 65%만 사용)을 그대로 쓰면 알림에서 너무 작게 보이므로
+  뷰포트를 68로 줄여 내용이 경계를 꽉 채우게 했다. 눈금은 이 크기에서 뭉개져 뺐다.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="68"
+    android:viewportHeight="68">
+    <group android:translateX="-20" android:translateY="-19.4">
+        <path
+            android:pathData="M29.85,70.69 A25.7,25.7 0 1 1 78.15,70.69"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeAlpha="0.35"/>
+        <path
+            android:pathData="M29.85,70.69 A25.7,25.7 0 0 1 70.52,42.21"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M41.98,49.88 L54,61.9 L68.59,44.51"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M54,56.8 a5.1,5.1 0 1 0 0,10.2 a5.1,5.1 0 1 0 0,-10.2 Z M54,59.7 a2.2,2.2 0 1 0 0,4.4 a2.2,2.2 0 1 0 0,-4.4 Z"
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"/>
+    </group>
+</vector>
