@@ -41,7 +41,23 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = Color(0xFF1F2937),
     onSurfaceVariant = Color(0xFFCBD5E1),
 
+    // 지정하지 않으면 Material 기본 라벤더 톤이 남는다(NavigationBar·바텀시트·테두리).
+    surfaceContainerLowest = SlateContainerLowestDark,
+    surfaceContainerLow = SlateContainerLowDark,
+    surfaceContainer = SlateContainerDark,
+    surfaceContainerHigh = SlateContainerHighDark,
+    surfaceContainerHighest = SlateContainerHighestDark,
+    surfaceDim = Color(0xFF0B1220),
+    surfaceBright = Color(0xFF2A3852),
+    surfaceTint = AutoBlueDark,
+
+    inverseSurface = Color(0xFFE5E7EB),
+    inverseOnSurface = Color(0xFF0F172A),
+    inversePrimary = Color(0xFF1E3A8A),
+
     outline = Color(0xFF334155),
+    outlineVariant = Color(0xFF263349),
+    scrim = Color(0xFF000000),
 
     error = Color(0xFFF87171),
     onError = Color(0xFF3B0A0A),
@@ -77,7 +93,23 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color(0xFFE2E8F0),
     onSurfaceVariant = Color(0xFF334155),
 
+    // 지정하지 않으면 Material 기본 라벤더 톤이 남는다(NavigationBar·바텀시트·테두리).
+    surfaceContainerLowest = SlateContainerLowestLight,
+    surfaceContainerLow = SlateContainerLowLight,
+    surfaceContainer = SlateContainerLight,
+    surfaceContainerHigh = SlateContainerHighLight,
+    surfaceContainerHighest = SlateContainerHighestLight,
+    surfaceDim = Color(0xFFE2E8F0),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceTint = AutoBlueLight,
+
+    inverseSurface = Color(0xFF1E293B),
+    inverseOnSurface = Color(0xFFF1F5F9),
+    inversePrimary = Color(0xFF93C5FD),
+
     outline = Color(0xFFCBD5E1),
+    outlineVariant = Color(0xFFE2E8F0),
+    scrim = Color(0xFF000000),
 
     error = Color(0xFFDC2626),
     onError = Color.White,
