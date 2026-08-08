@@ -98,7 +98,7 @@ class CarStatusWidget : GlanceAppWidget() {
      * 항상 최소 크기를 돌려줘서 크기 적응 코드가 전부 죽은 코드가 된다.
      */
     override val sizeMode = SizeMode.Responsive(
-        setOf(SIZE_COMPACT, SIZE_WIDE, SIZE_WIDE_TALL)
+        setOf(SIZE_COMPACT, SIZE_COMPACT_TALL, SIZE_COMPACT_XTALL, SIZE_WIDE, SIZE_WIDE_TALL)
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -133,8 +133,14 @@ class CarStatusWidget : GlanceAppWidget() {
     }
 
     companion object {
-        /** 2x2 부근 — 차량명·주행거리·가장 급한 항목 1개 */
-        val SIZE_COMPACT = DpSize(110.dp, 110.dp)
+        /**
+         * 2x2 부근 — 차량명·주행거리 + 급한 항목.
+         * 항목 수는 높이 버킷으로 정한다: 확보된 높이만큼만 보여주므로
+         * 작은 기기에서 잘릴 걱정 없이 큰 기기에선 더 많이 보인다.
+         */
+        val SIZE_COMPACT = DpSize(110.dp, 110.dp)        // 항목 1개
+        val SIZE_COMPACT_TALL = DpSize(110.dp, 150.dp)   // 항목 2개
+        val SIZE_COMPACT_XTALL = DpSize(110.dp, 195.dp)  // 항목 3개
 
         /** 4x2(기본) — 좌측 요약 + 우측 정비 목록 3개 */
         val SIZE_WIDE = DpSize(250.dp, 110.dp)
@@ -209,28 +215,46 @@ private fun CompactLayout(ui: CarWidgetUi) {
 
         Spacer(GlanceModifier.height(10.dp))
 
-        // 가장 급한 항목 하나만
-        val top = ui.rows.firstOrNull()
-        if (top != null) {
-            Text(
-                top.name.ellipsize(9),
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
-                maxLines = 1
-            )
-            Spacer(GlanceModifier.height(3.dp))
-            Text(
-                top.remainText,
-                style = TextStyle(fontSize = 10.sp, color = WColors.statusColor(top.status)),
-                maxLines = 1
-            )
-            Spacer(GlanceModifier.height(4.dp))
-            RemoteProgressBar(top.progress, top.status, height = 6.dp)
-        } else {
+        // 확보된 높이만큼만 항목을 보여준다 — 버킷보다 작으면 그 수가 줄어들 뿐,
+        // 넘쳐서 잘리는 일은 없다.
+        val height = LocalSize.current.height
+        val itemCount = when {
+            height >= CarStatusWidget.SIZE_COMPACT_XTALL.height -> 3
+            height >= CarStatusWidget.SIZE_COMPACT_TALL.height -> 2
+            else -> 1
+        }
+        val shown = ui.rows.take(itemCount)
+
+        if (shown.isEmpty()) {
             Text(
                 "정비 항목이 없어요",
                 style = TextStyle(fontSize = 11.sp, color = WColors.TextSecondary)
             )
+        } else {
+            shown.forEachIndexed { index, row ->
+                CompactItem(row)
+                if (index != shown.lastIndex) Spacer(GlanceModifier.height(7.dp))
+            }
         }
+    }
+}
+
+@Composable
+private fun CompactItem(row: MaintenanceProgressRow) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Text(
+            row.name.ellipsize(9),
+            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
+            maxLines = 1
+        )
+        Spacer(GlanceModifier.height(3.dp))
+        Text(
+            row.remainText,
+            style = TextStyle(fontSize = 10.sp, color = WColors.statusColor(row.status)),
+            maxLines = 1
+        )
+        Spacer(GlanceModifier.height(4.dp))
+        RemoteProgressBar(row.progress, row.status, height = 6.dp)
     }
 }
 
