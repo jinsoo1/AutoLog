@@ -29,3 +29,14 @@ fun isItemApplicableToFuel(itemName: String, fuelType: String?): Boolean {
     if (fuel == "디젤" && sparkOnly.any { n.contains(it) }) return false
     return true
 }
+
+/**
+ * 세차·코팅류 "관리" 항목 판정.
+ *
+ * 주기 없는 항목은 기본이 "수리"인데, 세차는 수리가 아니다.
+ * 이름으로 구분해 타임라인 배지·상세 문구를 "관리"로 바꾼다.
+ */
+fun isCareItemName(itemName: String): Boolean {
+    val n = itemName.replace(" ", "")
+    return listOf("세차", "코팅", "왁스", "광택", "세정").any { n.contains(it) }
+}

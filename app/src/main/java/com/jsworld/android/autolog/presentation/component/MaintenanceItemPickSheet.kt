@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -201,7 +201,7 @@ private fun ItemRow(
             shape = CircleShape
         ) {
             Icon(
-                if (urgent) Icons.Default.PriorityHigh else Icons.Default.Build,
+                if (urgent) Icons.Default.PriorityHigh else Icons.Default.Autorenew,
                 contentDescription = null,
                 tint = if (urgent) badgeColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier

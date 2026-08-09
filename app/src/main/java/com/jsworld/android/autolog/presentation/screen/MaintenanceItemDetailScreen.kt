@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
+import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.presentation.state.MaintenanceItemDetailUiState
 import com.jsworld.android.autolog.presentation.viewModel.MaintenanceItemDetailViewModel
 
@@ -140,7 +142,7 @@ fun MaintenanceItemDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (ui.isRepair) {
-                item { RepairInfoCard() }
+                item { RepairInfoCard(isCare = isCareItemName(ui.typeName)) }
                 item { PromoteToIntervalCard(onClick = onEditIntervals) }
             } else {
                 item { StatusCard(ui) }
@@ -151,7 +153,11 @@ fun MaintenanceItemDetailScreen(
 
             item {
                 SectionLabel(
-                    title = if (ui.isRepair) "수리 내역" else "교체 내역",
+                    title = when {
+                        ui.isRepair && isCareItemName(ui.typeName) -> "관리 내역"
+                        ui.isRepair -> "수리 내역"
+                        else -> "교체 내역"
+                    },
                     actionLabel = if (ui.histories.isNotEmpty()) "${ui.histories.size}건" else null
                 )
             }
@@ -160,7 +166,11 @@ fun MaintenanceItemDetailScreen(
                 item {
                     ListCard {
                         Text(
-                            if (ui.isRepair) "아직 수리 기록이 없어요." else "아직 교체 기록이 없어요.",
+                            when {
+                                ui.isRepair && isCareItemName(ui.typeName) -> "아직 관리 기록이 없어요."
+                                ui.isRepair -> "아직 수리 기록이 없어요."
+                                else -> "아직 교체 기록이 없어요."
+                            },
                             modifier = Modifier.padding(vertical = 16.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -258,26 +268,31 @@ private fun IntervalRow(ui: MaintenanceItemDetailUiState, onClick: () -> Unit) {
     }
 }
 
-/** 일회성 수리 항목의 머리 카드. "상태 좋아요"로 오해되지 않게 상태 카드를 대신한다. */
+/** 주기 없는 항목의 머리 카드 — 수리 또는 관리(세차·코팅류). "상태 좋아요"로 오해되지 않게 상태 카드를 대신한다. */
 @Composable
-private fun RepairInfoCard() {
+private fun RepairInfoCard(isCare: Boolean) {
+    val accent = if (isCare) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
+    val containerTint =
+        if (isCare) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer =
+        if (isCare) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerTint.copy(alpha = 0.55f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = MaterialTheme.colorScheme.secondary, shape = CircleShape) {
+            Surface(color = accent, shape = CircleShape) {
                 Icon(
-                    Icons.Default.Handyman,
+                    if (isCare) Icons.Default.WaterDrop else Icons.Default.Handyman,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondary,
+                    tint = if (isCare) MaterialTheme.colorScheme.onTertiary
+                    else MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier
                         .padding(5.dp)
                         .size(15.dp)
@@ -286,10 +301,10 @@ private fun RepairInfoCard() {
             Spacer(Modifier.width(11.dp))
             Column {
                 Text(
-                    "일회성 수리",
+                    if (isCare) "세차·관리 기록" else "일회성 수리",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = onContainer
                 )
                 Text(
                     "임박 알림·다음 정비에 나타나지 않아요",
@@ -433,7 +448,7 @@ private fun HistoryRow(
         ) {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                 Icon(
-                    Icons.Default.Build,
+                    Icons.Default.Autorenew,
                     contentDescription = null,
                     modifier = Modifier
                         .padding(6.dp)
@@ -481,7 +496,9 @@ private fun MaintenanceItemDetailUiState.intervalLabel(): String {
         intervalKm?.let { add("${it.formatThousands()}km") }
         intervalMonths?.let { add("${it}개월") }
     }
-    if (parts.isEmpty()) return "일회성 수리 · 주기 없음"
+    if (parts.isEmpty()) {
+        return if (isCareItemName(typeName)) "관리 기록 · 주기 없음" else "일회성 수리 · 주기 없음"
+    }
     val suffix = if (usingDefaultIntervals) " 주기(기본값)" else " 주기"
     return parts.joinToString(" · ") + suffix
 }
