@@ -9,6 +9,7 @@ import com.jsworld.android.autolog.data.local.entity.CarMaintenanceRecordRow
 import com.jsworld.android.autolog.data.local.entity.MaintenanceCostRow
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MileagePointRow
+import com.jsworld.android.autolog.data.local.entity.SettingLastCostRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -134,4 +135,22 @@ interface MaintenanceHistoryDao {
           AND h.serviceDate IS NOT NULL AND h.serviceMileage IS NOT NULL
     """)
     fun observeMileagePoints(carId: Long): Flow<List<MileagePointRow>>
+
+    /**
+     * 항목별 가장 최근 기록의 비용 — "다음 교체도 이 정도" 예상에 쓴다.
+     * 최근 기준은 항목 상세와 같은 정렬(날짜 → 주행거리 → id).
+     */
+    @Query("""
+        SELECT h.settingId AS settingId, h.cost AS cost
+        FROM maintenance_history h
+        JOIN car_maintenance_settings s ON s.id = h.settingId
+        WHERE s.carId = :carId
+          AND h.id = (
+              SELECT h2.id FROM maintenance_history h2
+              WHERE h2.settingId = h.settingId
+              ORDER BY h2.serviceDate DESC, h2.serviceMileage DESC, h2.id DESC
+              LIMIT 1
+          )
+    """)
+    fun observeLastCostBySetting(carId: Long): Flow<List<SettingLastCostRow>>
 }

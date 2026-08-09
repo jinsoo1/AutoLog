@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,14 +40,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.ExpenseInsight
 import com.jsworld.android.autolog.domain.model.FuelRecord
+import com.jsworld.android.autolog.domain.model.MaintenanceStatus
+import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
+import com.jsworld.android.autolog.domain.model.buildExpenseInsight
 import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
@@ -110,6 +120,10 @@ fun ReportTabScreen(
         val fuelRecords by viewModel.fuelRecordsState(car.id).collectAsState()
         val maintRecords by viewModel.maintenanceRecordsState(car.id).collectAsState()
 
+        // 다가오는 지출 카드용 — 임박·초과 항목 + 항목별 지난 교체 비용
+        val urgentItems by viewModel.urgentState(car.id).collectAsState()
+        val lastCosts by viewModel.lastCostsState(car.id).collectAsState()
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
@@ -146,15 +160,25 @@ fun ReportTabScreen(
                         }
                     )
                 }
+                val monthKey = current.month.toString()
+                val monthFuel = fuelRecords.filter { it.filledAt.startsWith(monthKey) }
+                val monthMaint = maintRecords.filter { it.serviceDate?.startsWith(monthKey) == true }
+
                 item {
                     val prev = loaded.getOrNull(monthKeys.indexOf(current.month.toString()) - 1)
+                    // 증가 원인을 항목명으로 짚기 위한 이번 달 최대 정비·수리 지출
+                    val topMaint = monthMaint
+                        .filter { !isCareItemName(it.typeName) && (it.cost ?: 0) > 0 }
+                        .maxByOrNull { it.cost!! }
                     TotalCard(
                         title = "${current.month.monthValue}월 총지출",
                         fuel = current.fuelCost,
                         maintenance = current.maintenanceCost,
                         care = current.careCost,
                         missingCostCount = current.missingCostCount,
-                        compare = prev?.let { current.total - it.total }
+                        insight = prev?.let {
+                            buildExpenseInsight(current, it, topMaint?.typeName, topMaint?.cost)
+                        }
                     )
                 }
                 item {
@@ -174,9 +198,11 @@ fun ReportTabScreen(
                     }
                 }
 
-                val monthKey = current.month.toString()
-                val monthFuel = fuelRecords.filter { it.filledAt.startsWith(monthKey) }
-                val monthMaint = maintRecords.filter { it.serviceDate?.startsWith(monthKey) == true }
+                // 다가오는 지출 — 이번 달을 보고 있을 때만. 과거 달에선 어색하다.
+                if (monthKey == monthKeys.last() && urgentItems.isNotEmpty()) {
+                    item { SectionLabel("다가오는 지출") }
+                    item { UpcomingCard(urgentItems, lastCosts) }
+                }
 
                 if (monthFuel.isNotEmpty()) {
                     item { FuelSummaryCard(monthFuel) }
@@ -319,8 +345,8 @@ private fun TotalCard(
     maintenance: Long,
     care: Long,
     missingCostCount: Int,
-    /** 전월 대비 증감(원). null 이면 비교 대상 없음 */
-    compare: Long? = null
+    /** 전월 대비 요약. null 이면 비교 대상 없음 */
+    insight: ExpenseInsight? = null
 ) {
     val total = fuel + maintenance + care
     Card(
@@ -330,48 +356,68 @@ private fun TotalCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "${total.formatWon()}원",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (compare != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    when {
-                        compare > 0L -> "지난달보다 ${compare.formatWon()}원 더 썼어요"
-                        compare < 0L -> "지난달보다 ${abs(compare).formatWon()}원 덜 썼어요"
-                        else -> "지난달과 같아요"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = when {
-                        compare > 0L -> MaterialTheme.colorScheme.error
-                        compare < 0L -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
-
             if (total > 0L) {
-                Spacer(Modifier.height(12.dp))
-                CategoryBar(fuel = fuel, maintenance = maintenance, care = care)
-                Spacer(Modifier.height(10.dp))
-                CategoryLegendRow("주유·충전", fuel, MaterialTheme.colorScheme.primary)
-                CategoryLegendRow("정비·수리", maintenance, MaterialTheme.colorScheme.secondary)
-                CategoryLegendRow("세차·관리", care, MaterialTheme.colorScheme.tertiary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    DonutChart(
+                        fuel = fuel,
+                        maintenance = maintenance,
+                        care = care,
+                        centerLabel = title
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    Column(Modifier.weight(1f)) {
+                        CategoryLegendRow("주유·충전", fuel, total, MaterialTheme.colorScheme.primary)
+                        CategoryLegendRow("정비·수리", maintenance, total, MaterialTheme.colorScheme.secondary)
+                        CategoryLegendRow("세차·관리", care, total, MaterialTheme.colorScheme.tertiary)
+                    }
+                }
             } else {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "0원",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "이 기간엔 지출 기록이 없어요",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            if (insight != null) {
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        insight.headline,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            insight.direction > 0 -> MaterialTheme.colorScheme.error
+                            insight.direction < 0 -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    insight.detail?.let {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             if (missingCostCount > 0) {
@@ -386,43 +432,66 @@ private fun TotalCard(
     }
 }
 
+/**
+ * 카테고리 비중 도넛 — 가운데에 총액. 얇은 막대보다 비중이 눈에 들어온다.
+ */
 @Composable
-private fun CategoryBar(fuel: Long, maintenance: Long, care: Long) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(10.dp)
-    ) {
-        val parts = listOf(
-            fuel to MaterialTheme.colorScheme.primary,
-            maintenance to MaterialTheme.colorScheme.secondary,
-            care to MaterialTheme.colorScheme.tertiary
-        ).filter { it.first > 0L }
+private fun DonutChart(
+    fuel: Long,
+    maintenance: Long,
+    care: Long,
+    centerLabel: String
+) {
+    val total = fuel + maintenance + care
+    val segments = listOf(
+        fuel to MaterialTheme.colorScheme.primary,
+        maintenance to MaterialTheme.colorScheme.secondary,
+        care to MaterialTheme.colorScheme.tertiary
+    ).filter { it.first > 0L }
 
-        parts.forEachIndexed { index, (value, color) ->
-            val shape = when {
-                parts.size == 1 -> RoundedCornerShape(5.dp)
-                index == 0 -> RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp)
-                index == parts.lastIndex -> RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp)
-                else -> RoundedCornerShape(0.dp)
+    Box(Modifier.size(124.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val strokeWidth = 15.dp.toPx()
+            val inset = strokeWidth / 2
+            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+            // 조각 사이 살짝 틈을 줘서 경계가 보이게 한다. 조각이 하나면 틈 없음.
+            val gap = if (segments.size > 1) 3f else 0f
+            var start = -90f
+            segments.forEach { (value, color) ->
+                val sweep = value.toFloat() / total * 360f
+                drawArc(
+                    color = color,
+                    startAngle = start + gap / 2,
+                    sweepAngle = (sweep - gap).coerceAtLeast(1f),
+                    useCenter = false,
+                    topLeft = Offset(inset, inset),
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth)
+                )
+                start += sweep
             }
-            Box(
-                Modifier
-                    .weight(value.toFloat())
-                    .height(10.dp)
-                    .background(color, shape)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                formatCompactWon(total),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
-            if (index != parts.lastIndex) Spacer(Modifier.width(2.dp))
+            Text(
+                centerLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-private fun CategoryLegendRow(label: String, value: Long, color: Color) {
+private fun CategoryLegendRow(label: String, value: Long, total: Long, color: Color) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -435,20 +504,119 @@ private fun CategoryLegendRow(label: String, value: Long, color: Color) {
                 )
         )
         Spacer(Modifier.width(8.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (value > 0L) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            "${value.formatWon()}원",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (value > 0L) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (value > 0L) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${value.formatWon()}원",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (value > 0L) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (value > 0L) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (value > 0L && total > 0L) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "${(value * 100.0 / total).roundToInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 다가오는 지출 — 임박·초과 항목에 지난 교체 비용을 붙여 "곧 나갈 돈"을 보여준다.
+ * 다음 비용 = 지난번 비용이라는 가정이므로 '약 ~' 근사로만 말한다.
+ */
+@Composable
+private fun UpcomingCard(
+    items: List<MaintenanceUiModel>,
+    lastCosts: Map<Long, Int?>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "교체 시기가 다가온 항목의 지난 교체 비용 기준 예상이에요.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+
+            items.forEach { item ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(
+                                if (item.status == MaintenanceStatus.OVERDUE)
+                                    MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.tertiary,
+                                CircleShape
+                            )
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            item.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            item.remainingText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    val cost = lastCosts[item.settingId]
+                    Text(
+                        cost?.let { "약 ${formatCompactWon(it.toLong())}원" } ?: "비용 미상",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (cost != null) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (cost != null) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            val known = items.mapNotNull { lastCosts[it.settingId] }
+            if (known.isNotEmpty()) {
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                )
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "예상 지출 합계",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "약 ${formatCompactWon(known.sumOf { it.toLong() })}원",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -490,7 +658,8 @@ private fun MetricCard(
 }
 
 /**
- * 월별 지출 막대 — 막대를 누르면 그 달로 이동한다.
+ * 월별 지출 막대 — 카테고리 색으로 쌓아서 "이 달은 정비 때문에 튀었네"가 보이게 한다.
+ * 점선은 표시 기간 평균. 막대를 누르면 그 달로 이동한다.
  */
 @Composable
 private fun TrendCard(
@@ -505,48 +674,131 @@ private fun TrendCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         val max = months.maxOfOrNull { it.total }?.coerceAtLeast(1L) ?: 1L
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            months.forEach { m ->
-                val key = m.month.toString()
-                val selected = key == selectedKey
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .clickable { onSelect(key) },
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val fraction = (m.total.toFloat() / max).coerceIn(0.04f, 1f)
-                    Box(
+        val avg = if (months.isNotEmpty()) months.sumOf { it.total } / months.size else 0L
+        val chartHeight = 88f
+
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+            Box {
+                // 평균 점선 — 어느 달이 평균보다 튀었는지 기준선이 된다.
+                if (avg > 0L) {
+                    val lineColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    Canvas(
                         Modifier
                             .fillMaxWidth()
-                            .height((72 * fraction).dp)
-                            .background(
-                                when {
-                                    selected -> MaterialTheme.colorScheme.primary
-                                    m.total > 0L -> MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                                    else -> MaterialTheme.colorScheme.outlineVariant
-                                },
-                                RoundedCornerShape(3.dp)
-                            )
-                    )
-                    Spacer(Modifier.height(4.dp))
+                            .height(chartHeight.dp)
+                    ) {
+                        val y = size.height * (1f - (avg.toFloat() / max).coerceIn(0f, 1f))
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))
+                        )
+                    }
+                }
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(chartHeight.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    months.forEach { m ->
+                        val key = m.month.toString()
+                        val selected = key == selectedKey
+                        val dimmed = selectedKey != null && !selected
+                        val barHeight = (chartHeight * (m.total.toFloat() / max)).coerceAtLeast(3f)
+
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .height(chartHeight.dp)
+                                .clickable { onSelect(key) },
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            if (m.total > 0L) {
+                                // 위에서부터 세차 → 정비 → 주유. 주유가 바닥에 깔린다.
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(barHeight.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                ) {
+                                    listOf(
+                                        m.careCost to MaterialTheme.colorScheme.tertiary,
+                                        m.maintenanceCost to MaterialTheme.colorScheme.secondary,
+                                        m.fuelCost to MaterialTheme.colorScheme.primary
+                                    ).filter { it.first > 0L }.forEach { (value, color) ->
+                                        Box(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .weight(value.toFloat())
+                                                .background(
+                                                    if (dimmed) color.copy(alpha = 0.35f) else color
+                                                )
+                                        )
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(3.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.outlineVariant,
+                                            RoundedCornerShape(2.dp)
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                months.forEach { m ->
+                    val selected = m.month.toString() == selectedKey
                     Text(
                         "${m.month.monthValue}",
+                        modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
+
+            if (avg > 0L) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "점선은 표시 기간 평균 (월 ${formatCompactWon(avg)}원)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
+}
+
+/** 427,300 → "42.7만", 12,000,000 → "1,200만", 150,000,000 → "1.5억" */
+internal fun formatCompactWon(value: Long): String = when {
+    value >= 100_000_000L -> {
+        val eok = value / 100_000_000.0
+        if (eok >= 10 || eok == eok.toLong().toDouble()) "%,.0f억".format(eok) else "%.1f억".format(eok)
+    }
+    value >= 10_000L -> {
+        val man = value / 10_000.0
+        if (man >= 100 || man == man.toLong().toDouble()) "%,.0f만".format(man) else "%.1f만".format(man)
+    }
+    else -> "%,d".format(value)
 }
 
 /**

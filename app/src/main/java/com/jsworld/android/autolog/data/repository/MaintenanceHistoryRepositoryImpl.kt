@@ -4,6 +4,7 @@ import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepositor
 
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
+import com.jsworld.android.autolog.domain.model.SettingLastCost
 import com.jsworld.android.autolog.data.local.dao.MaintenanceHistoryDao
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.mapper.toDomain
@@ -62,5 +63,8 @@ class MaintenanceHistoryRepositoryImpl @Inject constructor(
             .map { list -> list.map { it.toDomain() } }
     }
 
-
+    override fun observeLastCostBySetting(carId: Long): Flow<List<SettingLastCost>> {
+        return historyDao.observeLastCostBySetting(carId)
+            .map { list -> list.map { SettingLastCost(it.settingId, it.cost) } }
+    }
 }

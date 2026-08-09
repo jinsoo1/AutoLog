@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
+import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
+import com.jsworld.android.autolog.domain.model.SettingLastCost
+import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
@@ -12,13 +15,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class ReportViewModel @Inject constructor(
     private val expenseReportRepository: ExpenseReportRepository,
     private val fuelRecordRepository: FuelRecordRepository,
-    private val maintenanceHistoryRepository: MaintenanceHistoryRepository
+    private val maintenanceHistoryRepository: MaintenanceHistoryRepository,
+    private val carMaintenanceRepository: CarMaintenanceRepository
 ) : ViewModel() {
 
     // null = 로딩 중, emptyList = 기록 없음 — 빈 상태 화면이 로딩 중에 깜빡이지 않게 구분한다.
@@ -44,4 +49,22 @@ class ReportViewModel @Inject constructor(
             maintenanceHistoryRepository.observeCarRecords(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
+
+    /** 다가오는 지출 카드용 — 임박·초과 항목 */
+    fun urgentState(carId: Long): StateFlow<List<MaintenanceUiModel>> =
+        urgentMap.getOrPut(carId) {
+            carMaintenanceRepository.observeMaintenanceStatusList(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    /** 항목별 마지막 교체 비용 — "다음도 이 정도" 예상용 */
+    fun lastCostsState(carId: Long): StateFlow<Map<Long, Int?>> =
+        lastCostMap.getOrPut(carId) {
+            maintenanceHistoryRepository.observeLastCostBySetting(carId)
+                .map { list -> list.associate { it.settingId to it.cost } }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+        }
+
+    private val urgentMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()
+    private val lastCostMap = mutableMapOf<Long, StateFlow<Map<Long, Int?>>>()
 }

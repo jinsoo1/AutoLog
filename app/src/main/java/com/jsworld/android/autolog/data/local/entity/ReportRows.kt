@@ -20,3 +20,9 @@ data class MileagePointRow(
     @ColumnInfo(name = "date") val date: String,
     @ColumnInfo(name = "mileage") val mileage: Int
 )
+
+/** 항목별 가장 최근 기록의 비용 — 다가오는 지출 예상용 */
+data class SettingLastCostRow(
+    @ColumnInfo(name = "settingId") val settingId: Long,
+    @ColumnInfo(name = "cost") val cost: Int?
+)

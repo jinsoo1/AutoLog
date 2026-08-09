@@ -2,11 +2,15 @@ package com.jsworld.android.autolog.domain.repository
 
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
+import com.jsworld.android.autolog.domain.model.SettingLastCost
 import kotlinx.coroutines.flow.Flow
 
 interface MaintenanceHistoryRepository {
     /** 차량의 모든 정비 기록을 항목 이름과 함께 최신순으로 관찰한다(정비 탭 통합 타임라인). */
     fun observeCarRecords(carId: Long): Flow<List<CarMaintenanceRecord>>
+
+    /** 항목별 가장 최근 기록의 비용 — 리포트의 다가오는 지출 예상용 */
+    fun observeLastCostBySetting(carId: Long): Flow<List<SettingLastCost>>
 
     suspend fun getMaxMileageForCar(carId: Long): Int?
     fun observeLastHistory(settingId: Long): Flow<MaintenanceHistory?>
