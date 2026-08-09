@@ -25,6 +25,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.WaterDrop
@@ -87,6 +89,10 @@ import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
 import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+/** 지출 내역 접힘 상태에서 보이는 건수 / 접기가 적용되는 최소 건수(초과 시) */
+private const val ENTRY_COLLAPSED_COUNT = 6
+private const val ENTRY_COLLAPSE_MIN = 8
 
 /**
  * 지출 리포트 탭 — 월간/연간 총지출, 카테고리 분해, km당 유지비, 월별 추이.
@@ -262,9 +268,47 @@ fun ReportTabScreen(
                 if (entries.isNotEmpty()) {
                     item { SectionLabel("지출 내역 · ${entries.size}건") }
                     item {
+                        // 기록이 많은 달엔 카드가 화면을 다 먹는다 — 6건까지만 보이고 접는다.
+                        // 7~8건에 "외 1~2건" 펼치기가 생기는 게 더 어색해서 9건부터 적용.
+                        var expanded by rememberSaveable(monthKey) { mutableStateOf(false) }
+                        val collapsible = entries.size > ENTRY_COLLAPSE_MIN
+                        val visible =
+                            if (!collapsible || expanded) entries
+                            else entries.take(ENTRY_COLLAPSED_COUNT)
+
                         ListCard {
-                            entries.forEachIndexed { index, entry ->
-                                ExpenseEntryRow(entry, showDivider = index != entries.lastIndex)
+                            Column {
+                                visible.forEachIndexed { index, entry ->
+                                    ExpenseEntryRow(
+                                        entry,
+                                        showDivider = index != visible.lastIndex || collapsible
+                                    )
+                                }
+                                if (collapsible) {
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable { expanded = !expanded }
+                                            .padding(vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            if (expanded) "접기"
+                                            else "외 ${entries.size - ENTRY_COLLAPSED_COUNT}건 모두 보기",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Icon(
+                                            if (expanded) Icons.Filled.ExpandLess
+                                            else Icons.Filled.ExpandMore,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
