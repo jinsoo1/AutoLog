@@ -23,6 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Public
@@ -1019,7 +1024,11 @@ private data class MonthEntry(
     val date: String,
     val title: String,
     val amount: Int?,
-    val kind: EntryKind
+    val kind: EntryKind,
+    /** 주기 없는 정비 항목의 기록 = 일회성 수리 (공구 아이콘) */
+    val isRepair: Boolean = false,
+    /** 충전 기록 (번개 아이콘) */
+    val isElectric: Boolean = false
 )
 
 /** 그 달의 주유·정비·세차 기록을 하나의 지출 내역으로 합친다(최신순) */
@@ -1033,7 +1042,8 @@ private fun buildMonthEntries(
             title = record.unit.actionLabel +
                 (record.station?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
             amount = record.amount,
-            kind = EntryKind.FUEL
+            kind = EntryKind.FUEL,
+            isElectric = record.unit.isElectric
         )
     }
     val maintEntries = maint.map { record ->
@@ -1041,7 +1051,8 @@ private fun buildMonthEntries(
             date = record.serviceDate.orEmpty(),
             title = record.typeName,
             amount = record.cost,
-            kind = if (isCareItemName(record.typeName)) EntryKind.CARE else EntryKind.MAINT
+            kind = if (isCareItemName(record.typeName)) EntryKind.CARE else EntryKind.MAINT,
+            isRepair = record.isRepair
         )
     }
     return (fuelEntries + maintEntries).sortedByDescending { it.date }
@@ -1055,17 +1066,22 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(8.dp)
-                .background(
-                    when (entry.kind) {
-                        EntryKind.FUEL -> MaterialTheme.colorScheme.primary
-                        EntryKind.MAINT -> MaterialTheme.colorScheme.secondary
-                        EntryKind.CARE -> MaterialTheme.colorScheme.tertiary
-                    },
-                    CircleShape
-                )
+        // 앱 공통 아이콘 체계 — 아이콘이 기록의 정체, 색이 리포트 카테고리.
+        Icon(
+            when (entry.kind) {
+                EntryKind.FUEL ->
+                    if (entry.isElectric) Icons.Filled.Bolt else Icons.Filled.LocalGasStation
+                EntryKind.MAINT ->
+                    if (entry.isRepair) Icons.Filled.Handyman else Icons.Filled.Autorenew
+                EntryKind.CARE -> Icons.Filled.WaterDrop
+            },
+            contentDescription = null,
+            modifier = Modifier.size(17.dp),
+            tint = when (entry.kind) {
+                EntryKind.FUEL -> MaterialTheme.colorScheme.primary
+                EntryKind.MAINT -> MaterialTheme.colorScheme.secondary
+                EntryKind.CARE -> MaterialTheme.colorScheme.tertiary
+            }
         )
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -1090,7 +1106,7 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
     }
     if (showDivider) {
         androidx.compose.material3.HorizontalDivider(
-            modifier = Modifier.padding(start = 34.dp),
+            modifier = Modifier.padding(start = 43.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
         )
     }
