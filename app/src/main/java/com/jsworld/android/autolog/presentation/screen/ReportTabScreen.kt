@@ -22,6 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Route
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,8 +63,14 @@ import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
+import com.jsworld.android.autolog.domain.model.NarrativeTone
+import com.jsworld.android.autolog.domain.model.ReportNarrative
 import com.jsworld.android.autolog.domain.model.buildExpenseInsight
+import com.jsworld.android.autolog.domain.model.buildReportNarrative
+import com.jsworld.android.autolog.domain.model.distanceLadderText
+import com.jsworld.android.autolog.domain.model.earthLapsText
 import com.jsworld.android.autolog.domain.model.isCareItemName
+import com.jsworld.android.autolog.domain.model.personalRecordText
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
@@ -161,8 +174,24 @@ fun ReportTabScreen(
                     )
                 }
                 val monthKey = current.month.toString()
+                val isLatestMonth = monthKey == monthKeys.last()
                 val monthFuel = fuelRecords.filter { it.filledAt.startsWith(monthKey) }
                 val monthMaint = maintRecords.filter { it.serviceDate?.startsWith(monthKey) == true }
+                val prevMonthKey = current.month.minusMonths(1).toString()
+                val prevMonthFuel = fuelRecords.filter { it.filledAt.startsWith(prevMonthKey) }
+
+                item {
+                    // 임박/초과 개수는 "지금" 상태라 이번 달을 볼 때만 반영한다.
+                    val narrative = buildReportNarrative(
+                        current = current,
+                        previous = loaded.getOrNull(monthKeys.indexOf(monthKey) - 1),
+                        overdueCount = if (isLatestMonth)
+                            urgentItems.count { it.status == MaintenanceStatus.OVERDUE } else 0,
+                        soonCount = if (isLatestMonth)
+                            urgentItems.count { it.status == MaintenanceStatus.SOON } else 0
+                    )
+                    NarrativeCard(narrative)
+                }
 
                 item {
                     val prev = loaded.getOrNull(monthKeys.indexOf(current.month.toString()) - 1)
@@ -198,14 +227,25 @@ fun ReportTabScreen(
                     }
                 }
 
+                // 재미 지표 — 누적 지구 바퀴 + 자기 기록(없으면 거리 비유)
+                item {
+                    val secondLine = personalRecordText(loaded, current)
+                        ?: current.drivenKm?.let { distanceLadderText(it) }
+                    FunFactCard(
+                        earthLine = earthLapsText(car.mileage),
+                        totalMileage = car.mileage,
+                        secondLine = secondLine
+                    )
+                }
+
                 // 다가오는 지출 — 이번 달을 보고 있을 때만. 과거 달에선 어색하다.
-                if (monthKey == monthKeys.last() && urgentItems.isNotEmpty()) {
+                if (isLatestMonth && urgentItems.isNotEmpty()) {
                     item { SectionLabel("다가오는 지출") }
                     item { UpcomingCard(urgentItems, lastCosts) }
                 }
 
                 if (monthFuel.isNotEmpty()) {
-                    item { FuelSummaryCard(monthFuel) }
+                    item { FuelSummaryCard(monthFuel, prevMonthFuel) }
                 }
 
                 val entries = buildMonthEntries(monthFuel, monthMaint)
@@ -802,11 +842,15 @@ internal fun formatCompactWon(value: Long): String = when {
 }
 
 /**
- * 그 달의 주유·충전 요약 — 횟수, 총량, 평균 단가.
+ * 그 달의 주유·충전 요약 — 횟수, 총량, 평균 단가, 그리고 **내 지난달 단가와 비교**.
+ * 전국 평균 같은 외부 데이터 없이도 "잘 넣고 있는지"를 자기 기준으로 말해준다.
  * 플러그인 하이브리드는 주유/충전이 섞이므로 종류(unit)별로 한 줄씩.
  */
 @Composable
-private fun FuelSummaryCard(monthFuel: List<FuelRecord>) {
+private fun FuelSummaryCard(
+    monthFuel: List<FuelRecord>,
+    prevMonthFuel: List<FuelRecord>
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -815,15 +859,10 @@ private fun FuelSummaryCard(monthFuel: List<FuelRecord>) {
     ) {
         Column(Modifier.padding(16.dp)) {
             monthFuel.groupBy { it.unit }.entries.forEachIndexed { index, (unit, list) ->
-                if (index > 0) Spacer(Modifier.height(8.dp))
+                if (index > 0) Spacer(Modifier.height(10.dp))
 
                 val qty = list.mapNotNull { it.quantity }.sum()
-                // 평균 단가는 수량·금액이 모두 있는 기록으로만 — 반쪽 기록으로 왜곡하지 않기
-                val priced = list.filter { it.quantity != null && it.amount != null }
-                val avgPrice = priced.sumOf { it.amount!!.toDouble() }
-                    .takeIf { it > 0 && priced.sumOf { r -> r.quantity!! } > 0 }
-                    ?.div(priced.sumOf { r -> r.quantity!! })
-                    ?.roundToInt()
+                val avgPrice = avgUnitPrice(list)
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -840,6 +879,134 @@ private fun FuelSummaryCard(monthFuel: List<FuelRecord>) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                // 지난달 내 단가와 비교 — 둘 다 계산 가능할 때만
+                val prevAvg = avgUnitPrice(prevMonthFuel.filter { it.unit == unit })
+                if (avgPrice != null && prevAvg != null && avgPrice != prevAvg) {
+                    val diff = avgPrice - prevAvg
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        if (diff < 0)
+                            "지난달보다 ${unit.symbol}당 ${abs(diff).formatWon()}원 싸게 넣었어요"
+                        else
+                            "지난달보다 ${unit.symbol}당 ${diff.formatWon()}원 비싸게 넣었어요",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (diff < 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 평균 단가 — 수량·금액이 모두 있는 기록으로만 계산해 반쪽 기록으로 왜곡하지 않는다 */
+private fun avgUnitPrice(records: List<FuelRecord>): Int? {
+    val priced = records.filter { it.quantity != null && it.amount != null }
+    val totalQty = priced.sumOf { it.quantity!! }
+    if (totalQty <= 0) return null
+    return (priced.sumOf { it.amount!!.toDouble() } / totalQty).roundToInt()
+}
+
+/** 리포트 상단 내러티브 — 이 달의 표정 */
+@Composable
+private fun NarrativeCard(narrative: ReportNarrative) {
+    val (container, content) = when (narrative.tone) {
+        NarrativeTone.WARNING ->
+            MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        NarrativeTone.SPIKE, NarrativeTone.PREP ->
+            MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        NarrativeTone.CALM ->
+            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        NarrativeTone.EMPTY ->
+            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = container),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                when (narrative.tone) {
+                    NarrativeTone.WARNING -> Icons.Outlined.WarningAmber
+                    NarrativeTone.SPIKE -> Icons.AutoMirrored.Outlined.TrendingUp
+                    NarrativeTone.PREP -> Icons.Outlined.Schedule
+                    NarrativeTone.CALM -> Icons.Outlined.AutoAwesome
+                    NarrativeTone.EMPTY -> Icons.Outlined.Inbox
+                },
+                contentDescription = null,
+                tint = content
+            )
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    narrative.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = content
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    narrative.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = content.copy(alpha = 0.85f)
+                )
+            }
+        }
+    }
+}
+
+/** 재미 지표 — 누적 지구 바퀴 + 자기 기록(또는 이 달 주행 비유) */
+@Composable
+private fun FunFactCard(
+    earthLine: String?,
+    totalMileage: Int,
+    secondLine: String?
+) {
+    if (earthLine == null && secondLine == null) return
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            earthLine?.let {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Public,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text(
+                            "누적 ${totalMileage.formatWon()}km · 지구 둘레 40,075km 기준",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            if (earthLine != null && secondLine != null) Spacer(Modifier.height(10.dp))
+            secondLine?.let {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Route,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
             }
         }
