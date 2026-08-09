@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
+import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.SettingOption
 
@@ -181,8 +183,12 @@ private fun ItemRow(
         null -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    // status == null 은 주기 없는 항목(수리/관리)뿐이다 — "첫 기록"이라고 하면
+    // 기록이 있어도 계속 그렇게 보이므로 성격을 말해준다.
+    val isCare = isCareItemName(option.typeName)
     val badgeLabel = when {
-        status == null -> "첫 기록"
+        status == null && isCare -> "관리"
+        status == null -> "수리"
         status.status == MaintenanceStatus.OVERDUE -> "초과"
         status.status == MaintenanceStatus.SOON -> "임박"
         else -> "정상"
@@ -201,7 +207,12 @@ private fun ItemRow(
             shape = CircleShape
         ) {
             Icon(
-                if (urgent) Icons.Default.PriorityHigh else Icons.Default.Autorenew,
+                when {
+                    urgent -> Icons.Default.PriorityHigh
+                    isCare -> Icons.Default.WaterDrop
+                    status == null -> Icons.Default.Handyman
+                    else -> Icons.Default.Autorenew
+                },
                 contentDescription = null,
                 tint = if (urgent) badgeColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier

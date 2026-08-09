@@ -180,8 +180,14 @@ fun MaintenanceItemDetailScreen(
             } else {
                 item {
                     ListCard {
+                        val historyIcon = when {
+                            isCareItemName(ui.typeName) -> Icons.Default.WaterDrop
+                            ui.isRepair -> Icons.Default.Handyman
+                            else -> Icons.Default.Autorenew
+                        }
                         ui.histories.forEachIndexed { index, history ->
                             HistoryRow(
+                                icon = historyIcon,
                                 history = history,
                                 showDivider = index != ui.histories.lastIndex,
                                 onClick = { onEditHistory(history.id) }
@@ -435,6 +441,7 @@ private fun StatusCard(ui: MaintenanceItemDetailUiState) {
 
 @Composable
 private fun HistoryRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     history: MaintenanceHistory,
     showDivider: Boolean,
     onClick: () -> Unit
@@ -448,7 +455,7 @@ private fun HistoryRow(
         ) {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                 Icon(
-                    Icons.Default.Autorenew,
+                    icon,
                     contentDescription = null,
                     modifier = Modifier
                         .padding(6.dp)

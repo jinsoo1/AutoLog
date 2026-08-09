@@ -142,13 +142,14 @@ fun MaintenanceTabScreen(
             // 수리·관리는 건마다 이름이 달라 칩이 폭발하므로 각각 하나로 묶는다.
             // 관리 = 주기 없는 항목 중 세차·코팅류(수리가 아니므로 배지도 다르다).
             val typeNames = remember(records) {
-                records.filterNot { it.isRepair }.map { it.typeName }.distinct()
+                records.filterNot { it.isRepair || isCareItemName(it.typeName) }
+                    .map { it.typeName }.distinct()
             }
             val hasRepairs = remember(records) {
                 records.any { it.isRepair && !isCareItemName(it.typeName) }
             }
             val hasCare = remember(records) {
-                records.any { it.isRepair && isCareItemName(it.typeName) }
+                records.any { isCareItemName(it.typeName) }
             }
 
             // 필터로 고른 항목이 기록에서 사라지면(삭제 등) 필터를 해제한다.
@@ -161,7 +162,7 @@ fun MaintenanceTabScreen(
                 when (activeFilter) {
                     null -> records
                     REPAIR_FILTER -> records.filter { it.isRepair && !isCareItemName(it.typeName) }
-                    CARE_FILTER -> records.filter { it.isRepair && isCareItemName(it.typeName) }
+                    CARE_FILTER -> records.filter { isCareItemName(it.typeName) }
                     else -> records.filter { it.typeName == activeFilter && !it.isRepair }
                 }
             }
@@ -260,8 +261,9 @@ private fun TimelineRow(
     showDivider: Boolean,
     onClick: () -> Unit
 ) {
-    // 주기 정비(사이클) / 수리(공구) / 관리(물방울 — 세차·코팅류)
-    val isCare = record.isRepair && isCareItemName(record.typeName)
+    // 아이콘은 항목의 정체를, 배지는 기록의 성격을 말한다.
+    // 세차류는 주기를 붙여도(승격) 물방울을 유지한다 — 세차가 사이클 아이콘이 되면 어색하다.
+    val isCare = isCareItemName(record.typeName)
     val badgeLabel = when {
         isCare -> "관리"
         record.isRepair -> "수리"
