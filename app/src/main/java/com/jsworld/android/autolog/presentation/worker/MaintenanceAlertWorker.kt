@@ -134,7 +134,7 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         }
     }
 
-    /** ⚠️ 임시 테스트용 — 테스트 버튼과 함께 제거 */
+    /** 테스트 실행 전용 결과 안내 — 정기 알림 경로에서는 호출되지 않는다 */
     private fun showTestResultNotification(urgentTotal: Int, noHistoryCount: Int) {
         val reason = when {
             urgentTotal == 0 ->
@@ -213,7 +213,7 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     }
 
     companion object {
-        /** ⚠️ 임시 테스트용 inputData 키 — 출시 전 테스트 버튼과 함께 제거 */
+        /** 테스트용 inputData 키 — 디버그 전용 테스트 버튼(enqueueTest)에서만 쓰인다 */
         const val KEY_FORCE_TEST = "force_test"
 
         private const val TAG = "MaintAlert"

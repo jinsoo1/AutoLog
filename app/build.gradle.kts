@@ -77,6 +77,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG 로 디버그 전용 UI(알림 테스트 버튼)를 가드하기 위해 켠다.
+        buildConfig = true
     }
 }
 

@@ -71,6 +71,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
+import com.jsworld.android.autolog.BuildConfig
 import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
@@ -424,23 +425,24 @@ fun SettingsScreen(
                         )
                     }
 
-                    // TODO: ⚠️ 임시 테스트 버튼 — 출시 전 제거
-                    // (MaintenanceAlertScheduler.enqueueTest, Worker.KEY_FORCE_TEST 도 함께)
-                    item {
-                        SettingsMenuItem(
-                            icon = Icons.Outlined.BugReport,
-                            title = "알림 테스트 (임시)",
-                            subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
-                            indented = true,
-                            onClick = {
-                                MaintenanceAlertScheduler.enqueueTest(context)
-                                Toast.makeText(
-                                    context,
-                                    "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
+                    // 알림 테스트 — 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
+                    if (BuildConfig.DEBUG) {
+                        item {
+                            SettingsMenuItem(
+                                icon = Icons.Outlined.BugReport,
+                                title = "알림 테스트 (디버그 전용)",
+                                subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
+                                indented = true,
+                                onClick = {
+                                    MaintenanceAlertScheduler.enqueueTest(context)
+                                    Toast.makeText(
+                                        context,
+                                        "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        }
                     }
                 }
 
