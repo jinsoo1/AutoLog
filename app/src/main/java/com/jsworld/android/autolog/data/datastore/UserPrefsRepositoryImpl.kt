@@ -1,15 +1,20 @@
 package com.jsworld.android.autolog.data.datastore
 
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertNotifiedState
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 @Singleton
@@ -78,5 +83,88 @@ class UserPrefsRepositoryImpl @Inject constructor(
 
     override suspend fun setBackupBannerDismissedAt(millis: Long) {
         dataStore.edit { it[backupBannerDismissedAtKey] = millis }
+    }
+
+    /**
+     * 정비 임박/초과 푸시 알림 설정
+     */
+    private val alertEnabledKey = booleanPreferencesKey("maintenance_alert_enabled")
+    private val alertSoonKey = booleanPreferencesKey("maintenance_alert_soon")
+    private val alertOverdueKey = booleanPreferencesKey("maintenance_alert_overdue")
+    private val alertHourKey = intPreferencesKey("maintenance_alert_hour")
+    private val alertRemindDaysKey = intPreferencesKey("maintenance_alert_remind_days")
+
+    override fun observeMaintenanceAlertPrefs(): Flow<MaintenanceAlertPrefs> =
+        dataStore.data.map { prefs ->
+            MaintenanceAlertPrefs(
+                enabled = prefs[alertEnabledKey] ?: false,
+                soonEnabled = prefs[alertSoonKey] ?: true,
+                overdueEnabled = prefs[alertOverdueKey] ?: true,
+                hour = prefs[alertHourKey] ?: MaintenanceAlertPrefs.DEFAULT_HOUR,
+                remindDays = prefs[alertRemindDaysKey] ?: 0
+            )
+        }
+
+    override suspend fun setMaintenanceAlertEnabled(enabled: Boolean) {
+        dataStore.edit { it[alertEnabledKey] = enabled }
+    }
+
+    override suspend fun setMaintenanceAlertSoonEnabled(enabled: Boolean) {
+        dataStore.edit { it[alertSoonKey] = enabled }
+    }
+
+    override suspend fun setMaintenanceAlertOverdueEnabled(enabled: Boolean) {
+        dataStore.edit { it[alertOverdueKey] = enabled }
+    }
+
+    override suspend fun setMaintenanceAlertHour(hour: Int) {
+        dataStore.edit { it[alertHourKey] = hour.coerceIn(0, 23) }
+    }
+
+    override suspend fun setMaintenanceAlertRemindDays(days: Int) {
+        dataStore.edit { it[alertRemindDaysKey] = days.coerceAtLeast(0) }
+    }
+
+    /**
+     * 항목별 마지막 알림 상태 — "maintenance_alert_state_<settingId>" = "STATUS|millis".
+     * 항목 수가 수십 개 수준이라 DataStore 로 충분하다(테이블 추가·마이그레이션 회피).
+     */
+    private fun alertStateKey(settingId: Long) =
+        stringPreferencesKey("$ALERT_STATE_PREFIX$settingId")
+
+    override suspend fun getMaintenanceAlertNotifiedStates(): Map<Long, MaintenanceAlertNotifiedState> {
+        val prefs = dataStore.data.first()
+        return prefs.asMap().mapNotNull { (key, value) ->
+            val id = key.name.removePrefix(ALERT_STATE_PREFIX)
+                .takeIf { it != key.name }?.toLongOrNull() ?: return@mapNotNull null
+            val parts = (value as? String)?.split('|') ?: return@mapNotNull null
+            val status = parts.getOrNull(0) ?: return@mapNotNull null
+            val at = parts.getOrNull(1)?.toLongOrNull() ?: 0L
+            id to MaintenanceAlertNotifiedState(status, at)
+        }.toMap()
+    }
+
+    override suspend fun setMaintenanceAlertNotifiedState(
+        settingId: Long,
+        status: String,
+        notifiedAt: Long
+    ) {
+        dataStore.edit { it[alertStateKey(settingId)] = "$status|$notifiedAt" }
+    }
+
+    override suspend fun retainMaintenanceAlertNotifiedStates(keep: Set<Long>) {
+        dataStore.edit { prefs ->
+            prefs.asMap().keys
+                .filter { key ->
+                    val id = key.name.removePrefix(ALERT_STATE_PREFIX)
+                        .takeIf { it != key.name }?.toLongOrNull()
+                    id != null && id !in keep
+                }
+                .forEach { prefs -= it }
+        }
+    }
+
+    private companion object {
+        const val ALERT_STATE_PREFIX = "maintenance_alert_state_"
     }
 }

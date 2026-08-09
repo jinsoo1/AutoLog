@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.domain.repository
 
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertNotifiedState
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import kotlinx.coroutines.flow.Flow
 
 interface UserPrefsRepository {
@@ -22,4 +24,18 @@ interface UserPrefsRepository {
      */
     fun observeSelectedCarId(): Flow<Long?>
     suspend fun setSelectedCarId(carId: Long)
+
+    /** 정비 임박/초과 푸시 알림 설정 */
+    fun observeMaintenanceAlertPrefs(): Flow<MaintenanceAlertPrefs>
+    suspend fun setMaintenanceAlertEnabled(enabled: Boolean)
+    suspend fun setMaintenanceAlertSoonEnabled(enabled: Boolean)
+    suspend fun setMaintenanceAlertOverdueEnabled(enabled: Boolean)
+    suspend fun setMaintenanceAlertHour(hour: Int)
+    suspend fun setMaintenanceAlertRemindDays(days: Int)
+
+    /** settingId → 마지막으로 알림 보낸 상태. 전이 감지용 */
+    suspend fun getMaintenanceAlertNotifiedStates(): Map<Long, MaintenanceAlertNotifiedState>
+    suspend fun setMaintenanceAlertNotifiedState(settingId: Long, status: String, notifiedAt: Long)
+    /** keep 에 없는 항목의 기록을 지운다 — 정상으로 돌아온 항목이 다음에 다시 알림받게 */
+    suspend fun retainMaintenanceAlertNotifiedStates(keep: Set<Long>)
 }

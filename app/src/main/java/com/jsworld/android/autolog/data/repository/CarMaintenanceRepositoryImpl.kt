@@ -180,7 +180,8 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 name = name,
                 status = finalStatus,
                 remainingText = remainingText,
-                progressRatio = listOfNotNull(kmRatio, dayRatio).maxOrNull()
+                progressRatio = listOfNotNull(kmRatio, dayRatio).maxOrNull(),
+                hasHistory = !hasNoHistory
             )
         }
     }

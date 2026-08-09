@@ -32,8 +32,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.NotificationImportant
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TableView
 import androidx.compose.material3.AlertDialog
@@ -66,8 +70,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
+import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.presentation.viewModel.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,6 +94,12 @@ fun SettingsScreen(
 
     val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
         .collectAsStateWithLifecycle(initialValue = false)
+
+    val alertPrefs by viewModel.maintenanceAlertPrefs
+        .collectAsStateWithLifecycle(initialValue = MaintenanceAlertPrefs())
+
+    var showAlertHourDialog by remember { mutableStateOf(false) }
+    var showAlertRemindDialog by remember { mutableStateOf(false) }
 
     // 복원 대상 선택(목록) 다이얼로그 표시 여부
     var showRestorePicker by remember { mutableStateOf(false) }
@@ -171,6 +183,67 @@ fun SettingsScreen(
             }
         } else {
             disableWeeklyNotification()
+        }
+    }
+
+    /**
+     * 정비 임박/초과 알림 — 마스터 스위치를 켜는 순간 채널 생성 + 일일 검사 예약.
+     * (remember 로 감싸지 않는다 — alertPrefs.hour 최신값을 잡아야 해서)
+     */
+    val enableMaintenanceAlert: () -> Unit = {
+        AutoLogNotificationHelper.createChannels(context)
+        MaintenanceAlertScheduler.reschedule(context, alertPrefs.hour)
+        viewModel.setMaintenanceAlertEnabled(true)
+        Toast.makeText(
+            context,
+            "매일 ${formatAlertHour(alertPrefs.hour)}에 정비 상태를 확인해 알려드릴게요.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    val disableMaintenanceAlert: () -> Unit = {
+        MaintenanceAlertScheduler.cancel(context)
+        viewModel.setMaintenanceAlertEnabled(false)
+        Toast.makeText(context, "정비 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
+    }
+
+    val maintenanceAlertPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { granted ->
+                if (granted) {
+                    enableMaintenanceAlert()
+                } else {
+                    viewModel.setMaintenanceAlertEnabled(false)
+                    Toast.makeText(
+                        context,
+                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+
+    val onMaintenanceAlertToggleChange: (Boolean) -> Unit = { checked ->
+        if (checked) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    enableMaintenanceAlert()
+                } else {
+                    maintenanceAlertPermissionLauncher.launch(
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                }
+            } else {
+                enableMaintenanceAlert()
+            }
+        } else {
+            disableMaintenanceAlert()
         }
     }
 
@@ -291,6 +364,60 @@ fun SettingsScreen(
                         checked = notificationEnabled,
                         onCheckedChange = onNotificationToggleChange
                     )
+                }
+
+                item {
+                    SettingsSwitchMenuItem(
+                        icon = Icons.Outlined.NotificationsActive,
+                        title = "정비 알림",
+                        subtitle = "교체 시기가 다가오거나 지나면 알려드립니다",
+                        checked = alertPrefs.enabled,
+                        onCheckedChange = onMaintenanceAlertToggleChange
+                    )
+                }
+
+                if (alertPrefs.enabled) {
+                    item {
+                        SettingsSwitchMenuItem(
+                            icon = Icons.Outlined.Notifications,
+                            title = "임박 알림",
+                            subtitle = "교체 시기가 다가올 때",
+                            checked = alertPrefs.soonEnabled,
+                            onCheckedChange = viewModel::setMaintenanceAlertSoonEnabled
+                        )
+                    }
+
+                    item {
+                        SettingsSwitchMenuItem(
+                            icon = Icons.Outlined.NotificationImportant,
+                            title = "초과 알림",
+                            subtitle = "교체 시기를 넘겼을 때",
+                            checked = alertPrefs.overdueEnabled,
+                            onCheckedChange = viewModel::setMaintenanceAlertOverdueEnabled
+                        )
+                    }
+
+                    item {
+                        SettingsMenuItem(
+                            icon = Icons.Outlined.Schedule,
+                            title = "알림 시간",
+                            subtitle = "매일 ${formatAlertHour(alertPrefs.hour)}에 확인",
+                            onClick = { showAlertHourDialog = true }
+                        )
+                    }
+
+                    item {
+                        SettingsMenuItem(
+                            icon = Icons.Outlined.Repeat,
+                            title = "초과 리마인드",
+                            subtitle = if (alertPrefs.remindDays == 0) {
+                                "안 함 — 초과 시 한 번만 알려드려요"
+                            } else {
+                                "초과 상태가 계속되면 ${alertPrefs.remindDays}일마다 다시 알림"
+                            },
+                            onClick = { showAlertRemindDialog = true }
+                        )
+                    }
                 }
 
                 item {
@@ -627,6 +754,103 @@ fun SettingsScreen(
             }
         )
     }
+
+    /**
+     * 정비 알림 시간 선택 — 시간이 바뀌면 예약도 새 시각으로 교체한다.
+     */
+    if (showAlertHourDialog) {
+        AlertDialog(
+            onDismissRequest = { showAlertHourDialog = false },
+            title = { Text("알림 시간") },
+            text = {
+                Column(
+                    Modifier
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    (6..22).forEach { hour ->
+                        val selected = hour == alertPrefs.hour
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setMaintenanceAlertHour(hour)
+                                    MaintenanceAlertScheduler.reschedule(context, hour)
+                                    showAlertHourDialog = false
+                                }
+                                .padding(vertical = 12.dp, horizontal = 4.dp)
+                        ) {
+                            Text(
+                                formatAlertHour(hour),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAlertHourDialog = false }) { Text("취소") }
+            }
+        )
+    }
+
+    /**
+     * 초과 리마인드 주기 선택
+     */
+    if (showAlertRemindDialog) {
+        AlertDialog(
+            onDismissRequest = { showAlertRemindDialog = false },
+            title = { Text("초과 리마인드") },
+            text = {
+                Column {
+                    Text(
+                        "교체 시기를 넘긴 항목이 계속 방치되면 다시 알려드릴까요?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    MaintenanceAlertPrefs.REMIND_OPTIONS.forEach { days ->
+                        val selected = days == alertPrefs.remindDays
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setMaintenanceAlertRemindDays(days)
+                                    showAlertRemindDialog = false
+                                }
+                                .padding(vertical = 12.dp, horizontal = 4.dp)
+                        ) {
+                            Text(
+                                MaintenanceAlertPrefs.remindLabel(days),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAlertRemindDialog = false }) { Text("취소") }
+            }
+        )
+    }
+}
+
+/** 9 → "오전 9시", 14 → "오후 2시" */
+private fun formatAlertHour(hour: Int): String = when {
+    hour == 0 -> "오전 12시"
+    hour < 12 -> "오전 ${hour}시"
+    hour == 12 -> "오후 12시"
+    else -> "오후 ${hour - 12}시"
 }
 
 @Composable

@@ -12,5 +12,11 @@ data class MaintenanceUiModel(
      * 주기 소진율(0~1). 주기가 km·개월 둘 다 있으면 더 많이 소진된 쪽을 쓴다.
      * 주기가 없으면 null.
      */
-    val progressRatio: Float? = null
+    val progressRatio: Float? = null,
+    /**
+     * 기록이 하나라도 있는지. 기록이 없으면 0km/오늘 기준으로 계산돼
+     * 즉시 초과로 보이는데, 푸시 알림은 이런 항목을 걸러야 한다
+     * (항목만 켜둔 사용자에게 초과 알림을 쏟아내면 안 된다).
+     */
+    val hasHistory: Boolean = true
 )

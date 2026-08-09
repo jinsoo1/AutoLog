@@ -8,6 +8,7 @@ import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.BackupUiState
 import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
 import com.jsworld.android.autolog.data.repository.BackupRepository
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -43,6 +44,29 @@ class SettingsViewModel @Inject constructor(
 
     val weeklyMileageNotificationEnabled: Flow<Boolean> =
         userPrefsRepository.observeWeeklyMileageNotificationEnabled()
+
+    val maintenanceAlertPrefs: Flow<MaintenanceAlertPrefs> =
+        userPrefsRepository.observeMaintenanceAlertPrefs()
+
+    fun setMaintenanceAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setMaintenanceAlertEnabled(enabled) }
+    }
+
+    fun setMaintenanceAlertSoonEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setMaintenanceAlertSoonEnabled(enabled) }
+    }
+
+    fun setMaintenanceAlertOverdueEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setMaintenanceAlertOverdueEnabled(enabled) }
+    }
+
+    fun setMaintenanceAlertHour(hour: Int) {
+        viewModelScope.launch { userPrefsRepository.setMaintenanceAlertHour(hour) }
+    }
+
+    fun setMaintenanceAlertRemindDays(days: Int) {
+        viewModelScope.launch { userPrefsRepository.setMaintenanceAlertRemindDays(days) }
+    }
 
     val lastBackupAt: Flow<Long> =
         userPrefsRepository.observeLastBackupAt()
