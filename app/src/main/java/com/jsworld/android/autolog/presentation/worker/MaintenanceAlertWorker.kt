@@ -48,19 +48,23 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val prefs = userPrefsRepository.observeMaintenanceAlertPrefs().first()
+        val forceTest = inputData.getBoolean(KEY_FORCE_TEST, false)
 
         // 꺼져 있으면 체인도 세운다(끌 때 cancel 되지만 경합 대비 안전망).
         if (!prefs.enabled) return Result.success()
 
         // ⚠️ 검사보다 예약을 먼저 — 도중에 예외가 나도 내일 체인이 살아야 한다.
-        MaintenanceAlertScheduler.scheduleNext(applicationContext, prefs.hour)
+        // 테스트 실행은 일일 체인을 건드리지 않는다.
+        if (!forceTest) {
+            MaintenanceAlertScheduler.scheduleNext(applicationContext, prefs.hour)
+        }
 
-        runCatching { checkAndNotify(prefs) }
+        runCatching { checkAndNotify(prefs, forceTest) }
 
         return Result.success()
     }
 
-    private suspend fun checkAndNotify(prefs: MaintenanceAlertPrefs) {
+    private suspend fun checkAndNotify(prefs: MaintenanceAlertPrefs, forceTest: Boolean) {
         if (!NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) return
 
         val now = System.currentTimeMillis()
@@ -78,7 +82,8 @@ class MaintenanceAlertWorker @AssistedInject constructor(
             currentIds += items.map { it.settingId }
 
             // 새로 알릴 거리가 있는지 — 전이했거나, 초과 리마인드 주기가 지났거나.
-            val fresh = items.filter { item ->
+            // 테스트 실행은 검사 없이 전부 알린다.
+            val fresh = if (forceTest) items else items.filter { item ->
                 shouldNotifyMaintenanceAlert(
                     status = item.status,
                     prev = notified[item.settingId],
@@ -90,13 +95,18 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 
             // 알림 본문에는 현재 주의가 필요한 항목 전부를 담는다(fresh 만이 아니라).
             runCatching { showNotification(car, items) }
-            fresh.forEach {
-                userPrefsRepository.setMaintenanceAlertNotifiedState(it.settingId, it.status.name, now)
+            if (!forceTest) {
+                fresh.forEach {
+                    userPrefsRepository.setMaintenanceAlertNotifiedState(it.settingId, it.status.name, now)
+                }
             }
         }
 
         // 정상으로 돌아온 항목의 기록을 지워, 다음에 다시 임박해지면 또 알리게 한다.
-        userPrefsRepository.retainMaintenanceAlertNotifiedStates(currentIds)
+        // 테스트 실행은 상태를 일절 건드리지 않는다 — 정기 알림에 영향 없음.
+        if (!forceTest) {
+            userPrefsRepository.retainMaintenanceAlertNotifiedStates(currentIds)
+        }
     }
 
     private fun showNotification(car: Car, items: List<MaintenanceUiModel>) {
@@ -151,10 +161,13 @@ class MaintenanceAlertWorker @AssistedInject constructor(
             .notify((NOTIFICATION_ID_BASE + car.id).toInt(), builder.build())
     }
 
-    private companion object {
+    companion object {
+        /** ⚠️ 임시 테스트용 inputData 키 — 출시 전 테스트 버튼과 함께 제거 */
+        const val KEY_FORCE_TEST = "force_test"
+
         // 주간 알림(1001)과 겹치지 않는 대역
-        const val NOTIFICATION_ID_BASE = 2000L
-        const val REQUEST_CODE_BASE = 3000L
+        private const val NOTIFICATION_ID_BASE = 2000L
+        private const val REQUEST_CODE_BASE = 3000L
     }
 }
 

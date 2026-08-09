@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.jsworld.android.autolog.presentation.worker.MaintenanceAlertWorker
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit
 object MaintenanceAlertScheduler {
 
     private const val UNIQUE_WORK_NAME = "maintenance_alert_daily"
+    private const val TEST_WORK_NAME = "maintenance_alert_test"
 
     /** 이미 예약이 있으면 유지(KEEP). 워커의 자기 재예약, 앱 시작 복구용 */
     fun scheduleNext(context: Context, hour: Int) {
@@ -32,6 +34,22 @@ object MaintenanceAlertScheduler {
 
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_WORK_NAME)
+        WorkManager.getInstance(context).cancelUniqueWork(TEST_WORK_NAME)
+    }
+
+    /**
+     * ⚠️ 임시 테스트용 — 출시 전 이 함수와 설정 화면의 테스트 버튼을 제거할 것.
+     * 10초 뒤 전이 검사를 무시하고 현재 임박·초과 항목으로 강제 알림을 보낸다.
+     * 상태를 저장하지 않으므로 몇 번을 눌러도, 정기 알림에도 영향이 없다.
+     */
+    fun enqueueTest(context: Context) {
+        val request = OneTimeWorkRequestBuilder<MaintenanceAlertWorker>()
+            .setInputData(workDataOf(MaintenanceAlertWorker.KEY_FORCE_TEST to true))
+            .setInitialDelay(10, TimeUnit.SECONDS)
+            .build()
+
+        WorkManager.getInstance(context)
+            .enqueueUniqueWork(TEST_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
     private fun enqueue(context: Context, hour: Int, policy: ExistingWorkPolicy) {

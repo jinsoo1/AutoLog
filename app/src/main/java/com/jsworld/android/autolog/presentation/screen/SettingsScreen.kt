@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.NotificationImportant
 import androidx.compose.material.icons.outlined.Notifications
@@ -416,6 +417,24 @@ fun SettingsScreen(
                                 "초과 상태가 계속되면 ${alertPrefs.remindDays}일마다 다시 알림"
                             },
                             onClick = { showAlertRemindDialog = true }
+                        )
+                    }
+
+                    // TODO: ⚠️ 임시 테스트 버튼 — 출시 전 제거
+                    // (MaintenanceAlertScheduler.enqueueTest, Worker.KEY_FORCE_TEST 도 함께)
+                    item {
+                        SettingsMenuItem(
+                            icon = Icons.Outlined.BugReport,
+                            title = "알림 테스트 (임시)",
+                            subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
+                            onClick = {
+                                MaintenanceAlertScheduler.enqueueTest(context)
+                                Toast.makeText(
+                                    context,
+                                    "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         )
                     }
                 }
