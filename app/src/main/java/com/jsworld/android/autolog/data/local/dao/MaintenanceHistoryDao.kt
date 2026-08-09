@@ -6,7 +6,9 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceRecordRow
+import com.jsworld.android.autolog.data.local.entity.MaintenanceCostRow
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
+import com.jsworld.android.autolog.data.local.entity.MileagePointRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -106,4 +108,30 @@ interface MaintenanceHistoryDao {
         ORDER BY h.serviceDate DESC, h.serviceMileage DESC, h.id DESC
     """)
     fun observeCarRecords(carId: Long): Flow<List<CarMaintenanceRecordRow>>
+
+    /**
+     * 리포트용 — 월·항목명·금액. 카테고리(정비·수리/세차) 분류는 이름 기반이라
+     * 코틀린(isCareItemName)에서 하고, 여기서는 원천 행만 낸다.
+     * 날짜 없는 기록은 어느 달에도 넣을 수 없어 제외한다.
+     */
+    @Query("""
+        SELECT substr(h.serviceDate, 1, 7) AS month,
+               t.name AS typeName,
+               h.cost AS cost
+        FROM maintenance_history h
+        JOIN car_maintenance_settings s ON s.id = h.settingId
+        JOIN maintenance_types t ON t.id = s.maintenanceTypeId
+        WHERE s.carId = :carId AND h.serviceDate IS NOT NULL
+    """)
+    fun observeMonthlyCostRows(carId: Long): Flow<List<MaintenanceCostRow>>
+
+    /** 리포트용 — 주행거리 관측점(정비 기록의 날짜·누적 km) */
+    @Query("""
+        SELECT h.serviceDate AS date, h.serviceMileage AS mileage
+        FROM maintenance_history h
+        JOIN car_maintenance_settings s ON s.id = h.settingId
+        WHERE s.carId = :carId
+          AND h.serviceDate IS NOT NULL AND h.serviceMileage IS NOT NULL
+    """)
+    fun observeMileagePoints(carId: Long): Flow<List<MileagePointRow>>
 }

@@ -5,6 +5,8 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
+import com.jsworld.android.autolog.data.local.entity.MileagePointRow
+import com.jsworld.android.autolog.data.local.entity.MonthlyAmountRow
 import com.jsworld.android.autolog.data.local.entity.MonthlyFuelCostRow
 import kotlinx.coroutines.flow.Flow
 
@@ -67,6 +69,28 @@ interface FuelRecordDao {
         """
     )
     fun observeRecentStations(carId: Long, unit: String, limit: Int = 5): Flow<List<String>>
+
+    /** 리포트용 — 월별 총지출(단위 구분 없이 합산) */
+    @Query(
+        """
+        SELECT substr(filledAt, 1, 7) AS month,
+               SUM(COALESCE(amount, 0)) AS total
+        FROM fuel_records
+        WHERE carId = :carId
+        GROUP BY substr(filledAt, 1, 7)
+        """
+    )
+    fun observeMonthlyTotal(carId: Long): Flow<List<MonthlyAmountRow>>
+
+    /** 리포트용 — 주행거리 관측점(주유 기록의 날짜·누적 km) */
+    @Query(
+        """
+        SELECT filledAt AS date, mileage AS mileage
+        FROM fuel_records
+        WHERE carId = :carId AND mileage IS NOT NULL
+        """
+    )
+    fun observeMileagePoints(carId: Long): Flow<List<MileagePointRow>>
 
     /** 직전 주유 기록의 주행거리 — "이전 기록 이후 몇 km 달렸는지" 계산에 쓴다 */
     @Query(

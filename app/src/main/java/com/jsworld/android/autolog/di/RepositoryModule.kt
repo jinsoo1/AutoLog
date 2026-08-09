@@ -5,12 +5,14 @@ import com.jsworld.android.autolog.data.datastore.NoticeReadRepositoryImpl
 import com.jsworld.android.autolog.data.datastore.UserPrefsRepositoryImpl
 import com.jsworld.android.autolog.data.repository.CarMaintenanceRepositoryImpl
 import com.jsworld.android.autolog.data.repository.CarRepositoryImpl
+import com.jsworld.android.autolog.data.repository.ExpenseReportRepositoryImpl
 import com.jsworld.android.autolog.data.repository.FuelRecordRepositoryImpl
 import com.jsworld.android.autolog.data.repository.MaintenanceHistoryRepositoryImpl
 import com.jsworld.android.autolog.data.repository.MaintenanceTypeRepositoryImpl
 import com.jsworld.android.autolog.data.repository.NoticeRepositoryImpl
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
+import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.CarSortPreferenceRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
@@ -62,4 +64,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindFuelRecordRepository(impl: FuelRecordRepositoryImpl): FuelRecordRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindExpenseReportRepository(impl: ExpenseReportRepositoryImpl): ExpenseReportRepository
 }
