@@ -70,12 +70,17 @@ import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.NarrativeTone
 import com.jsworld.android.autolog.domain.model.ReportNarrative
+import com.jsworld.android.autolog.domain.model.TopSpendItem
+import com.jsworld.android.autolog.domain.model.YearHighlight
 import com.jsworld.android.autolog.domain.model.buildExpenseInsight
 import com.jsworld.android.autolog.domain.model.buildReportNarrative
+import com.jsworld.android.autolog.domain.model.buildYearHighlights
+import com.jsworld.android.autolog.domain.model.buildYearNarrative
 import com.jsworld.android.autolog.domain.model.distanceLadderText
 import com.jsworld.android.autolog.domain.model.earthLapsText
 import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.personalRecordText
+import com.jsworld.android.autolog.domain.model.topSpendItems
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
@@ -276,6 +281,11 @@ fun ReportTabScreen(
             } else {
                 val yearMonths = loaded.filter { it.month.year == selectedYear }
                 val yearIndex = years.indexOf(selectedYear)
+                val yearPrefix = "$selectedYear-"
+                val prevYearPrefix = "${selectedYear - 1}-"
+                val yearFuel = fuelRecords.filter { it.filledAt.startsWith(yearPrefix) }
+                val yearMaint = maintRecords.filter { it.serviceDate?.startsWith(yearPrefix) == true }
+                val prevYearFuel = fuelRecords.filter { it.filledAt.startsWith(prevYearPrefix) }
 
                 item {
                     PeriodSelector(
@@ -286,6 +296,24 @@ fun ReportTabScreen(
                         onNext = { if (yearIndex < years.lastIndex) selectedYear = years[yearIndex + 1] }
                     )
                 }
+
+                item {
+                    val prevYearTotal = loaded
+                        .filter { it.month.year == selectedYear - 1 }
+                        .takeIf { it.isNotEmpty() }
+                        ?.sumOf { it.total }
+                    NarrativeCard(
+                        buildYearNarrative(
+                            yearTotal = yearMonths.sumOf { it.total },
+                            prevYearTotal = prevYearTotal,
+                            repairCount = yearMaint.count {
+                                it.isRepair && !isCareItemName(it.typeName)
+                            },
+                            isCompleteYear = selectedYear < loaded.last().month.year
+                        )
+                    )
+                }
+
                 item {
                     TotalCard(
                         title = "${selectedYear}년 총지출",
@@ -337,6 +365,19 @@ fun ReportTabScreen(
                         )
                     }
                 }
+
+                val topItems = topSpendItems(yearMaint)
+                if (topItems.isNotEmpty()) {
+                    item { SectionLabel("항목별 지출 TOP") }
+                    item { TopSpendCard(topItems) }
+                }
+
+                val highlights = buildYearHighlights(yearMonths, yearFuel, yearMaint, prevYearFuel)
+                if (highlights.isNotEmpty()) {
+                    item { SectionLabel("올해의 기록") }
+                    item { YearHighlightsCard(highlights) }
+                }
+
                 item { SectionLabel("월별 지출") }
                 item {
                     TrendCard(
@@ -1109,6 +1150,107 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
             modifier = Modifier.padding(start = 43.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
         )
+    }
+}
+
+/** 항목별 연간 지출 순위 — 막대 길이로 상대 크기가 보인다 */
+@Composable
+private fun TopSpendCard(items: List<TopSpendItem>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            val max = items.maxOf { it.total }.coerceAtLeast(1L)
+            items.forEachIndexed { index, item ->
+                if (index > 0) Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${index + 1}",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.width(20.dp)
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                item.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            if (item.count > 1) {
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "${item.count}회",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier
+                                .fillMaxWidth(fraction = (item.total.toFloat() / max).coerceIn(0.04f, 1f))
+                                .height(4.dp)
+                                .background(
+                                    if (item.isCare) MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.secondary,
+                                    RoundedCornerShape(2.dp)
+                                )
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "${item.total.formatWon()}원",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 올해의 기록 — 데이터에서 뽑은 팩트 모음 */
+@Composable
+private fun YearHighlightsCard(highlights: List<YearHighlight>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            highlights.forEachIndexed { index, highlight ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        highlight.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(104.dp)
+                    )
+                    Text(
+                        highlight.value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (index != highlights.lastIndex) {
+                    androidx.compose.material3.HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    )
+                }
+            }
+        }
     }
 }
 
