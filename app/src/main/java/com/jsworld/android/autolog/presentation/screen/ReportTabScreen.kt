@@ -302,14 +302,16 @@ fun ReportTabScreen(
                         .filter { it.month.year == selectedYear - 1 }
                         .takeIf { it.isNotEmpty() }
                         ?.sumOf { it.total }
+                    val yearRepairs = yearMaint.filter {
+                        it.isRepair && !isCareItemName(it.typeName)
+                    }
                     NarrativeCard(
                         buildYearNarrative(
                             yearTotal = yearMonths.sumOf { it.total },
                             prevYearTotal = prevYearTotal,
-                            repairCount = yearMaint.count {
-                                it.isRepair && !isCareItemName(it.typeName)
-                            },
-                            isCompleteYear = selectedYear < loaded.last().month.year
+                            repairCount = yearRepairs.size,
+                            isCompleteYear = selectedYear < loaded.last().month.year,
+                            maxRepairCost = yearRepairs.maxOfOrNull { (it.cost ?: 0).toLong() } ?: 0L
                         )
                     )
                 }

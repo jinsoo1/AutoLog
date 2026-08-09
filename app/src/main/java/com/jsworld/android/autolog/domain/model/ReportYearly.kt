@@ -7,18 +7,31 @@ import kotlin.math.roundToInt
  * 전부 순수 함수라 단위 테스트로 지킨다.
  */
 
+/** 한 건만으로도 "큰 수리"로 부를 금액 */
+private const val BIG_REPAIR_WON = 1_000_000L
+
 /** 연간 내러티브 — 월간과 같은 카드 UI 를 쓰되 판정 기준만 연 단위 */
 fun buildYearNarrative(
     yearTotal: Long,
     prevYearTotal: Long?,
     repairCount: Int,
     /** 지나간 해인지 — 진행 중인 해에 "알뜰했다"고 단정하지 않기 위해 */
-    isCompleteYear: Boolean
+    isCompleteYear: Boolean,
+    /** 그 해 단일 수리 기록의 최대 금액. 없으면 0 */
+    maxRepairCost: Long = 0L
 ): ReportNarrative = when {
     yearTotal == 0L -> ReportNarrative(
         title = "기록이 없는 해예요",
         subtitle = "이 해엔 지출 기록이 없어요.",
         tone = NarrativeTone.EMPTY
+    )
+
+    // 횟수는 적어도 금액이 크면 그 해의 사건이다 — 잦은 수리보다 먼저 판정.
+    maxRepairCost >= BIG_REPAIR_WON -> ReportNarrative(
+        title = "큰 수리가 있었던 해예요",
+        subtitle = "%,d원짜리 수리가 있었어요. 올해의 기록에서 확인해보세요."
+            .format(maxRepairCost),
+        tone = NarrativeTone.SPIKE
     )
 
     repairCount >= 2 -> ReportNarrative(

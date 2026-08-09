@@ -45,6 +45,30 @@ class ReportYearlyTest {
     }
 
     @Test
+    fun `연간 내러티브 - 100만원짜리 수리는 1건이어도 큰 수리가 있었던 해`() {
+        val big = buildYearNarrative(
+            1_200_000, null, repairCount = 1, isCompleteYear = false,
+            maxRepairCost = 1_000_000
+        )
+        assertTrue(big.title.contains("큰 수리"))
+        assertTrue(big.subtitle.contains("1,000,000원"))
+
+        // 잦은 수리(2건)이면서 그중 하나가 100만원 이상이면 큰 수리가 우선
+        val both = buildYearNarrative(
+            2_000_000, null, repairCount = 2, isCompleteYear = false,
+            maxRepairCost = 1_500_000
+        )
+        assertTrue(both.title.contains("큰 수리"))
+
+        // 100만원 미만이면 기존 규칙대로
+        val small = buildYearNarrative(
+            900_000, null, repairCount = 1, isCompleteYear = false,
+            maxRepairCost = 990_000
+        )
+        assertTrue(!small.title.contains("큰 수리"))
+    }
+
+    @Test
     fun `연간 내러티브 - 진행 중인 해에는 알뜰했다고 단정하지 않는다`() {
         val ongoing = buildYearNarrative(100_000, 1_000_000, 0, isCompleteYear = false)
         assertEquals(NarrativeTone.CALM, ongoing.tone)
