@@ -51,7 +51,10 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         val forceTest = inputData.getBoolean(KEY_FORCE_TEST, false)
 
         // 꺼져 있으면 체인도 세운다(끌 때 cancel 되지만 경합 대비 안전망).
-        if (!prefs.enabled) return Result.success()
+        if (!prefs.enabled) {
+            android.util.Log.d(TAG, "doWork skipped — alert disabled (forceTest=$forceTest)")
+            return Result.success()
+        }
 
         // ⚠️ 검사보다 예약을 먼저 — 도중에 예외가 나도 내일 체인이 살아야 한다.
         // 테스트 실행은 일일 체인을 건드리지 않는다.
@@ -65,20 +68,34 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     }
 
     private suspend fun checkAndNotify(prefs: MaintenanceAlertPrefs, forceTest: Boolean) {
-        if (!NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) return
+        val allowed = NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()
+        android.util.Log.d(TAG, "run forceTest=$forceTest allowed=$allowed prefs=$prefs")
+        if (!allowed) return
 
         val now = System.currentTimeMillis()
         val notified = userPrefsRepository.getMaintenanceAlertNotifiedStates()
         val cars = carRepository.getAllCars().first()
         val currentIds = mutableSetOf<Long>()
 
+        var sent = 0
+        var urgentTotal = 0
+        var noHistoryCount = 0
+
         cars.forEach { car ->
-            val items = carMaintenanceRepository.observeMaintenanceStatusList(car.id).first()
-                .filter { it.hasHistory }
-                .filter {
-                    (it.status == MaintenanceStatus.SOON && prefs.soonEnabled) ||
-                        (it.status == MaintenanceStatus.OVERDUE && prefs.overdueEnabled)
-                }
+            val urgent = carMaintenanceRepository.observeMaintenanceStatusList(car.id).first()
+            urgentTotal += urgent.size
+
+            val withHistory = urgent.filter { it.hasHistory }
+            noHistoryCount += urgent.size - withHistory.size
+
+            val items = withHistory.filter {
+                (it.status == MaintenanceStatus.SOON && prefs.soonEnabled) ||
+                    (it.status == MaintenanceStatus.OVERDUE && prefs.overdueEnabled)
+            }
+            android.util.Log.d(
+                TAG,
+                "car=${car.name} urgent=${urgent.size} withHistory=${withHistory.size} eligible=${items.size}"
+            )
             currentIds += items.map { it.settingId }
 
             // 새로 알릴 거리가 있는지 — 전이했거나, 초과 리마인드 주기가 지났거나.
@@ -95,6 +112,8 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 
             // 알림 본문에는 현재 주의가 필요한 항목 전부를 담는다(fresh 만이 아니라).
             runCatching { showNotification(car, items) }
+                .onSuccess { sent++ }
+                .onFailure { android.util.Log.e(TAG, "notify failed car=${car.name}", it) }
             if (!forceTest) {
                 fresh.forEach {
                     userPrefsRepository.setMaintenanceAlertNotifiedState(it.settingId, it.status.name, now)
@@ -107,6 +126,38 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         if (!forceTest) {
             userPrefsRepository.retainMaintenanceAlertNotifiedStates(currentIds)
         }
+
+        // 테스트인데 보낸 게 없으면 "왜 없는지"를 알림으로 알려준다 —
+        // 조용히 끝나면 기능이 고장난 것처럼 보이기 때문.
+        if (forceTest && sent == 0) {
+            showTestResultNotification(urgentTotal, noHistoryCount)
+        }
+    }
+
+    /** ⚠️ 임시 테스트용 — 테스트 버튼과 함께 제거 */
+    private fun showTestResultNotification(urgentTotal: Int, noHistoryCount: Int) {
+        val reason = when {
+            urgentTotal == 0 ->
+                "임박·초과 상태인 정비 항목이 없어요. 아무 항목의 주기를 짧게(예: 1,000km) 바꿔 초과 상태를 만든 뒤 다시 테스트해보세요."
+            noHistoryCount == urgentTotal ->
+                "임박·초과 항목 ${urgentTotal}건이 전부 아직 기록이 없는 항목이라 제외됐어요. 알림은 마지막 교체 기록이 있는 항목에만 갑니다 — 기록을 하나 입력한 뒤 다시 테스트해보세요."
+            else ->
+                "임박·초과 ${urgentTotal}건 중 기록 없음 ${noHistoryCount}건은 제외됐고, 나머지는 임박/초과 알림 스위치 설정으로 제외됐어요."
+        }
+
+        val notification = NotificationCompat.Builder(
+            applicationContext,
+            AutoLogNotificationHelper.MAINT_SOON_CHANNEL_ID
+        )
+            .setSmallIcon(R.drawable.ic_stat_autolog)
+            .setContentTitle("테스트: 보낼 알림이 없어요")
+            .setContentText(reason)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(applicationContext)
+            .notify(TEST_RESULT_NOTIFICATION_ID, notification)
     }
 
     private fun showNotification(car: Car, items: List<MaintenanceUiModel>) {
@@ -165,9 +216,12 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         /** ⚠️ 임시 테스트용 inputData 키 — 출시 전 테스트 버튼과 함께 제거 */
         const val KEY_FORCE_TEST = "force_test"
 
+        private const val TAG = "MaintAlert"
+
         // 주간 알림(1001)과 겹치지 않는 대역
         private const val NOTIFICATION_ID_BASE = 2000L
         private const val REQUEST_CODE_BASE = 3000L
+        private const val TEST_RESULT_NOTIFICATION_ID = 2999
     }
 }
 

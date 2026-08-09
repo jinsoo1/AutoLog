@@ -384,6 +384,7 @@ fun SettingsScreen(
                             title = "임박 알림",
                             subtitle = "교체 시기가 다가올 때",
                             checked = alertPrefs.soonEnabled,
+                            indented = true,
                             onCheckedChange = viewModel::setMaintenanceAlertSoonEnabled
                         )
                     }
@@ -394,6 +395,7 @@ fun SettingsScreen(
                             title = "초과 알림",
                             subtitle = "교체 시기를 넘겼을 때",
                             checked = alertPrefs.overdueEnabled,
+                            indented = true,
                             onCheckedChange = viewModel::setMaintenanceAlertOverdueEnabled
                         )
                     }
@@ -403,6 +405,7 @@ fun SettingsScreen(
                             icon = Icons.Outlined.Schedule,
                             title = "알림 시간",
                             subtitle = "매일 ${formatAlertHour(alertPrefs.hour)}에 확인",
+                            indented = true,
                             onClick = { showAlertHourDialog = true }
                         )
                     }
@@ -416,6 +419,7 @@ fun SettingsScreen(
                             } else {
                                 "초과 상태가 계속되면 ${alertPrefs.remindDays}일마다 다시 알림"
                             },
+                            indented = true,
                             onClick = { showAlertRemindDialog = true }
                         )
                     }
@@ -427,6 +431,7 @@ fun SettingsScreen(
                             icon = Icons.Outlined.BugReport,
                             title = "알림 테스트 (임시)",
                             subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
+                            indented = true,
                             onClick = {
                                 MaintenanceAlertScheduler.enqueueTest(context)
                                 Toast.makeText(
@@ -892,6 +897,8 @@ fun SettingsMenuItem(
     subtitle: String? = null,
     badgeText: String? = null,
     enabled: Boolean = true,
+    /** 상위 스위치에 딸린 하위 설정 — 들여쓰기 + 작은 아이콘으로 계층을 보여준다 */
+    indented: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
@@ -903,7 +910,12 @@ fun SettingsMenuItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(
+                    start = if (indented) 44.dp else 20.dp,
+                    end = 20.dp,
+                    top = if (indented) 12.dp else 16.dp,
+                    bottom = if (indented) 12.dp else 16.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -913,12 +925,13 @@ fun SettingsMenuItem(
                 )
             ) {
                 Box(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(if (indented) 30.dp else 40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
+                        modifier = Modifier.size(if (indented) 18.dp else 24.dp),
                         tint = if (enabled) {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
@@ -937,7 +950,8 @@ fun SettingsMenuItem(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = if (indented) MaterialTheme.typography.bodyMedium
+                    else MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = if (enabled) {
                         MaterialTheme.colorScheme.onSurface
@@ -987,6 +1001,8 @@ fun SettingsSwitchMenuItem(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
+    /** 상위 스위치에 딸린 하위 설정 — 들여쓰기 + 작은 아이콘으로 계층을 보여준다 */
+    indented: Boolean = false,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Surface(
@@ -996,7 +1012,12 @@ fun SettingsSwitchMenuItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(
+                    start = if (indented) 44.dp else 20.dp,
+                    end = 20.dp,
+                    top = if (indented) 12.dp else 16.dp,
+                    bottom = if (indented) 12.dp else 16.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -1004,12 +1025,13 @@ fun SettingsSwitchMenuItem(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
             ) {
                 Box(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(if (indented) 30.dp else 40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
+                        modifier = Modifier.size(if (indented) 18.dp else 24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1022,7 +1044,8 @@ fun SettingsSwitchMenuItem(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = if (indented) MaterialTheme.typography.bodyMedium
+                    else MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
