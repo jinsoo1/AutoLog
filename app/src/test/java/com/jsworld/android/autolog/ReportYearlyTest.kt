@@ -127,6 +127,31 @@ class ReportYearlyTest {
     }
 
     @Test
+    fun `올해의 기록 - 충전량은 가구 전기 사용량으로 환산된다`() {
+        // 890kWh / 350kWh = 약 2.5달 치
+        val big = buildYearHighlights(
+            emptyList(),
+            listOf(fuel(1, 890.0, unit = FuelUnit.KWH)),
+            emptyList()
+        )
+        assertEquals(
+            "890kWh · 4인 가구 약 2.5달 치 전기 분량",
+            big.find { it.label == "올해 충전량" }?.value
+        )
+
+        // 한 달 치 미만이면 일 단위로 — 58kWh ≈ 5일 치
+        val small = buildYearHighlights(
+            emptyList(),
+            listOf(fuel(1, 58.0, unit = FuelUnit.KWH)),
+            emptyList()
+        )
+        assertEquals(
+            "58kWh · 4인 가구 약 5일 치 전기 분량",
+            small.find { it.label == "올해 충전량" }?.value
+        )
+    }
+
+    @Test
     fun `올해의 기록 - 작년 단가 비교는 2년치가 있어야 나온다`() {
         val noPrev = buildYearHighlights(
             emptyList(), listOf(fuel(48_000, 30.0)), emptyList(), prevYearFuel = emptyList()

@@ -91,7 +91,9 @@ data class YearHighlight(val label: String, val value: String)
 
 private const val EARTH_KM = 40_075.0
 private const val DRUM_LITER = 200.0
-private const val PHONE_KWH = 0.015
+
+/** 4인 가구 월평균 전기 사용량(kWh) — 충전량을 실감 나는 크기로 환산하는 기준 */
+private const val HOUSEHOLD_MONTH_KWH = 350.0
 
 fun buildYearHighlights(
     yearMonths: List<MonthlyExpense>,
@@ -157,10 +159,14 @@ fun buildYearHighlights(
     }
     val kwh = yearFuel.filter { it.unit.isElectric }.mapNotNull { it.quantity }.sum()
     if (kwh > 0) {
+        val months = kwh / HOUSEHOLD_MONTH_KWH
+        val scale =
+            if (months >= 1.0) "약 ${"%.1f".format(months)}달 치"
+            else "약 ${(kwh / (HOUSEHOLD_MONTH_KWH / 30)).roundToInt().coerceAtLeast(1)}일 치"
         add(
             YearHighlight(
                 "올해 충전량",
-                "${"%,.0f".format(kwh)}kWh · 스마트폰 약 ${"%,d".format((kwh / PHONE_KWH).roundToInt())}번 충전 분량"
+                "${"%,.0f".format(kwh)}kWh · 4인 가구 $scale 전기 분량"
             )
         )
     }
