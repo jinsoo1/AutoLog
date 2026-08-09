@@ -44,11 +44,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
+import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
+import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
+import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
 import java.text.NumberFormat
-import java.time.YearMonth
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * 지출 리포트 탭 — 월간/연간 총지출, 카테고리 분해, km당 유지비, 월별 추이.
@@ -101,6 +106,10 @@ fun ReportTabScreen(
         val current = loaded.firstOrNull { it.month.toString() == selectedMonth } ?: loaded.last()
         val years = loaded.map { it.month.year }.distinct()
 
+        // 지출 내역 리스트·주유 요약용 원본 기록
+        val fuelRecords by viewModel.fuelRecordsState(car.id).collectAsState()
+        val maintRecords by viewModel.maintenanceRecordsState(car.id).collectAsState()
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
@@ -138,12 +147,14 @@ fun ReportTabScreen(
                     )
                 }
                 item {
+                    val prev = loaded.getOrNull(monthKeys.indexOf(current.month.toString()) - 1)
                     TotalCard(
                         title = "${current.month.monthValue}월 총지출",
                         fuel = current.fuelCost,
                         maintenance = current.maintenanceCost,
                         care = current.careCost,
-                        missingCostCount = current.missingCostCount
+                        missingCostCount = current.missingCostCount,
+                        compare = prev?.let { current.total - it.total }
                     )
                 }
                 item {
@@ -162,6 +173,27 @@ fun ReportTabScreen(
                         )
                     }
                 }
+
+                val monthKey = current.month.toString()
+                val monthFuel = fuelRecords.filter { it.filledAt.startsWith(monthKey) }
+                val monthMaint = maintRecords.filter { it.serviceDate?.startsWith(monthKey) == true }
+
+                if (monthFuel.isNotEmpty()) {
+                    item { FuelSummaryCard(monthFuel) }
+                }
+
+                val entries = buildMonthEntries(monthFuel, monthMaint)
+                if (entries.isNotEmpty()) {
+                    item { SectionLabel("지출 내역 · ${entries.size}건") }
+                    item {
+                        ListCard {
+                            entries.forEachIndexed { index, entry ->
+                                ExpenseEntryRow(entry, showDivider = index != entries.lastIndex)
+                            }
+                        }
+                    }
+                }
+
                 item { SectionLabel("월별 추이") }
                 item {
                     TrendCard(
@@ -209,6 +241,27 @@ fun ReportTabScreen(
                             label = "연 주행",
                             value = if (totalKm > 0) "${totalKm.formatWon()}km" else null,
                             emptyHint = "주행거리 기록 필요",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                item {
+                    val total = yearMonths.sumOf { it.total }
+                    val top = yearMonths.maxByOrNull { it.total }?.takeIf { it.total > 0L }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MetricCard(
+                            label = "월평균 지출",
+                            value = if (yearMonths.isNotEmpty() && total > 0L)
+                                "${(total / yearMonths.size).formatWon()}원" else null,
+                            emptyHint = "지출 기록 필요",
+                            caption = "기록 시작 후 ${yearMonths.size}개월 기준",
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricCard(
+                            label = "지출 최다 달",
+                            value = top?.let { "${it.month.monthValue}월" },
+                            emptyHint = "지출 기록 필요",
+                            caption = top?.let { "${it.total.formatWon()}원" },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -265,7 +318,9 @@ private fun TotalCard(
     fuel: Long,
     maintenance: Long,
     care: Long,
-    missingCostCount: Int
+    missingCostCount: Int,
+    /** 전월 대비 증감(원). null 이면 비교 대상 없음 */
+    compare: Long? = null
 ) {
     val total = fuel + maintenance + care
     Card(
@@ -285,6 +340,23 @@ private fun TotalCard(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
+
+            if (compare != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    when {
+                        compare > 0L -> "지난달보다 ${compare.formatWon()}원 더 썼어요"
+                        compare < 0L -> "지난달보다 ${abs(compare).formatWon()}원 덜 썼어요"
+                        else -> "지난달과 같아요"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = when {
+                        compare > 0L -> MaterialTheme.colorScheme.error
+                        compare < 0L -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
 
             if (total > 0L) {
                 Spacer(Modifier.height(12.dp))
@@ -474,6 +546,134 @@ private fun TrendCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * 그 달의 주유·충전 요약 — 횟수, 총량, 평균 단가.
+ * 플러그인 하이브리드는 주유/충전이 섞이므로 종류(unit)별로 한 줄씩.
+ */
+@Composable
+private fun FuelSummaryCard(monthFuel: List<FuelRecord>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            monthFuel.groupBy { it.unit }.entries.forEachIndexed { index, (unit, list) ->
+                if (index > 0) Spacer(Modifier.height(8.dp))
+
+                val qty = list.mapNotNull { it.quantity }.sum()
+                // 평균 단가는 수량·금액이 모두 있는 기록으로만 — 반쪽 기록으로 왜곡하지 않기
+                val priced = list.filter { it.quantity != null && it.amount != null }
+                val avgPrice = priced.sumOf { it.amount!!.toDouble() }
+                    .takeIf { it > 0 && priced.sumOf { r -> r.quantity!! } > 0 }
+                    ?.div(priced.sumOf { r -> r.quantity!! })
+                    ?.roundToInt()
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${unit.actionLabel} ${list.size}회",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        buildList {
+                            if (qty > 0) add("${FuelAmountCalc.formatQuantity(qty)}${unit.symbol}")
+                            avgPrice?.let { add("평균 ${it.formatWon()}원/${unit.symbol}") }
+                        }.joinToString(" · ").ifBlank { "수량 기록 없음" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+private enum class EntryKind { FUEL, MAINT, CARE }
+
+private data class MonthEntry(
+    val date: String,
+    val title: String,
+    val amount: Int?,
+    val kind: EntryKind
+)
+
+/** 그 달의 주유·정비·세차 기록을 하나의 지출 내역으로 합친다(최신순) */
+private fun buildMonthEntries(
+    fuel: List<FuelRecord>,
+    maint: List<CarMaintenanceRecord>
+): List<MonthEntry> {
+    val fuelEntries = fuel.map { record ->
+        MonthEntry(
+            date = record.filledAt,
+            title = record.unit.actionLabel +
+                (record.station?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+            amount = record.amount,
+            kind = EntryKind.FUEL
+        )
+    }
+    val maintEntries = maint.map { record ->
+        MonthEntry(
+            date = record.serviceDate.orEmpty(),
+            title = record.typeName,
+            amount = record.cost,
+            kind = if (isCareItemName(record.typeName)) EntryKind.CARE else EntryKind.MAINT
+        )
+    }
+    return (fuelEntries + maintEntries).sortedByDescending { it.date }
+}
+
+@Composable
+private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .background(
+                    when (entry.kind) {
+                        EntryKind.FUEL -> MaterialTheme.colorScheme.primary
+                        EntryKind.MAINT -> MaterialTheme.colorScheme.secondary
+                        EntryKind.CARE -> MaterialTheme.colorScheme.tertiary
+                    },
+                    CircleShape
+                )
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                entry.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                entry.date.toDisplayDateOrNull() ?: entry.date.ifBlank { "날짜 없음" },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            entry.amount?.let { "${it.formatWon()}원" } ?: "금액 없음",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (entry.amount != null) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (entry.amount != null) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (showDivider) {
+        androidx.compose.material3.HorizontalDivider(
+            modifier = Modifier.padding(start = 34.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        )
     }
 }
 
