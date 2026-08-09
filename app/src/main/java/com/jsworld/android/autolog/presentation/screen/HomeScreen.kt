@@ -78,6 +78,7 @@ fun HomeScreen(
     onOpenItemDetail: (Long) -> Unit,
     onSeeAllRecords: () -> Unit,
     onSeeAllFuel: () -> Unit,
+    onOpenReport: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -117,7 +118,6 @@ fun HomeScreen(
         val next = remember(overview) {
             overview.filter { it.status == MaintenanceStatus.NORMAL }.take(NEXT_MAINTENANCE_PREVIEW)
         }
-        val thisYearCost = remember(records) { records.sumOfCostInYear(LocalDate.now().year) }
 
         val fuelRecords by viewModel.fuelRecordsState(car.id).collectAsState()
         // 라벨은 **실제 기록에 있는 종류**까지 반영해야 한다.
@@ -128,13 +128,13 @@ fun HomeScreen(
         }
         val isMixed = displayUnits.size > 1
 
-        val thisMonthFuelCost = remember(fuelRecords) {
+        // 이번 달 지출 = 주유·충전 + 정비·수리·세차(금액 입력된 기록만).
+        // 상세 분해는 리포트 탭이 담당하고, 여기서는 합계만 보여준다.
+        val thisMonthExpense = remember(fuelRecords, records) {
             val prefix = LocalDate.now().let { "%04d-%02d".format(it.year, it.monthValue) }
-            fuelRecords.filter { it.filledAt.startsWith(prefix) }.sumOf { it.amount ?: 0 }
+            fuelRecords.filter { it.filledAt.startsWith(prefix) }.sumOf { it.amount ?: 0 } +
+                records.filter { it.serviceDate?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 }
         }
-
-        // 주유·충전이 섞이면 합계를 "에너지비"로 묶어 부른다.
-        val fuelCostLabel = if (isMixed) "에너지비" else displayUnits.first().costLabel
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -152,11 +152,12 @@ fun HomeScreen(
                         onClick = { showMileageDialog = true }
                     )
                     StatCard(
-                        label = "이번 달 $fuelCostLabel",
-                        value = thisMonthFuelCost.formatThousands(),
+                        label = "이번 달 지출",
+                        value = thisMonthExpense.formatThousands(),
                         unit = "원",
-                        caption = "올해 정비비 ${thisYearCost.formatThousands()}원",
-                        modifier = Modifier.weight(1f)
+                        caption = "탭해서 리포트 보기",
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenReport
                     )
                 }
             }
@@ -606,9 +607,6 @@ internal fun CarMaintenanceRecord.subtitle(): String = buildList {
     serviceMileage?.let { add("${it.formatThousands()}km") }
     place?.takeIf { it.isNotBlank() }?.let { add(it) }
 }.joinToString(" · ").ifBlank { "기록" }
-
-internal fun List<CarMaintenanceRecord>.sumOfCostInYear(year: Int): Int =
-    filter { it.serviceDate?.startsWith("$year") == true }.sumOf { it.cost ?: 0 }
 
 internal fun String.toDisplayDateOrNull(): String? = runCatching {
     val date = LocalDate.parse(this)
