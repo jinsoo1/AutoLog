@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.domain.model.MonthlyFuelCost
+import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
+import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -43,7 +46,9 @@ class FuelViewModel @Inject constructor(
  */
 @HiltViewModel
 class FuelRecordEditViewModel @Inject constructor(
-    private val fuelRecordRepository: FuelRecordRepository
+    private val fuelRecordRepository: FuelRecordRepository,
+    private val carRepository: CarRepository,
+    private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
 
     fun observeRecord(recordId: Long) = fuelRecordRepository.observeById(recordId)
@@ -99,7 +104,22 @@ class FuelRecordEditViewModel @Inject constructor(
                     )
                 )
             }
+            maybeUpdateCarMileage(carId, mileage)
             onDone()
+        }
+    }
+
+    /**
+     * 주유 시 적은 주행거리가 차량 누적 주행거리보다 크면 차량 값도 따라 올린다.
+     * 더 작을 때는 건드리지 않는다 — 과거 날짜의 기록을 뒤늦게 넣는 경우가 있어서다.
+     */
+    private suspend fun maybeUpdateCarMileage(carId: Long, mileage: Int?) {
+        if (mileage == null) return
+        val car = carRepository.getCarById(carId).first() ?: return
+        if (mileage > car.mileage) {
+            carRepository.updateMileage(carId, mileage)
+            // 주행거리가 바뀌면 정비 임박 계산이 달라지므로 위젯도 갱신한다.
+            widgetUpdater.requestUpdate()
         }
     }
 
