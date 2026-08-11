@@ -78,7 +78,8 @@ fun MainTabScreen(
     onAddFuel: (FuelUnit) -> Unit,
     onEditFuel: (Long) -> Unit,
     onNoticeClick: () -> Unit,
-    onExcelExportClick: () -> Unit
+    onExcelExportClick: () -> Unit,
+    onOpenCareDetail: (Long) -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(MainTab.HOME) }
     var showSwitcher by rememberSaveable { mutableStateOf(false) }
@@ -162,7 +163,8 @@ fun MainTabScreen(
                     onSwitchCar = { showSwitcher = true },
                     onManageItems = onManageItems,
                     onAddMaintenance = onAddMaintenance,
-                    onEditHistory = onEditHistory
+                    onEditHistory = onEditHistory,
+                    onOpenCareDetail = onOpenCareDetail
                 )
 
                 MainTab.FUEL -> FuelTabScreen(

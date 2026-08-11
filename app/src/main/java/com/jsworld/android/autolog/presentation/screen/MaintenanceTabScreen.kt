@@ -61,7 +61,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.buildCareOverview
+import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.isCareItemName
+import com.jsworld.android.autolog.domain.model.upkeepLines
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.viewModel.MaintenanceTabViewModel
 import java.time.LocalDate
@@ -79,6 +82,7 @@ fun MaintenanceTabScreen(
     onManageItems: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onEditHistory: (Long) -> Unit,
+    onOpenCareDetail: (Long) -> Unit,
     viewModel: MaintenanceTabViewModel = hiltViewModel()
 ) {
     Scaffold(
@@ -143,6 +147,20 @@ fun MaintenanceTabScreen(
             }
 
             val records by viewModel.recordsState(car.id).collectAsState()
+
+            // 세차 카드 — 세차 계열 항목이 켜져 있거나 기록이 있을 때만.
+            // 세차를 안 쓰는 사용자의 탭은 지금과 완전히 같다.
+            val careEnabled by viewModel.careEnabledState(car.id).collectAsState()
+            val careRecords = remember(records) {
+                records.filter { isCareItemName(it.typeName) }
+            }
+            if (careEnabled || careRecords.isNotEmpty()) {
+                CareEntryCard(
+                    careRecords = careRecords,
+                    onClick = { onOpenCareDetail(car.id) }
+                )
+                Spacer(Modifier.height(10.dp))
+            }
 
             var filter by rememberSaveable(car.id) { mutableStateOf<String?>(null) }
 
@@ -396,6 +414,76 @@ private fun EmptyMessage(title: String, body: String) {
                 body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * 세차·관리 허브 진입 카드 — 단순 링크가 아니라 "세차한 지 N일"을 담는다.
+ * 세차 계열 항목이 켜져 있거나 기록이 있을 때만 나타난다.
+ */
+@Composable
+private fun CareEntryCard(
+    careRecords: List<CarMaintenanceRecord>,
+    onClick: () -> Unit
+) {
+    val today = remember { LocalDate.now() }
+    val overview = remember(careRecords) { buildCareOverview(careRecords, today) }
+    val counts = remember(careRecords) { careCounts(careRecords, today) }
+    val upkeep = remember(careRecords) { upkeepLines(careRecords, today) }
+
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f)
+            .compositeOver(MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.WaterDrop,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    when {
+                        overview.daysSinceWash == null -> "세차 기록을 시작해보세요"
+                        overview.daysSinceWash == 0 -> "오늘 세차했어요"
+                        else -> "세차한 지 ${overview.daysSinceWash}일"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Text(
+                    if (overview.daysSinceWash == null) {
+                        "세차·코팅·왁스를 간단히 기록할 수 있어요"
+                    } else {
+                        buildList {
+                            add("이번 달 ${counts.monthCount}회")
+                            upkeep.firstOrNull()?.let { (name, days) ->
+                                add(if (days == 0) "$name 오늘" else "$name ${days}일 전")
+                            }
+                        }.joinToString(" · ")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
             )
         }
     }

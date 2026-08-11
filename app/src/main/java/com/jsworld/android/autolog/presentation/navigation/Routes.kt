@@ -36,6 +36,10 @@ object Routes {
     const val MAINTENANCE_ITEM_DETAIL = "maintenance_item/{settingId}"
     fun maintenanceItemDetail(settingId: Long) = "maintenance_item/$settingId"
 
+    /** 세차·관리 허브 — 정비 탭의 세차 카드에서 진입 */
+    const val CARE_DETAIL = "care_detail/{carId}"
+    fun careDetail(carId: Long) = "care_detail/$carId"
+
     /** 항목 주기 수정 — 항목 상세에서 진입 */
     const val EDIT_MAINTENANCE_SETTING = "edit_maintenance_setting"
 

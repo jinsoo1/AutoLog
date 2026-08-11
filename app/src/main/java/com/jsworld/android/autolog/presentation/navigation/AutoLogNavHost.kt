@@ -33,6 +33,7 @@ import com.jsworld.android.autolog.presentation.screen.AddMaintenanceScreen
 import com.jsworld.android.autolog.presentation.screen.AddMaintenanceTypeScreen
 import com.jsworld.android.autolog.presentation.screen.CarDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CarListScreen
+import com.jsworld.android.autolog.presentation.screen.CareDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CarMaintenanceItemPickerScreen
 import com.jsworld.android.autolog.presentation.screen.EditCarScreen
 import com.jsworld.android.autolog.presentation.screen.EditMaintenanceSettingScreen
@@ -187,7 +188,27 @@ fun AutoLogNavHost(
                     navController.navigate(Routes.fuelRecord(recordId)) { launchSingleTop = true }
                 },
                 onNoticeClick = { navController.navigate(Routes.NOTICE) },
-                onExcelExportClick = { navController.navigate(EXCEL_EXPORT) }
+                onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
+                onOpenCareDetail = { carId ->
+                    navController.navigate(Routes.careDetail(carId)) { launchSingleTop = true }
+                }
+            )
+        }
+
+        // 세차·관리 허브
+        composable(
+            route = Routes.CARE_DETAIL,
+            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+        ) { entry ->
+            val carId = entry.arguments!!.getLong("carId")
+            CareDetailScreen(
+                carId = carId,
+                onBack = { navController.popBackStack() },
+                onEditHistory = { historyId ->
+                    navController.navigate("$EDIT_MAINTENANCE_HISTORY/$historyId") {
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
