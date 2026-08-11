@@ -32,11 +32,15 @@ import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -180,13 +184,25 @@ fun MaintenanceTabScreen(
 
             // 주기는 있는데 기록이 없는 항목 안내 — 이런 항목은 계산 기준이 없어
             // 홈·리포트·알림의 임박/초과에서 빠지므로, 여기서 조용히 알려준다.
-            val noHistoryCount by viewModel.noHistoryCountState(car.id).collectAsState()
-            if (noHistoryCount > 0) {
+            val noHistoryItems by viewModel.noHistoryItemsState(car.id).collectAsState()
+            var showNoHistorySheet by rememberSaveable(car.id) { mutableStateOf(false) }
+            if (noHistoryItems.isNotEmpty()) {
                 NoHistoryHintBanner(
-                    count = noHistoryCount,
-                    onClick = { onAddMaintenance(car.id, null) }
+                    count = noHistoryItems.size,
+                    onClick = { showNoHistorySheet = true }
                 )
                 Spacer(Modifier.height(10.dp))
+            }
+
+            if (showNoHistorySheet && noHistoryItems.isNotEmpty()) {
+                NoHistoryItemsSheet(
+                    items = noHistoryItems,
+                    onRecord = { settingId ->
+                        showNoHistorySheet = false
+                        onAddMaintenance(car.id, settingId)
+                    },
+                    onDismiss = { showNoHistorySheet = false }
+                )
             }
 
             if (typeNames.size > 1 || ((hasRepairs || hasCare) && typeNames.isNotEmpty())) {
@@ -386,8 +402,78 @@ private fun EmptyMessage(title: String, body: String) {
 }
 
 /**
+ * 기록 없는 항목 목록 바텀시트 — 배너를 누르면 어떤 항목들인지 보여주고,
+ * 항목별 '기록하기'로 해당 항목의 기록 추가 화면으로 바로 보낸다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoHistoryItemsSheet(
+    items: List<com.jsworld.android.autolog.domain.model.MaintenanceUiModel>,
+    onRecord: (settingId: Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+        ) {
+            Text(
+                "아직 기록이 없는 항목",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "첫 기록을 남기면 그 시점을 기준으로 교체 시기를 계산해 알려드려요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+
+            items.forEachIndexed { index, item ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onRecord(item.settingId) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Autorenew,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        item.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    FilledTonalButton(
+                        onClick = { onRecord(item.settingId) },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+                    ) {
+                        Text("기록하기", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (index != items.lastIndex) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * 기록 없는 항목 안내 배너 — 경고가 아니라 안내이므로 빨간색이 아닌 차분한 톤.
- * 누르면 기록 추가 흐름(항목 선택 시트)으로 이어진다.
+ * 누르면 기록 없는 항목 목록 시트가 열린다.
  */
 @Composable
 private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
