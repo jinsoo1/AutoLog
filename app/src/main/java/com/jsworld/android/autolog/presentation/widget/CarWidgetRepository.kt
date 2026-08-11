@@ -56,6 +56,21 @@ class CarWidgetRepository @Inject constructor(
             val lastMileage = item.history.mapNotNull { it.serviceMileage }.maxOrNull()
             val lastDate = item.history.mapNotNull { it.serviceDate?.toLocalDateOrNull() }.maxOrNull()
 
+            // 기록이 없으면 0km/오늘 기준 계산이라 가짜 초과가 된다 —
+            // 홈·리포트·알림과 같은 원칙으로 위험 대신 중립 행으로 안내만 한다.
+            if (lastMileage == null && lastDate == null) {
+                return@mapNotNull RowWithKey(
+                    row = MaintenanceProgressRow(
+                        name = type.name,
+                        status = MaintenanceStatus.NORMAL,
+                        progress = 0f,
+                        remainText = "첫 기록 필요"
+                    ),
+                    statusRank = 2,
+                    urgentKey = Long.MAX_VALUE // 정상 항목들보다도 뒤로
+                )
+            }
+
             val baseLastMileage = lastMileage ?: 0
             val baseDateForCalc = lastDate ?: today
 

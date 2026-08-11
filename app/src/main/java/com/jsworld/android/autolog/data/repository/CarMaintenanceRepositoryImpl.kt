@@ -411,12 +411,14 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
             val typeMap = if (typeIds.isEmpty()) emptyMap()
             else maintenanceTypeDao.getTypesByIds(typeIds).associateBy { it.id }
 
+            // 기록 없는 항목은 0km/오늘 기준 계산이라 가짜 초과로 뜬다 —
+            // 홈·리포트·알림과 같은 원칙으로 위험 요약에서 제외한다.
             val dangerList = buildMaintenanceUiModelsFromRoom(
                 carMileage = carMileage,
                 roomItems = roomItems,
                 typeMap = typeMap,
                 today = today
-            ).filter { it.status != MaintenanceStatus.NORMAL }
+            ).filter { it.status != MaintenanceStatus.NORMAL && it.hasHistory }
 
             val top = dangerList.firstOrNull()
             val summary = if (top == null) {
