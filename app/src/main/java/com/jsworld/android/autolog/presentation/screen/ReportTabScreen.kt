@@ -149,8 +149,10 @@ fun ReportTabScreen(
         val fuelRecords by viewModel.fuelRecordsState(car.id).collectAsState()
         val maintRecords by viewModel.maintenanceRecordsState(car.id).collectAsState()
 
-        // 다가오는 지출 카드용 — 임박·초과 항목 + 항목별 지난 교체 비용
-        val urgentItems by viewModel.urgentState(car.id).collectAsState()
+        // 다가오는 지출 카드용 — 임박·초과 항목 + 항목별 지난 교체 비용.
+        // 기록 없는 항목은 가짜 초과라 제외한다(홈·알림과 같은 원칙).
+        val urgentAll by viewModel.urgentState(car.id).collectAsState()
+        val urgentItems = remember(urgentAll) { urgentAll.filter { it.hasHistory } }
         val lastCosts by viewModel.lastCostsState(car.id).collectAsState()
 
         LazyColumn(

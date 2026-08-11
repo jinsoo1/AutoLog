@@ -114,7 +114,11 @@ fun HomeScreen(
 
         var showMileageDialog by rememberSaveable(car.id) { mutableStateOf(false) }
 
-        val urgent = remember(overview) { overview.filter { it.status != MaintenanceStatus.NORMAL } }
+        // 기록이 없는 항목은 0km/오늘 기준 계산이라 "가짜 초과"로 뜬다 — 홈의 빨간 카드에서
+        // 제외한다(알림과 같은 원칙). 대신 정비 탭 상단 배너가 첫 기록 입력을 안내한다.
+        val urgent = remember(overview) {
+            overview.filter { it.status != MaintenanceStatus.NORMAL && it.hasHistory }
+        }
         val next = remember(overview) {
             overview.filter { it.status == MaintenanceStatus.NORMAL }.take(NEXT_MAINTENANCE_PREVIEW)
         }

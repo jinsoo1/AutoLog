@@ -22,12 +22,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -48,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -173,6 +176,17 @@ fun MaintenanceTabScreen(
                     "오른쪽 아래 '정비 기록'으로 첫 기록을 남겨보세요."
                 )
                 return@Column
+            }
+
+            // 주기는 있는데 기록이 없는 항목 안내 — 이런 항목은 계산 기준이 없어
+            // 홈·리포트·알림의 임박/초과에서 빠지므로, 여기서 조용히 알려준다.
+            val noHistoryCount by viewModel.noHistoryCountState(car.id).collectAsState()
+            if (noHistoryCount > 0) {
+                NoHistoryHintBanner(
+                    count = noHistoryCount,
+                    onClick = { onAddMaintenance(car.id, null) }
+                )
+                Spacer(Modifier.height(10.dp))
             }
 
             if (typeNames.size > 1 || ((hasRepairs || hasCare) && typeNames.isNotEmpty())) {
@@ -366,6 +380,56 @@ private fun EmptyMessage(title: String, body: String) {
                 body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * 기록 없는 항목 안내 배너 — 경고가 아니라 안내이므로 빨간색이 아닌 차분한 톤.
+ * 누르면 기록 추가 흐름(항목 선택 시트)으로 이어진다.
+ */
+@Composable
+private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        // 반투명 색을 그대로 쓰면 톤과 섞여 딤처럼 보인다 — compositeOver 로 불투명하게.
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+            .compositeOver(MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "아직 기록이 없는 항목이 ${count}개 있어요",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    "첫 기록을 남기면 교체 시기를 계산해 알려드려요",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
         }
     }
