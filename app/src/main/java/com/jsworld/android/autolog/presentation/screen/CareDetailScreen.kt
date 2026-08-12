@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -292,9 +294,10 @@ fun CareDetailScreen(
         CareItemsSheet(
             items = pickItems,
             onToggle = { name, enabled -> viewModel.setItemEnabled(carId, name, enabled) },
-            onEditInterval = { settingId ->
+            onAdd = { name -> viewModel.setItemEnabled(carId, name, true) },
+            onEditInterval = { itemId ->
                 showItemSheet = false
-                intervalTarget = settingId
+                intervalTarget = itemId
             },
             onDismiss = { showItemSheet = false }
         )
@@ -584,15 +587,19 @@ private fun CareNudgeCard(
     }
 }
 
-/** 세차 항목 관리 — 켜고 끄기 + 주기 설정 진입 */
+/** 세차 항목 관리 — 켜고 끄기, 주기 칩, 직접 추가 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CareItemsSheet(
     items: List<CarePickItem>,
     onToggle: (name: String, enabled: Boolean) -> Unit,
+    onAdd: (name: String) -> Unit,
     onEditInterval: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var showAddField by rememberSaveable { mutableStateOf(false) }
+    var newName by rememberSaveable { mutableStateOf("") }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -603,7 +610,8 @@ private fun CareItemsSheet(
             Text("관리 항목", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Text(
-                "켠 항목은 기록할 때 고를 수 있어요. 주기를 정하면 '세차 3회마다'처럼 진행도가 보입니다.",
+                "켠 항목은 기록할 때 고를 수 있어요. 주기 버튼을 누르면 " +
+                    "'세차 3회마다'처럼 나만의 주기를 정할 수 있습니다.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -613,7 +621,7 @@ private fun CareItemsSheet(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -622,22 +630,31 @@ private fun CareItemsSheet(
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )
-                        val cycleText = when {
-                            item.intervalWashCount != null -> "세차 ${item.intervalWashCount}회마다"
-                            item.intervalMonths != null -> "${item.intervalMonths}개월마다"
-                            item.enabled -> "주기 없음 · 기록만"
-                            else -> null
-                        }
-                        cycleText?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // 주기는 버튼처럼 보여야 누른다 — 상태를 담은 칩으로.
+                        if (item.enabled && item.itemId != null) {
+                            AssistChip(
+                                onClick = { onEditInterval(item.itemId) },
+                                label = {
+                                    Text(
+                                        when {
+                                            item.intervalWashCount != null ->
+                                                "세차 ${item.intervalWashCount}회마다"
+                                            item.intervalMonths != null ->
+                                                "${item.intervalMonths}개월마다"
+                                            else -> "주기 설정"
+                                        },
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
                             )
                         }
-                    }
-                    if (item.enabled && item.itemId != null) {
-                        TextButton(onClick = { onEditInterval(item.itemId) }) { Text("주기") }
                     }
                     Switch(
                         checked = item.enabled,
@@ -647,6 +664,47 @@ private fun CareItemsSheet(
                 if (index != items.lastIndex) {
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // 직접 추가 — 하부 세차, 엔진룸 클리닝처럼 목록에 없는 항목
+            if (!showAddField) {
+                TextButton(
+                    onClick = { showAddField = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("항목 직접 추가", fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        placeholder = { Text("예: 하부 세차") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilledTonalButton(
+                        enabled = newName.trim().isNotEmpty() &&
+                            items.none { it.name == newName.trim() },
+                        onClick = {
+                            onAdd(newName.trim())
+                            newName = ""
+                            showAddField = false
+                        }
+                    ) { Text("추가") }
+                }
+                if (items.any { it.name == newName.trim() }) {
+                    Text(
+                        "이미 있는 항목이에요 — 목록에서 켜주세요.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
