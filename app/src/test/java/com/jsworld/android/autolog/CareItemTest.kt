@@ -51,10 +51,16 @@ class CareItemTest {
     }
 
     @Test
-    fun `실내 클리닝은 이름만으로는 세차로 안 잡힌다 - 이름 규칙은 이관·레거시 백업 전용`() {
-        // 이름 판정은 v3→v4 마이그레이션과 구버전 백업 변환에만 쓴다.
-        // 새 데이터의 분류는 테이블 자체(care_items)가 담당한다.
+    fun `이름 규칙은 이관·레거시 백업 전용 - 키워드 없는 이름은 못 잡는다`() {
+        // 이름 판정('실내 클리닝'처럼 키워드 없는 이름을 놓침)은 v3→v4 마이그레이션과
+        // 구버전 백업 변환에만 쓴다. 새 데이터의 분류는 테이블 자체(care_items)가 담당한다.
         assertFalse(isCareItemName("실내 클리닝"))
-        assertTrue("기본 세차 항목에는 포함돼 있어야 함", "실내 클리닝" in DefaultCareItems.items)
+    }
+
+    @Test
+    fun `실내와 실외 세차는 각각 기본 항목이다`() {
+        // 기본 '세차'(실외)가 카운터 기준이고, 실내 세차는 선택 항목으로 함께 기록한다.
+        assertTrue("실내 세차" in DefaultCareItems.items)
+        assertTrue(isWashName("실내 세차")) // 세차 경과일·횟수 계산에도 잡힌다
     }
 }

@@ -76,6 +76,7 @@ import com.jsworld.android.autolog.domain.model.careNudgeCandidates
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.isWashName
 import com.jsworld.android.autolog.domain.model.upkeepLines
+import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
 import com.jsworld.android.autolog.presentation.viewModel.CareDetailViewModel
 import java.time.Instant
@@ -94,7 +95,6 @@ fun CareDetailScreen(
     viewModel: CareDetailViewModel = hiltViewModel()
 ) {
     val records by viewModel.careRecordsState(carId).collectAsState()
-    val itemNames by viewModel.careNamesState(carId).collectAsState()
     val pickItems by viewModel.carePickItemsState(carId).collectAsState()
 
     var showSheet by rememberSaveable { mutableStateOf(false) }
@@ -256,11 +256,15 @@ fun CareDetailScreen(
 
     if (showSheet) {
         CareRecordSheet(
-            itemNames = itemNames,
-            // 세차와 함께 할 수 있는 관리 항목 — 켜져 있는 세차 외 항목들
-            togetherCandidates = pickItems
-                .filter { it.enabled && !isWashName(it.name) }
-                .map { it.name },
+            // 함께 한 관리 후보 — 기본 세차만 빼고 전부(실내 세차 포함).
+            // 넛지에서 온 단일 기록이면 다중 선택을 겹치지 않게 숨긴다.
+            togetherCandidates = if (pendingName == null) {
+                pickItems
+                    .filter { it.enabled && it.name != DefaultCareItems.WASH }
+                    .map { it.name }
+            } else {
+                emptyList()
+            },
             initialName = pendingName,
             existing = null,
             onDismiss = {
@@ -284,8 +288,8 @@ fun CareDetailScreen(
 
     editTarget?.let { target ->
         CareRecordSheet(
-            itemNames = listOf(target.itemName), // 수정에서는 항목을 바꾸지 않는다
-            togetherCandidates = emptyList(),
+            togetherCandidates = emptyList(), // 수정에서는 항목을 바꾸지 않는다
+
             initialName = target.itemName,
             existing = target,
             onDismiss = { editTarget = null },
@@ -837,8 +841,8 @@ private fun CareIntervalSheet(
     }
 }
 
-/** 세차 방식 빠른 선택 — 메모에 그대로 들어가는 프리셋 */
-private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "실내 클리닝")
+/** 세차 방식 빠른 선택 */
+private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차")
 
 /**
  * 3초 기록 시트 — 정비 기록 화면(주행거리·정비소…)은 세차엔 과하다.
@@ -847,9 +851,9 @@ private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun CareRecordSheet(
-    itemNames: List<String>,
-    /** 세차와 함께 한 관리를 다중 선택할 후보(켜진 세차 외 항목). 수정 모드에선 비움 */
+    /** 함께 한 관리를 다중 선택할 후보(기본 세차를 뺀 켜진 항목). 단일·수정 모드에선 비움 */
     togetherCandidates: List<String>,
+    /** null 이면 기본 세차 기록. 넛지에서 오면 그 항목의 단일 기록 */
     initialName: String?,
     existing: CareRecord?,
     onDismiss: () -> Unit,
@@ -860,9 +864,8 @@ private fun CareRecordSheet(
         together: List<String>
     ) -> Unit
 ) {
-    var selectedName by rememberSaveable {
-        mutableStateOf(initialName ?: itemNames.firstOrNull() ?: "세차")
-    }
+    // "무엇을" 선택은 없다 — 이 시트는 기본이 세차 기록이다.
+    val selectedName = existing?.itemName ?: initialName ?: DefaultCareItems.WASH
     var together by rememberSaveable { mutableStateOf(setOf<String>()) }
     var date by rememberSaveable {
         mutableStateOf(existing?.performedAt ?: LocalDate.now().toString())
@@ -883,8 +886,11 @@ private fun CareRecordSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (existing == null) "세차 기록"
-                    else "${existing.itemName} 기록 수정",
+                    when {
+                        existing != null -> "${existing.itemName} 기록 수정"
+                        selectedName == DefaultCareItems.WASH -> "세차 기록"
+                        else -> "$selectedName 기록"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
@@ -896,24 +902,6 @@ private fun CareRecordSheet(
                 }
             }
             Spacer(Modifier.height(12.dp))
-
-            if (existing == null && itemNames.size > 1) {
-                Text(
-                    "무엇을 했나요?",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    itemNames.forEach { name ->
-                        FilterChip(
-                            selected = selectedName == name,
-                            onClick = { selectedName = name },
-                            label = { Text(name) }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
 
             // 방식 — 전용 필드. 칩으로 고르거나, 그 외 방식은 메모에 적으면 된다.
             if (isWashName(selectedName)) {
@@ -936,7 +924,7 @@ private fun CareRecordSheet(
                 // 세차하면서 같이 한 관리 — 다중 선택하면 각각 기록이 남는다.
                 if (togetherCandidates.isNotEmpty()) {
                     Text(
-                        "함께 한 관리 (선택 — 각각 기록돼요)",
+                        "선택 항목 (함께 했다면 골라주세요 — 각각 기록돼요)",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

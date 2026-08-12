@@ -2,7 +2,6 @@ package com.jsworld.android.autolog.presentation.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.repository.CareRepository
@@ -21,7 +20,6 @@ class CareDetailViewModel @Inject constructor(
 
     private val recordsMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
     private val itemsMap = mutableMapOf<Long, StateFlow<List<CarePickItem>>>()
-    private val namesMap = mutableMapOf<Long, StateFlow<List<String>>>()
 
     /** 이 차량의 세차·관리 기록 전부(최신순) */
     fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =
@@ -35,24 +33,6 @@ class CareDetailViewModel @Inject constructor(
         itemsMap.getOrPut(carId) {
             careRepository.observeItems(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-        }
-
-    /**
-     * 기록 시트의 "무엇을" 칩 — 켜져 있는 항목 + 기본 '세차'.
-     * 켜지 않은 항목이라도 기록하면 저장 시 만들어 켠다.
-     */
-    fun careNamesState(carId: Long): StateFlow<List<String>> =
-        namesMap.getOrPut(carId) {
-            careRepository.observeItems(carId)
-                .map { items ->
-                    (listOf(DefaultCareItems.WASH) +
-                        items.filter { it.enabled }.map { it.name }).distinct()
-                }
-                .stateIn(
-                    viewModelScope,
-                    SharingStarted.WhileSubscribed(5_000),
-                    listOf(DefaultCareItems.WASH)
-                )
         }
 
     fun setItemEnabled(carId: Long, name: String, enabled: Boolean) {

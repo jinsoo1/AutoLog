@@ -115,8 +115,8 @@ object DefaultCareItems {
     const val WASH = "세차"
 
     val items = listOf(
-        WASH,
-        "실내 클리닝",
+        WASH,          // 실외(기본) 세차 — 경과일·세차 횟수 카운터의 기준
+        "실내 세차",
         "왁스 코팅",
         "유리막 코팅",
         "발수 코팅",
