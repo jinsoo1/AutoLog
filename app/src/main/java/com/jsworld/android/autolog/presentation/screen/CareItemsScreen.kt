@@ -75,7 +75,10 @@ fun CareItemsScreen(
     onBack: () -> Unit,
     viewModel: CareDetailViewModel = hiltViewModel()
 ) {
-    val items by viewModel.carePickItemsState(carId).collectAsState()
+    // 기본 세차는 이 허브의 기준(경과일·세차 횟수)이라 끄거나 주기를 줄 수 없다 —
+    // 목록에 두면 "왜 있는지" 혼란만 주므로 아예 보여주지 않는다.
+    val allItems by viewModel.carePickItemsState(carId).collectAsState()
+    val items = remember(allItems) { allItems.filterNot { it.name == DefaultCareItems.WASH } }
 
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var intervalTarget by rememberSaveable { mutableStateOf(-1L) }
@@ -117,7 +120,7 @@ fun CareItemsScreen(
         ) {
             item {
                 Text(
-                    "켠 항목은 세차 기록의 '선택 항목'에 나타나요. " +
+                    "세차는 항상 기록되고, 여기서 켠 항목이 세차 기록의 '선택 항목'에 나타나요. " +
                         "주기 버튼을 누르면 '세차 3회마다'처럼 나만의 주기를 정할 수 있습니다.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -216,25 +219,13 @@ private fun CareItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        item.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    // 기본 세차는 경과일·세차 횟수의 기준이라 역할을 밝혀둔다.
-                    if (item.name == DefaultCareItems.WASH) {
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "기준",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                Text(
+                    item.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 if (item.enabled && item.itemId != null) {
                     Spacer(Modifier.height(4.dp))
                     // 주기는 버튼처럼 보여야 누른다 — 상태를 담은 칩으로.

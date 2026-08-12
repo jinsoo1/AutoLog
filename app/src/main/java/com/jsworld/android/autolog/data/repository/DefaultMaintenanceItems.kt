@@ -122,4 +122,22 @@ object DefaultCareItems {
         "발수 코팅",
         "광택"
     )
+
+    /**
+     * 1.2.0 이전 정비 항목 이름을 새 세차 항목 이름으로 맞춘다.
+     *
+     * "실내/외 세차(관리)"는 실내·실외를 뭉쳐 놓은 옛 이름이라 그대로 두면
+     * 기본 '세차'와 중복돼 목록이 지저분해진다 — 기본 세차로 병합해야
+     * 과거 기록이 경과일·세차 횟수 카운터에도 제대로 잡힌다.
+     *
+     * ⚠️ MIGRATION_3_4 의 SQL CASE 문과 같은 규칙을 유지할 것.
+     */
+    fun normalizeLegacyName(name: String): String {
+        val n = name.replace(" ", "")
+        return when {
+            n.contains("실내/외세차") -> WASH
+            n.contains("코팅/왁스") -> "왁스 코팅"
+            else -> name
+        }
+    }
 }

@@ -185,6 +185,21 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
  */
 val MIGRATION_3_4 = object : Migration(3, 4) {
 
+    /**
+     * 옛 이름을 새 세차 항목 이름으로 맞춘다.
+     * "실내/외 세차(관리)"를 그대로 두면 기본 '세차'와 중복돼 목록이 지저분해지고
+     * 과거 기록이 세차 카운터에 잡히지 않는다.
+     *
+     * ⚠️ DefaultCareItems.normalizeLegacyName 과 같은 규칙을 유지할 것.
+     */
+    private val normalizedName = """
+        CASE
+            WHEN REPLACE(t.name, ' ', '') LIKE '%실내/외세차%' THEN '세차'
+            WHEN REPLACE(t.name, ' ', '') LIKE '%코팅/왁스%' THEN '왁스 코팅'
+            ELSE t.name
+        END
+    """.trimIndent()
+
     // 이름 규칙 — isCareItemName 과 같은 조건. 공백이 섞여 있어도 잡히게 한다.
     private val careNameCondition = """
         (REPLACE(t.name, ' ', '') LIKE '%세차%'
@@ -235,11 +250,12 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL(
             """
             INSERT INTO care_items (carId, name, intervalMonths, intervalWashCount, isActive)
-            SELECT s.carId, t.name, MAX(s.intervalMonths), NULL, MAX(s.isActive)
+            SELECT s.carId, $normalizedName AS careName,
+                   MAX(s.intervalMonths), NULL, MAX(s.isActive)
             FROM car_maintenance_settings s
             JOIN maintenance_types t ON t.id = s.maintenanceTypeId
             WHERE $careNameCondition
-            GROUP BY s.carId, t.name
+            GROUP BY s.carId, careName
             """.trimIndent()
         )
 
@@ -251,7 +267,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
             FROM maintenance_history h
             JOIN car_maintenance_settings s ON s.id = h.settingId
             JOIN maintenance_types t ON t.id = s.maintenanceTypeId
-            JOIN care_items ci ON ci.carId = s.carId AND ci.name = t.name
+            JOIN care_items ci ON ci.carId = s.carId AND ci.name = $normalizedName
             WHERE $careNameCondition
             """.trimIndent()
         )

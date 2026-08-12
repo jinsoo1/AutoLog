@@ -59,15 +59,17 @@ class CareLegacyBackupTest {
         assertEquals(1, converted.maintenanceSettings.size)
         assertEquals(1, converted.maintenanceHistories.size)
 
-        // 세차 쪽으로 항목 2개, 기록 2건이 옮겨진다
+        // 세차 쪽으로 항목 2개, 기록 2건이 옮겨진다.
+        // 옛 이름은 새 항목 이름으로 정규화된다 — 그대로 두면 기본 '세차'와 중복되고
+        // 과거 기록이 세차 카운터에 잡히지 않는다.
         assertEquals(
-            listOf("실내/외 세차(관리)", "코팅/왁스(관리)"),
+            listOf("세차", "왁스 코팅"),
             converted.careItems.map { it.name }
         )
         assertEquals(2, converted.careRecords.size)
 
         // 주기·활성 상태·기록 내용이 보존된다
-        val wash = converted.careItems.first { it.name == "실내/외 세차(관리)" }
+        val wash = converted.careItems.first { it.name == "세차" }
         assertEquals(1, wash.intervalMonths)
         assertTrue(wash.isActive)
 
@@ -76,6 +78,26 @@ class CareLegacyBackupTest {
         assertEquals(15_000, washRecord.cost)
         assertEquals("OO세차장", washRecord.place)
         assertEquals("셀프", washRecord.memo)
+    }
+
+    @Test
+    fun `옛 세차 이름과 새 세차 이름이 한 항목으로 병합된다`() {
+        // 1.2.0 에서 "실내/외 세차(관리)"로 기록하다가 세차 허브에서 "세차"로도
+        // 기록한 사용자 — 두 이름의 기록이 하나의 세차 항목으로 합쳐져야 한다.
+        val base = legacyBackup()
+        val mixed = base.copy(
+            maintenanceTypes = base.maintenanceTypes + MaintenanceTypeBackup(4, "세차", null, null),
+            maintenanceSettings = base.maintenanceSettings +
+                MaintenanceSettingBackup(13, 1, 4, null, null, true),
+            maintenanceHistories = base.maintenanceHistories +
+                MaintenanceHistoryBackup(103, 13, "2026-08-09", null, null, 12_000, null)
+        )
+
+        val converted = mixed.withLegacyCareConverted()
+        assertEquals(listOf("세차", "왁스 코팅"), converted.careItems.map { it.name })
+
+        val washId = converted.careItems.first { it.name == "세차" }.id
+        assertEquals(2, converted.careRecords.count { it.careItemId == washId })
     }
 
     @Test

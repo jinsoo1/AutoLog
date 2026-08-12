@@ -342,7 +342,9 @@ fun AutoLogBackup.withLegacyCareConverted(): AutoLogBackup {
     var nextItemId = 1L
     val itemByKey = LinkedHashMap<Pair<Long, String>, CareItemBackup>()
     careSettings.forEach { s ->
-        val name = typeNameById[s.maintenanceTypeId] ?: return@forEach
+        // 옛 이름("실내/외 세차(관리)" 등)은 새 항목 이름으로 맞춘다 — 같은 이름끼리 병합된다.
+        val name = typeNameById[s.maintenanceTypeId]
+            ?.let { DefaultCareItems.normalizeLegacyName(it) } ?: return@forEach
         val key = s.carId to name
         val existing = itemByKey[key]
         itemByKey[key] = CareItemBackup(
@@ -361,7 +363,8 @@ fun AutoLogBackup.withLegacyCareConverted(): AutoLogBackup {
         .filter { it.settingId in careSettingIds }
         .mapNotNull { h ->
             val setting = settingById[h.settingId] ?: return@mapNotNull null
-            val name = typeNameById[setting.maintenanceTypeId] ?: return@mapNotNull null
+            val name = typeNameById[setting.maintenanceTypeId]
+                ?.let { DefaultCareItems.normalizeLegacyName(it) } ?: return@mapNotNull null
             val item = itemByKey[setting.carId to name] ?: return@mapNotNull null
             CareRecordBackup(
                 id = nextRecordId++,
