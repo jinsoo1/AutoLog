@@ -257,6 +257,10 @@ fun CareDetailScreen(
     if (showSheet) {
         CareRecordSheet(
             itemNames = itemNames,
+            // 세차와 함께 할 수 있는 관리 항목 — 켜져 있는 세차 외 항목들
+            togetherCandidates = pickItems
+                .filter { it.enabled && !isWashName(it.name) }
+                .map { it.name },
             initialName = pendingName,
             existing = null,
             onDismiss = {
@@ -264,12 +268,15 @@ fun CareDetailScreen(
                 pendingName = null
             },
             onDelete = null,
-            onSave = { name, date, cost, method, place, memo ->
-                viewModel.save(carId, name, date, cost, method, place, memo) {
+            onSave = { name, date, cost, method, place, memo, together ->
+                viewModel.save(carId, name, date, cost, method, place, memo, together) {
                     showSheet = false
                     pendingName = null
                     // 세차를 기록한 직후에만 — 세차 횟수 주기가 도달한 항목을 알려준다.
-                    if (isWashName(name)) nudge = careNudgeCandidates(cycles)
+                    // 방금 함께 기록한 항목은 이미 했으니 넛지에서 뺀다.
+                    if (isWashName(name)) {
+                        nudge = careNudgeCandidates(cycles).filterNot { it.name in together }
+                    }
                 }
             }
         )
@@ -278,11 +285,12 @@ fun CareDetailScreen(
     editTarget?.let { target ->
         CareRecordSheet(
             itemNames = listOf(target.itemName), // 수정에서는 항목을 바꾸지 않는다
+            togetherCandidates = emptyList(),
             initialName = target.itemName,
             existing = target,
             onDismiss = { editTarget = null },
             onDelete = { viewModel.delete(target.id) { editTarget = null } },
-            onSave = { _, date, cost, method, place, memo ->
+            onSave = { _, date, cost, method, place, memo, _ ->
                 viewModel.update(target.id, date, cost, method, place, memo) {
                     editTarget = null
                 }
@@ -840,15 +848,22 @@ private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "
 @Composable
 private fun CareRecordSheet(
     itemNames: List<String>,
+    /** 세차와 함께 한 관리를 다중 선택할 후보(켜진 세차 외 항목). 수정 모드에선 비움 */
+    togetherCandidates: List<String>,
     initialName: String?,
     existing: CareRecord?,
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)?,
-    onSave: (name: String, date: String, cost: Int?, method: String?, place: String?, memo: String?) -> Unit
+    onSave: (
+        name: String, date: String, cost: Int?,
+        method: String?, place: String?, memo: String?,
+        together: List<String>
+    ) -> Unit
 ) {
     var selectedName by rememberSaveable {
         mutableStateOf(initialName ?: itemNames.firstOrNull() ?: "세차")
     }
+    var together by rememberSaveable { mutableStateOf(setOf<String>()) }
     var date by rememberSaveable {
         mutableStateOf(existing?.performedAt ?: LocalDate.now().toString())
     }
@@ -917,6 +932,36 @@ private fun CareRecordSheet(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+
+                // 세차하면서 같이 한 관리 — 다중 선택하면 각각 기록이 남는다.
+                if (togetherCandidates.isNotEmpty()) {
+                    Text(
+                        "함께 한 관리 (선택 — 각각 기록돼요)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        togetherCandidates.forEach { name ->
+                            FilterChip(
+                                selected = name in together,
+                                onClick = {
+                                    together =
+                                        if (name in together) together - name
+                                        else together + name
+                                },
+                                label = { Text(name) }
+                            )
+                        }
+                    }
+                    if (together.isNotEmpty()) {
+                        Text(
+                            "비용은 세차 기록에 입력돼요 — 항목별 비용은 저장 후 각 기록에서 수정할 수 있어요.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
             }
 
             OutlinedTextField(
@@ -972,7 +1017,8 @@ private fun CareRecordSheet(
                         costText.toIntOrNull(),
                         method,
                         place,
-                        memo
+                        memo,
+                        if (isWashName(selectedName)) together.toList() else emptyList()
                     )
                 },
                 enabled = !saving,

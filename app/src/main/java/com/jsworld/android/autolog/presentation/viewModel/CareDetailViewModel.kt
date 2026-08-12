@@ -71,10 +71,23 @@ class CareDetailViewModel @Inject constructor(
         method: String?,
         place: String?,
         memo: String?,
+        /** 세차와 함께 한 관리 항목들 — 같은 날짜·장소로 기록만 남긴다(비용은 세차에) */
+        together: List<String> = emptyList(),
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
             careRepository.addRecord(carId, itemName, performedAt, cost, method, place, memo)
+            together.forEach { name ->
+                careRepository.addRecord(
+                    carId = carId,
+                    itemName = name,
+                    performedAt = performedAt,
+                    cost = null,
+                    method = null,
+                    place = place,
+                    memo = null
+                )
+            }
             onDone()
         }
     }
