@@ -7,12 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocalGasStation
@@ -56,7 +54,6 @@ private enum class MainTab(
     HOME("홈", Icons.Filled.Home, Icons.Outlined.Home),
     MAINTENANCE("정비", Icons.Filled.Build, Icons.Outlined.Build),
     FUEL("주유", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
-    REPORT("리포트", Icons.Filled.BarChart, Icons.Outlined.BarChart),
     SETTINGS("설정", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
@@ -79,7 +76,8 @@ fun MainTabScreen(
     onEditFuel: (Long) -> Unit,
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
-    onOpenCareDetail: (Long) -> Unit
+    onOpenCareDetail: (Long) -> Unit,
+    onOpenReport: () -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(MainTab.HOME) }
     var showSwitcher by rememberSaveable { mutableStateOf(false) }
@@ -155,7 +153,7 @@ fun MainTabScreen(
                     onOpenItemDetail = onOpenItemDetail,
                     onSeeAllRecords = { tab = MainTab.MAINTENANCE },
                     onSeeAllFuel = { tab = MainTab.FUEL },
-                    onOpenReport = { tab = MainTab.REPORT }
+                    onOpenReport = onOpenReport
                 )
 
                 MainTab.MAINTENANCE -> MaintenanceTabScreen(
@@ -174,15 +172,11 @@ fun MainTabScreen(
                     onEditFuel = onEditFuel
                 )
 
-                MainTab.REPORT -> ReportTabScreen(
-                    car = selectedCar,
-                    onSwitchCar = { showSwitcher = true }
-                )
-
                 MainTab.SETTINGS -> SettingsScreen(
                     onBackClick = {},
                     onNoticeClick = onNoticeClick,
                     onExcelExportClick = onExcelExportClick,
+                    onReportClick = onOpenReport,
                     showBack = false
                 )
             }

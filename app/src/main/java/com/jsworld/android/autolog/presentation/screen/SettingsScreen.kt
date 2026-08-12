@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.NotificationImportant
@@ -83,6 +84,7 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
+    onReportClick: () -> Unit,
     showBack: Boolean = true,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -350,6 +352,20 @@ fun SettingsScreen(
                         title = "공지사항",
                         subtitle = "업데이트 및 안내사항 확인",
                         onClick = onNoticeClick
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsSectionTitle("기록 보기")
+                }
+
+                item {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.BarChart,
+                        title = "지출 리포트",
+                        subtitle = "월간·연간 지출과 km당 유지비 확인",
+                        onClick = onReportClick
                     )
                 }
 

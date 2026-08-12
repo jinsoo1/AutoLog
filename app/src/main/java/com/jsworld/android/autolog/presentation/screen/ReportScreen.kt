@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
@@ -38,13 +38,16 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -95,22 +98,46 @@ private const val ENTRY_COLLAPSED_COUNT = 6
 private const val ENTRY_COLLAPSE_MIN = 8
 
 /**
- * 지출 리포트 탭 — 월간/연간 총지출, 카테고리 분해, km당 유지비, 월별 추이.
+ * 지출 리포트 — 월간/연간 총지출, 카테고리 분해, km당 유지비, 월별 추이.
  *
+ * 탭이 아니라 홈의 '이번 달 지출' 카드(와 설정)에서 진입하는 별도 화면이다.
  * 원칙: 계산할 수 없는 값은 "-" 로 두고 이유를 밝힌다. 숫자를 지어내지 않는다.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportTabScreen(
+fun ReportScreen(
     car: Car?,
+    onBack: () -> Unit,
     onSwitchCar: () -> Unit,
     viewModel: ReportViewModel = hiltViewModel()
 ) {
-    Column(Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "지출 리포트",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                    }
+                }
+            )
+        }
+    ) { scaffoldPadding ->
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(scaffoldPadding)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 4.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CarSwitcherChip(car = car, onClick = onSwitchCar)
@@ -439,6 +466,7 @@ fun ReportTabScreen(
                 }
             }
         }
+    }
     }
 }
 
