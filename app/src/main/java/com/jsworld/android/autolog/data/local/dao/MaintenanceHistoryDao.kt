@@ -101,7 +101,8 @@ interface MaintenanceHistoryDao {
                h.memo          AS memo,
                CASE WHEN s.intervalKm IS NULL AND s.intervalMonths IS NULL
                      AND t.defaultIntervalKm IS NULL AND t.defaultIntervalMonths IS NULL
-                    THEN 1 ELSE 0 END AS isRepair
+                    THEN 1 ELSE 0 END AS isRepair,
+               t.isCare        AS isCare
         FROM maintenance_history h
         JOIN car_maintenance_settings s ON s.id = h.settingId
         JOIN maintenance_types t ON t.id = s.maintenanceTypeId
@@ -111,14 +112,14 @@ interface MaintenanceHistoryDao {
     fun observeCarRecords(carId: Long): Flow<List<CarMaintenanceRecordRow>>
 
     /**
-     * 리포트용 — 월·항목명·금액. 카테고리(정비·수리/세차) 분류는 이름 기반이라
-     * 코틀린(isCareItemName)에서 하고, 여기서는 원천 행만 낸다.
+     * 리포트용 — 월·항목명·금액·카테고리.
      * 날짜 없는 기록은 어느 달에도 넣을 수 없어 제외한다.
      */
     @Query("""
         SELECT substr(h.serviceDate, 1, 7) AS month,
                t.name AS typeName,
-               h.cost AS cost
+               h.cost AS cost,
+               t.isCare AS isCare
         FROM maintenance_history h
         JOIN car_maintenance_settings s ON s.id = h.settingId
         JOIN maintenance_types t ON t.id = s.maintenanceTypeId

@@ -7,6 +7,8 @@ import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import androidx.room.withTransaction
 import com.jsworld.android.autolog.domain.model.CarMaintenanceDigest
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
+import com.jsworld.android.autolog.domain.model.CarePickItem
+import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
 import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
 import com.jsworld.android.autolog.domain.model.isItemApplicableToFuel
@@ -88,6 +90,10 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
             val setting = item.setting
             val type = typeMap[setting.maintenanceTypeId]
             val name = type?.name ?: "정비항목(${setting.maintenanceTypeId})"
+
+            // 세차·관리는 정비 시스템에서 분리됐다 — 주기가 있어도 여기서 계산하지 않는다.
+            // (세차 주기는 세차 허브에서 자체 단위로 보여준다)
+            if (type?.isCare == true) return@mapNotNull null
 
             val intervalKm = setting.intervalKm ?: type?.defaultIntervalKm
             val intervalMonths = setting.intervalMonths ?: type?.defaultIntervalMonths
@@ -259,6 +265,90 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
     override fun observeSettingOptions(carId: Long): Flow<List<SettingOption>> =
         fullDao.observeSettingOptions(carId).map { list -> list.map { it.toDomain() } }
 
+    /** 세차 허브용 — 이 차량에서 켜져 있는 세차·관리 항목만 */
+    override fun observeCareOptions(carId: Long): Flow<List<SettingOption>> =
+        fullDao.observeSettingOptions(carId)
+            .map { list -> list.map { it.toDomain() }.filter { it.isCare } }
+
+    /**
+     * 세차 허브 항목 관리 목록 — 기본 제공 항목과 사용자가 만든 세차 항목을 합친다.
+     * 기본 목록을 앞에 두고, 사용자 추가 항목은 그 뒤에 이름순으로 붙인다.
+     */
+    override fun observeCarePickItems(carId: Long): Flow<List<CarePickItem>> = combine(
+        maintenanceTypeDao.observeAll(),
+        settingDao.observeByCarIdIncludingInactive(carId)
+    ) { types, settings ->
+        val careTypes = types.filter { it.isCare }
+        val settingByTypeId = settings.associateBy { it.maintenanceTypeId }
+
+        val existing = careTypes.map { type ->
+            val setting = settingByTypeId[type.id]
+            CarePickItem(
+                name = type.name,
+                enabled = setting?.isActive == true,
+                settingId = setting?.id?.takeIf { setting.isActive },
+                intervalMonths = setting?.intervalMonths,
+                intervalWashCount = setting?.intervalWashCount
+            )
+        }
+
+        // 아직 타입조차 없는 기본 항목도 목록에 보여야 켤 수 있다.
+        val missingDefaults = DefaultCareItems.items
+            .filterNot { name -> existing.any { it.name == name } }
+            .map { CarePickItem(it, enabled = false, settingId = null, intervalMonths = null, intervalWashCount = null) }
+
+        val defaultOrder = DefaultCareItems.items.withIndex().associate { (i, n) -> n to i }
+        (existing + missingDefaults).sortedWith(
+            compareBy({ defaultOrder[it.name] ?: Int.MAX_VALUE }, { it.name })
+        )
+    }
+
+    override suspend fun setCareItemEnabled(carId: Long, name: String, enabled: Boolean) {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty()) { "항목 이름이 비어있어요" }
+
+        if (!enabled) {
+            val typeId = maintenanceTypeDao.findByName(trimmed)?.id ?: return
+            settingDao.getOneByCarIdAndTypeId(carId, typeId)?.let {
+                settingDao.setActive(it.id, false)
+            }
+            return
+        }
+
+        // 켜기 — 세차 항목으로 타입을 찾거나 만들고, 주기 없이 활성화한다.
+        val typeId = maintenanceTypeDao.findByName(trimmed)?.id
+            ?: maintenanceTypeDao.insertType(
+                MaintenanceTypeEntity(
+                    id = 0,
+                    name = trimmed,
+                    defaultIntervalKm = null,
+                    defaultIntervalMonths = null,
+                    isCare = true
+                )
+            )
+
+        val existing = settingDao.getOneByCarIdAndTypeId(carId, typeId)
+        if (existing != null) {
+            if (!existing.isActive) settingDao.setActive(existing.id, true)
+            return
+        }
+        settingDao.insertSetting(
+            CarMaintenanceSettingEntity(
+                id = 0,
+                carId = carId,
+                maintenanceTypeId = typeId,
+                intervalKm = null,
+                intervalMonths = null,
+                isActive = true,
+                intervalWashCount = null
+            )
+        )
+    }
+
+    override suspend fun updateCareInterval(settingId: Long, months: Int?, washCount: Int?) {
+        settingDao.updateCareInterval(settingId, months, washCount)
+    }
+
     override suspend fun insertHistory(
         settingId: Long,
         serviceDate: String?,
@@ -294,7 +384,8 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
         ) { types, settings ->
             val byTypeId = settings.associateBy { it.maintenanceTypeId }
 
-            types.map { t ->
+            // 세차·관리 항목은 세차 허브에서 관리한다 — 정비 항목 목록에서 제외.
+            types.filterNot { it.isCare }.map { t ->
                 val s = byTypeId[t.id]
                 MaintenanceTypePickUi(
                     typeId = t.id,
@@ -302,7 +393,8 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                     defaultKm = t.defaultIntervalKm,
                     defaultMonths = t.defaultIntervalMonths,
                     checked = (s?.isActive == true),
-                    settingId = s?.id
+                    settingId = s?.id,
+                    isCare = t.isCare
                 )
             }.sortedBy { it.typeName }
         }
@@ -543,7 +635,9 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                     name = trimmed,
                     // 주기 없음 = 수리. 임박 계산에서 제외된다.
                     defaultIntervalKm = null,
-                    defaultIntervalMonths = null
+                    defaultIntervalMonths = null,
+                    // 세차 계열 이름이면 관리 항목으로 만든다(정비 타임라인에 섞이지 않게).
+                    isCare = isCareItemName(trimmed)
                 )
             )
 

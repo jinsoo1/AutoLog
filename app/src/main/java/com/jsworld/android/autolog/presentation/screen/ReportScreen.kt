@@ -83,7 +83,6 @@ import com.jsworld.android.autolog.domain.model.buildYearHighlights
 import com.jsworld.android.autolog.domain.model.buildYearNarrative
 import com.jsworld.android.autolog.domain.model.distanceLadderText
 import com.jsworld.android.autolog.domain.model.earthLapsText
-import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.personalRecordText
 import com.jsworld.android.autolog.domain.model.topSpendItems
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
@@ -242,7 +241,7 @@ fun ReportScreen(
                     val prev = loaded.getOrNull(monthKeys.indexOf(current.month.toString()) - 1)
                     // 증가 원인을 항목명으로 짚기 위한 이번 달 최대 정비·수리 지출
                     val topMaint = monthMaint
-                        .filter { !isCareItemName(it.typeName) && (it.cost ?: 0) > 0 }
+                        .filter { !it.isCare && (it.cost ?: 0) > 0 }
                         .maxByOrNull { it.cost!! }
                     TotalCard(
                         title = "${current.month.monthValue}월 총지출",
@@ -375,9 +374,7 @@ fun ReportScreen(
                         .filter { it.month.year == selectedYear - 1 }
                         .takeIf { it.isNotEmpty() }
                         ?.sumOf { it.total }
-                    val yearRepairs = yearMaint.filter {
-                        it.isRepair && !isCareItemName(it.typeName)
-                    }
+                    val yearRepairs = yearMaint.filter { it.isRepair && !it.isCare }
                     NarrativeCard(
                         buildYearNarrative(
                             yearTotal = yearMonths.sumOf { it.total },
@@ -1168,7 +1165,7 @@ private fun buildMonthEntries(
             date = record.serviceDate.orEmpty(),
             title = record.typeName,
             amount = record.cost,
-            kind = if (isCareItemName(record.typeName)) EntryKind.CARE else EntryKind.MAINT,
+            kind = if (record.isCare) EntryKind.CARE else EntryKind.MAINT,
             isRepair = record.isRepair
         )
     }

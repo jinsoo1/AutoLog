@@ -5,5 +5,7 @@ data class MaintenanceType(
     val id: Long,
     val name: String,
     val defaultIntervalKm: Int?,
-    val defaultIntervalMonths: Int?
+    val defaultIntervalMonths: Int?,
+    /** 세차·관리 항목 — 정비 시스템에서 분리되어 세차 허브에서만 다뤄진다 */
+    val isCare: Boolean = false
 )

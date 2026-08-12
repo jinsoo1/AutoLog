@@ -63,7 +63,6 @@ import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.buildCareOverview
 import com.jsworld.android.autolog.domain.model.careCounts
-import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.upkeepLines
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.viewModel.MaintenanceTabViewModel
@@ -146,14 +145,14 @@ fun MaintenanceTabScreen(
                 return@Column
             }
 
-            val records by viewModel.recordsState(car.id).collectAsState()
+            val allRecords by viewModel.recordsState(car.id).collectAsState()
 
-            // 세차 카드 — 세차 계열 항목이 켜져 있거나 기록이 있을 때만.
-            // 세차를 안 쓰는 사용자의 탭은 지금과 완전히 같다.
+            // 세차 카드 — 세차 항목이 켜져 있거나 기록이 있을 때만.
+            // 세차를 안 쓰는 사용자의 탭은 카드 없이 지금과 완전히 같다.
             val careEnabled by viewModel.careEnabledState(car.id).collectAsState()
-            val careRecords = remember(records) {
-                records.filter { isCareItemName(it.typeName) }
-            }
+            val careRecords = remember(allRecords) { allRecords.filter { it.isCare } }
+            // 정비 타임라인에서 세차는 빠진다 — 세차 허브가 전담한다.
+            val records = remember(allRecords) { allRecords.filterNot { it.isCare } }
             if (careEnabled || careRecords.isNotEmpty()) {
                 CareEntryCard(
                     careRecords = careRecords,
@@ -167,27 +166,18 @@ fun MaintenanceTabScreen(
             // 수리·관리는 건마다 이름이 달라 칩이 폭발하므로 각각 하나로 묶는다.
             // 관리 = 주기 없는 항목 중 세차·코팅류(수리가 아니므로 배지도 다르다).
             val typeNames = remember(records) {
-                records.filterNot { it.isRepair || isCareItemName(it.typeName) }
-                    .map { it.typeName }.distinct()
+                records.filterNot { it.isRepair }.map { it.typeName }.distinct()
             }
-            val hasRepairs = remember(records) {
-                records.any { it.isRepair && !isCareItemName(it.typeName) }
-            }
-            val hasCare = remember(records) {
-                records.any { isCareItemName(it.typeName) }
-            }
+            val hasRepairs = remember(records) { records.any { it.isRepair } }
 
             // 필터로 고른 항목이 기록에서 사라지면(삭제 등) 필터를 해제한다.
             val activeFilter = filter?.takeIf {
-                it in typeNames ||
-                    (it == REPAIR_FILTER && hasRepairs) ||
-                    (it == CARE_FILTER && hasCare)
+                it in typeNames || (it == REPAIR_FILTER && hasRepairs)
             }
             val shown = remember(records, activeFilter) {
                 when (activeFilter) {
                     null -> records
-                    REPAIR_FILTER -> records.filter { it.isRepair && !isCareItemName(it.typeName) }
-                    CARE_FILTER -> records.filter { isCareItemName(it.typeName) }
+                    REPAIR_FILTER -> records.filter { it.isRepair }
                     else -> records.filter { it.typeName == activeFilter && !it.isRepair }
                 }
             }
@@ -223,7 +213,7 @@ fun MaintenanceTabScreen(
                 )
             }
 
-            if (typeNames.size > 1 || ((hasRepairs || hasCare) && typeNames.isNotEmpty())) {
+            if (typeNames.size > 1 || (hasRepairs && typeNames.isNotEmpty())) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -243,17 +233,6 @@ fun MaintenanceTabScreen(
                                     filter = if (activeFilter == REPAIR_FILTER) null else REPAIR_FILTER
                                 },
                                 label = { Text("수리") }
-                            )
-                        }
-                    }
-                    if (hasCare) {
-                        item {
-                            FilterChip(
-                                selected = activeFilter == CARE_FILTER,
-                                onClick = {
-                                    filter = if (activeFilter == CARE_FILTER) null else CARE_FILTER
-                                },
-                                label = { Text("관리") }
                             )
                         }
                     }
@@ -310,28 +289,15 @@ private fun TimelineRow(
     onClick: () -> Unit
 ) {
     // 아이콘은 항목의 정체를, 배지는 기록의 성격을 말한다.
-    // 세차류는 주기를 붙여도(승격) 물방울을 유지한다 — 세차가 사이클 아이콘이 되면 어색하다.
-    val isCare = isCareItemName(record.typeName)
-    val badgeLabel = when {
-        isCare -> "관리"
-        record.isRepair -> "수리"
-        else -> null
-    }
-    val container = when {
-        isCare -> MaterialTheme.colorScheme.tertiaryContainer
-        record.isRepair -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.primaryContainer
-    }
-    val content = when {
-        isCare -> MaterialTheme.colorScheme.onTertiaryContainer
-        record.isRepair -> MaterialTheme.colorScheme.onSecondaryContainer
-        else -> MaterialTheme.colorScheme.onPrimaryContainer
-    }
-    val icon = when {
-        isCare -> Icons.Default.WaterDrop
-        record.isRepair -> Icons.Default.Handyman
-        else -> Icons.Default.Autorenew
-    }
+    // 세차·관리 기록은 이 타임라인에 오지 않는다(세차 허브 전담).
+    val badgeLabel = if (record.isRepair) "수리" else null
+    val container =
+        if (record.isRepair) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.primaryContainer
+    val content =
+        if (record.isRepair) MaterialTheme.colorScheme.onSecondaryContainer
+        else MaterialTheme.colorScheme.onPrimaryContainer
+    val icon = if (record.isRepair) Icons.Default.Handyman else Icons.Default.Autorenew
 
     Column(Modifier.clickable(onClick = onClick)) {
         Row(
@@ -611,7 +577,6 @@ private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
 
 /** 필터 칩에서 "수리/관리 전체"를 뜻하는 값. 항목 이름과 겹치지 않게 제어문자를 쓴다. */
 private const val REPAIR_FILTER = "\u0000repair"
-private const val CARE_FILTER = "\u0000care"
 
 /** "2026년 7월". 날짜가 없는 기록은 맨 아래 "날짜 미상"으로 모은다. */
 private fun CarMaintenanceRecord.monthLabel(): String {

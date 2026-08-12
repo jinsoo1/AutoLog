@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,8 +27,14 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +62,15 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jsworld.android.autolog.domain.model.CARE_MONTH_OPTIONS
+import com.jsworld.android.autolog.domain.model.CARE_WASH_COUNT_OPTIONS
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareCycleProgress
+import com.jsworld.android.autolog.domain.model.CareCycleUnit
+import com.jsworld.android.autolog.domain.model.CarePickItem
+import com.jsworld.android.autolog.domain.model.buildCareCycles
 import com.jsworld.android.autolog.domain.model.buildCareOverview
+import com.jsworld.android.autolog.domain.model.careNudgeCandidates
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.isWashName
 import com.jsworld.android.autolog.domain.model.upkeepLines
@@ -80,13 +94,31 @@ fun CareDetailScreen(
 ) {
     val records by viewModel.careRecordsState(carId).collectAsState()
     val itemNames by viewModel.careNamesState(carId).collectAsState()
+    val pickItems by viewModel.carePickItemsState(carId).collectAsState()
 
     var showSheet by rememberSaveable { mutableStateOf(false) }
+    var showItemSheet by rememberSaveable { mutableStateOf(false) }
+    var intervalTarget by rememberSaveable { mutableStateOf<Long>(-1L) }
+    // 저장 직후 "이번엔 왁스도 할 때예요" 안내 — 푸시가 아니라 화면 안 배너
+    var nudge by remember { mutableStateOf<List<CareCycleProgress>>(emptyList()) }
+    // 넛지에서 '왁스도 기록'을 누르면 그 항목이 미리 선택된 시트가 열린다
+    var pendingName by remember { mutableStateOf<String?>(null) }
 
     val today = remember { LocalDate.now() }
     val overview = remember(records) { buildCareOverview(records, today) }
     val counts = remember(records) { careCounts(records, today) }
-    val upkeep = remember(records) { upkeepLines(records, today) }
+
+    val cycles = remember(pickItems, records) {
+        buildCareCycles(
+            items = pickItems,
+            washDates = records.filter { isWashName(it.typeName) }.mapNotNull { it.serviceDate },
+            lastByName = records
+                .filter { it.serviceDate != null }
+                .groupBy { it.typeName }
+                .mapValues { (_, list) -> list.mapNotNull { it.serviceDate }.max() },
+            today = today
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -118,6 +150,20 @@ fun CareDetailScreen(
         ) {
             item { CareHeroCard(overview) }
 
+            if (nudge.isNotEmpty()) {
+                item {
+                    CareNudgeCard(
+                        cycles = nudge,
+                        onRecord = { name ->
+                            nudge = emptyList()
+                            pendingName = name
+                            showSheet = true
+                        },
+                        onDismiss = { nudge = emptyList() }
+                    )
+                }
+            }
+
             if (records.isNotEmpty()) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -132,7 +178,31 @@ fun CareDetailScreen(
                 }
             }
 
-            if (upkeep.isNotEmpty()) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "관리 주기",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "항목 관리",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { showItemSheet = true }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            if (cycles.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -142,20 +212,23 @@ fun CareDetailScreen(
                     ) {
                         Column(Modifier.padding(14.dp)) {
                             Text(
-                                "유지 관리",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                upkeep.joinToString(" · ") { (name, days) ->
-                                    if (days == 0) "$name 오늘" else "$name ${days}일 전"
-                                },
+                                "주기를 정한 관리 항목이 없어요",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "'항목 관리'에서 왁스·코팅 같은 항목을 켜고 " +
+                                    "'세차 3회마다'처럼 나만의 주기를 정할 수 있어요.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+                }
+            } else {
+                items(items = cycles, key = { it.settingId }) { cycle ->
+                    CareCycleCard(cycle = cycle, onClick = { intervalTarget = cycle.settingId })
                 }
             }
 
@@ -181,11 +254,48 @@ fun CareDetailScreen(
     if (showSheet) {
         CareRecordSheet(
             itemNames = itemNames,
-            onDismiss = { showSheet = false },
+            initialName = pendingName,
+            onDismiss = {
+                showSheet = false
+                pendingName = null
+            },
             onSave = { name, date, cost, place, memo ->
-                viewModel.save(carId, name, date, cost, place, memo) { showSheet = false }
+                viewModel.save(carId, name, date, cost, place, memo) {
+                    showSheet = false
+                    pendingName = null
+                    // 세차를 기록한 직후에만 — 세차 횟수 주기가 도달한 항목을 알려준다.
+                    if (isWashName(name)) nudge = careNudgeCandidates(cycles)
+                }
             }
         )
+    }
+
+    if (showItemSheet) {
+        CareItemsSheet(
+            items = pickItems,
+            onToggle = { name, enabled -> viewModel.setItemEnabled(carId, name, enabled) },
+            onEditInterval = { settingId ->
+                showItemSheet = false
+                intervalTarget = settingId
+            },
+            onDismiss = { showItemSheet = false }
+        )
+    }
+
+    intervalTarget.takeIf { it > 0L }?.let { settingId ->
+        val item = pickItems.firstOrNull { it.settingId == settingId }
+        if (item == null) {
+            intervalTarget = -1L
+        } else {
+            CareIntervalSheet(
+                item = item,
+                onSave = { months, washCount ->
+                    viewModel.setInterval(settingId, months, washCount)
+                    intervalTarget = -1L
+                },
+                onDismiss = { intervalTarget = -1L }
+            )
+        }
     }
 }
 
@@ -352,6 +462,296 @@ private fun CareRecordRow(
     }
 }
 
+/** 관리 주기 한 줄 — 진행 막대는 경고가 아니라 리듬을 보여준다(초과도 호박색) */
+@Composable
+private fun CareCycleCard(cycle: CareCycleProgress, onClick: () -> Unit) {
+    val accent =
+        if (cycle.isOverdue) MaterialTheme.colorScheme.tertiary
+        else MaterialTheme.colorScheme.primary
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    cycle.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    cycle.remainText,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { cycle.progress ?: 0f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = accent,
+                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                drawStopIndicator = {}
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                cycle.caption,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * 세차 저장 직후 안내 — 세차장에 서 있는 그 순간에 "왁스도 할 때"를 알려준다.
+ * 푸시 알림으로 귀찮게 하지 않는 게 핵심이다.
+ */
+@Composable
+private fun CareNudgeCard(
+    cycles: List<CareCycleProgress>,
+    onRecord: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            val content = MaterialTheme.colorScheme.onTertiaryContainer
+            val first = cycles.first()
+            Text(
+                if (cycles.size == 1) "이번엔 ${first.name}도 할 때예요"
+                else "이번엔 ${first.name} 등 ${cycles.size}가지도 할 때예요",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = content
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                cycles.joinToString(" · ") { "${it.name} ${it.remainText}" },
+                style = MaterialTheme.typography.labelSmall,
+                color = content.copy(alpha = 0.85f)
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                cycles.take(2).forEach { cycle ->
+                    FilledTonalButton(
+                        onClick = { onRecord(cycle.name) },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+                    ) {
+                        Text("${cycle.name} 기록", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("다음에", style = MaterialTheme.typography.labelMedium, color = content)
+                }
+            }
+        }
+    }
+}
+
+/** 세차 항목 관리 — 켜고 끄기 + 주기 설정 진입 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CareItemsSheet(
+    items: List<CarePickItem>,
+    onToggle: (name: String, enabled: Boolean) -> Unit,
+    onEditInterval: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+        ) {
+            Text("관리 항목", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "켠 항목은 기록할 때 고를 수 있어요. 주기를 정하면 '세차 3회마다'처럼 진행도가 보입니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+
+            items.forEachIndexed { index, item ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            item.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        val cycleText = when {
+                            item.intervalWashCount != null -> "세차 ${item.intervalWashCount}회마다"
+                            item.intervalMonths != null -> "${item.intervalMonths}개월마다"
+                            item.enabled -> "주기 없음 · 기록만"
+                            else -> null
+                        }
+                        cycleText?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (item.enabled && item.settingId != null) {
+                        TextButton(onClick = { onEditInterval(item.settingId) }) { Text("주기") }
+                    }
+                    Switch(
+                        checked = item.enabled,
+                        onCheckedChange = { onToggle(item.name, it) }
+                    )
+                }
+                if (index != items.lastIndex) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 주기 설정 — 세차 횟수 / 기간 / 없음 */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun CareIntervalSheet(
+    item: CarePickItem,
+    onSave: (months: Int?, washCount: Int?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // 초기 단위 — 저장된 값이 있으면 그 단위, 없으면 세차 횟수를 권한다.
+    var unit by rememberSaveable(item.name) {
+        mutableStateOf(
+            when {
+                item.intervalWashCount != null -> CareCycleUnit.WASH_COUNT
+                item.intervalMonths != null -> CareCycleUnit.MONTHS
+                else -> CareCycleUnit.WASH_COUNT
+            }
+        )
+    }
+    var washCount by rememberSaveable(item.name) { mutableStateOf(item.intervalWashCount ?: 3) }
+    var months by rememberSaveable(item.name) { mutableStateOf(item.intervalMonths ?: 6) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+        ) {
+            Text(
+                "${item.name} 주기",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(10.dp))
+
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = unit == CareCycleUnit.WASH_COUNT,
+                    onClick = { unit = CareCycleUnit.WASH_COUNT },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
+                ) { Text("세차 횟수") }
+                SegmentedButton(
+                    selected = unit == CareCycleUnit.MONTHS,
+                    onClick = { unit = CareCycleUnit.MONTHS },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
+                ) { Text("기간") }
+                SegmentedButton(
+                    selected = unit == CareCycleUnit.NONE,
+                    onClick = { unit = CareCycleUnit.NONE },
+                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                ) { Text("없음") }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            when (unit) {
+                CareCycleUnit.WASH_COUNT -> {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CARE_WASH_COUNT_OPTIONS.forEach { n ->
+                            FilterChip(
+                                selected = washCount == n,
+                                onClick = { washCount = n },
+                                label = { Text("${n}회") }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                CareCycleUnit.MONTHS -> {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CARE_MONTH_OPTIONS.forEach { m ->
+                            FilterChip(
+                                selected = months == m,
+                                onClick = { months = m },
+                                label = { Text("${m}개월") }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "마지막 ${item.name} 기록에서 ${months}개월이 기준이 돼요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                CareCycleUnit.NONE -> {
+                    Text(
+                        "주기 없이 기록만 남겨요. 진행도는 표시되지 않습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    when (unit) {
+                        CareCycleUnit.WASH_COUNT -> onSave(null, washCount)
+                        CareCycleUnit.MONTHS -> onSave(months, null)
+                        CareCycleUnit.NONE -> onSave(null, null)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("저장", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
 /** 세차 방식 빠른 선택 — 메모에 그대로 들어가는 프리셋 */
 private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "실내 클리닝")
 
@@ -363,10 +763,13 @@ private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "
 @Composable
 private fun CareRecordSheet(
     itemNames: List<String>,
+    initialName: String?,
     onDismiss: () -> Unit,
     onSave: (name: String, date: String, cost: Int?, place: String?, memo: String?) -> Unit
 ) {
-    var selectedName by rememberSaveable { mutableStateOf(itemNames.firstOrNull() ?: "세차") }
+    var selectedName by rememberSaveable {
+        mutableStateOf(initialName ?: itemNames.firstOrNull() ?: "세차")
+    }
     var date by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var costText by rememberSaveable { mutableStateOf("") }
     var place by rememberSaveable { mutableStateOf("") }

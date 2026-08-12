@@ -3,7 +3,8 @@ package com.jsworld.android.autolog.presentation.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
-import com.jsworld.android.autolog.domain.model.isCareItemName
+import com.jsworld.android.autolog.domain.model.CarePickItem
+import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
@@ -29,9 +30,26 @@ class CareDetailViewModel @Inject constructor(
     fun careRecordsState(carId: Long): StateFlow<List<CarMaintenanceRecord>> =
         recordsMap.getOrPut(carId) {
             historyRepository.observeCarRecords(carId)
-                .map { list -> list.filter { isCareItemName(it.typeName) } }
+                .map { list -> list.filter { it.isCare } }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
+
+    /** 항목 관리 목록 — 기본 제공 + 사용자 추가, 켜짐 여부와 주기 포함 */
+    fun carePickItemsState(carId: Long): StateFlow<List<CarePickItem>> =
+        pickItemsMap.getOrPut(carId) {
+            carMaintenanceRepository.observeCarePickItems(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val pickItemsMap = mutableMapOf<Long, StateFlow<List<CarePickItem>>>()
+
+    fun setItemEnabled(carId: Long, name: String, enabled: Boolean) {
+        viewModelScope.launch { carMaintenanceRepository.setCareItemEnabled(carId, name, enabled) }
+    }
+
+    fun setInterval(settingId: Long, months: Int?, washCount: Int?) {
+        viewModelScope.launch { carMaintenanceRepository.updateCareInterval(settingId, months, washCount) }
+    }
 
     /**
      * 기록 시트의 "무엇을" 칩 — 켜져 있는 세차 계열 항목 + 기록에 있던 이름 + 기본 '세차'.
@@ -39,12 +57,15 @@ class CareDetailViewModel @Inject constructor(
      */
     fun careNamesState(carId: Long): StateFlow<List<String>> =
         namesMap.getOrPut(carId) {
-            carMaintenanceRepository.observeSettingOptions(carId)
+            carMaintenanceRepository.observeCareOptions(carId)
                 .map { options ->
-                    val active = options.map { it.typeName }.filter { isCareItemName(it) }
-                    (listOf("세차") + active).distinct()
+                    (listOf(DefaultCareItems.WASH) + options.map { it.typeName }).distinct()
                 }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf("세차"))
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(5_000),
+                    listOf(DefaultCareItems.WASH)
+                )
         }
 
     fun save(

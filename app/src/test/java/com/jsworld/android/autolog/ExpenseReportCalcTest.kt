@@ -35,11 +35,13 @@ class ExpenseReportCalcTest {
     }
 
     @Test
-    fun `세차는 관리 비용으로, 나머지는 정비 비용으로 분류된다`() {
+    fun `isCare 항목은 관리 비용으로, 나머지는 정비 비용으로 분류된다`() {
         val result = ExpenseReportCalc.build(
             fuelByMonth = emptyMap(),
             maintenanceRows = listOf(
-                ExpenseCostRow("2026-05", "세차", 20_000),
+                // 분류는 이름이 아니라 타입 플래그(isCare)로 한다 — '실내 클리닝'처럼
+                // 키워드가 없는 관리 항목도 세차로 집계되어야 하기 때문.
+                ExpenseCostRow("2026-05", "세차", 20_000, isCare = true),
                 ExpenseCostRow("2026-05", "엔진오일", 80_000),
                 ExpenseCostRow("2026-05", "써모스탯 교체", 150_000)
             ),

@@ -7,5 +7,7 @@ data class CarMaintenanceSetting(
     val maintenanceTypeId: Long,
     val intervalKm: Int?,
     val intervalMonths: Int?,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    /** 세차 N회마다 하는 관리의 주기(세차 항목 전용) */
+    val intervalWashCount: Int? = null
 )

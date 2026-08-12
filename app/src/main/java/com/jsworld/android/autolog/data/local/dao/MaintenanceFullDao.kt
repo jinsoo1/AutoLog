@@ -31,13 +31,16 @@ interface MaintenanceFullDao {
             s.id AS settingId,
             t.name AS typeName,
             MAX(h.serviceDate) AS lastServiceDate,
-            MAX(h.serviceMileage) AS lastServiceMileage
+            MAX(h.serviceMileage) AS lastServiceMileage,
+            t.isCare AS isCare,
+            COALESCE(s.intervalMonths, t.defaultIntervalMonths) AS intervalMonths,
+            s.intervalWashCount AS intervalWashCount
         FROM car_maintenance_settings s
         JOIN maintenance_types t ON t.id = s.maintenanceTypeId
         LEFT JOIN maintenance_history h ON h.settingId = s.id
         WHERE s.carId = :carId 
         AND s.isActive = 1
-        GROUP BY s.id, t.name
+        GROUP BY s.id, t.name, t.isCare, s.intervalMonths, t.defaultIntervalMonths, s.intervalWashCount
         ORDER BY t.name
     """)
     fun observeSettingOptions(carId: Long): Flow<List<SettingOptionRow>>

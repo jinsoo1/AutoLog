@@ -31,7 +31,9 @@ data class MonthlyExpense(
 data class ExpenseCostRow(
     val month: String, // "yyyy-MM"
     val typeName: String,
-    val cost: Int?
+    val cost: Int?,
+    /** 세차·관리 항목인지(타입 플래그) — 이름 판정은 '실내 클리닝'을 놓친다 */
+    val isCare: Boolean = false
 )
 
 /** 주행거리 관측점 — 주유 기록·정비 기록·주행거리 업데이트에서 모은다 */
@@ -67,7 +69,7 @@ object ExpenseReportCalc {
             val key = "%04d-%02d".format(m.year, m.monthValue)
             val rows = maintenanceRows.filter { it.month == key }
             val (care, maint) = rows.filter { it.cost != null }
-                .partition { isCareItemName(it.typeName) }
+                .partition { it.isCare }
 
             result += MonthlyExpense(
                 month = m,

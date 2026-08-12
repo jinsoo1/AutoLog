@@ -164,3 +164,36 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         )
     }
 }
+
+/**
+ * 세차·관리 독립 + 세차 횟수 기반 주기.
+ *
+ * - maintenance_types.isCare: 세차·관리 항목 플래그. 이름으로 판정하면
+ *   "실내 클리닝"처럼 키워드 없는 항목이 정비로 잡히므로 컬럼으로 승격한다.
+ * - car_maintenance_settings.intervalWashCount: "세차 N회마다" 주기.
+ *
+ * 컬럼 추가만 하는 마이그레이션이라 데이터 유실 위험이 없다.
+ * 기존 항목의 isCare 는 지금까지 쓰던 이름 규칙(isCareItemName)과 같은 조건으로 백필한다.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `maintenance_types` ADD COLUMN `isCare` INTEGER NOT NULL DEFAULT 0"
+        )
+        db.execSQL(
+            "ALTER TABLE `car_maintenance_settings` ADD COLUMN `intervalWashCount` INTEGER"
+        )
+
+        // 이름에 공백이 섞여 있어도 잡히도록 REPLACE 로 공백을 제거하고 비교한다.
+        db.execSQL(
+            """
+            UPDATE `maintenance_types` SET `isCare` = 1
+            WHERE REPLACE(name, ' ', '') LIKE '%세차%'
+               OR REPLACE(name, ' ', '') LIKE '%코팅%'
+               OR REPLACE(name, ' ', '') LIKE '%왁스%'
+               OR REPLACE(name, ' ', '') LIKE '%광택%'
+               OR REPLACE(name, ' ', '') LIKE '%세정%'
+            """.trimIndent()
+        )
+    }
+}

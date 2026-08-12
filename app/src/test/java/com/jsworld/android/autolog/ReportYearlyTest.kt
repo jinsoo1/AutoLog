@@ -16,12 +16,17 @@ import java.time.YearMonth
 
 class ReportYearlyTest {
 
-    private fun maint(name: String, cost: Int?, date: String = "2026-03-10", repair: Boolean = false) =
-        CarMaintenanceRecord(
-            historyId = 0, settingId = 0, typeId = 0, typeName = name,
-            serviceDate = date, serviceMileage = null, place = null,
-            cost = cost, memo = null, isRepair = repair
-        )
+    private fun maint(
+        name: String,
+        cost: Int?,
+        date: String = "2026-03-10",
+        repair: Boolean = false,
+        care: Boolean = false
+    ) = CarMaintenanceRecord(
+        historyId = 0, settingId = 0, typeId = 0, typeName = name,
+        serviceDate = date, serviceMileage = null, place = null,
+        cost = cost, memo = null, isRepair = repair, isCare = care
+    )
 
     private fun fuel(
         amount: Int?, qty: Double?, date: String = "2026-05-01",
@@ -85,7 +90,7 @@ class ReportYearlyTest {
                 maint("엔진오일", 90_000),
                 maint("타이어 교체", 450_000),
                 maint("엔진오일", 90_000),
-                maint("세차", 20_000),
+                maint("세차", 20_000, care = true),
                 maint("금액없음", null)
             )
         )

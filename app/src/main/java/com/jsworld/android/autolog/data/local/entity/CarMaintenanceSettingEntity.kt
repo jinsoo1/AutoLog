@@ -36,5 +36,13 @@ data class CarMaintenanceSettingEntity(
 
     val intervalKm: Int?,
     val intervalMonths: Int?,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+
+    /**
+     * 세차 N회마다 하는 관리의 주기(세차 횟수). 세차 항목 전용.
+     *
+     * km·개월로는 표현할 수 없는 단위다 — "세차 3번 중 1번은 실내 클리닝"처럼
+     * 세차 기록 수를 세어 진행도를 계산한다.
+     */
+    val intervalWashCount: Int? = null
 )

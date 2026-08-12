@@ -6,6 +6,7 @@ import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
+import com.jsworld.android.autolog.domain.model.isCareItemName
 import kotlinx.serialization.Serializable
 
 /**
@@ -60,7 +61,15 @@ data class MaintenanceTypeBackup(
     val id: Long,
     val name: String,
     val defaultIntervalKm: Int?,
-    val defaultIntervalMonths: Int?
+    val defaultIntervalMonths: Int?,
+    /**
+     * 세차·관리 항목 플래그.
+     *
+     * ⚠️ 기본값을 반드시 유지할 것 — 이 필드가 없던 과거 백업도 그대로 복원돼야 한다.
+     * 과거 백업은 false 로 들어오지만, 복원 후 이름 규칙으로 다시 채워준다
+     * (BackupRepository.restore 참조).
+     */
+    val isCare: Boolean = false
 )
 
 @Serializable
@@ -70,7 +79,13 @@ data class MaintenanceSettingBackup(
     val maintenanceTypeId: Long,
     val intervalKm: Int?,
     val intervalMonths: Int?,
-    val isActive: Boolean
+    val isActive: Boolean,
+    /**
+     * "세차 N회마다" 주기.
+     *
+     * ⚠️ 기본값을 반드시 유지할 것 — 이 필드가 없던 과거 백업도 그대로 복원돼야 한다.
+     */
+    val intervalWashCount: Int? = null
 )
 
 @Serializable
@@ -127,7 +142,8 @@ fun MaintenanceTypeEntity.toBackup(): MaintenanceTypeBackup =
         id = id,
         name = name,
         defaultIntervalKm = defaultIntervalKm,
-        defaultIntervalMonths = defaultIntervalMonths
+        defaultIntervalMonths = defaultIntervalMonths,
+        isCare = isCare
     )
 
 fun CarMaintenanceSettingEntity.toBackup(): MaintenanceSettingBackup =
@@ -137,7 +153,8 @@ fun CarMaintenanceSettingEntity.toBackup(): MaintenanceSettingBackup =
         maintenanceTypeId = maintenanceTypeId,
         intervalKm = intervalKm,
         intervalMonths = intervalMonths,
-        isActive = isActive
+        isActive = isActive,
+        intervalWashCount = intervalWashCount
     )
 
 fun MaintenanceHistoryEntity.toBackup(): MaintenanceHistoryBackup =
@@ -178,7 +195,10 @@ fun MaintenanceTypeBackup.toEntity(): MaintenanceTypeEntity =
         id = id,
         name = name,
         defaultIntervalKm = defaultIntervalKm,
-        defaultIntervalMonths = defaultIntervalMonths
+        defaultIntervalMonths = defaultIntervalMonths,
+        // 이 필드가 없던 과거 백업(false)은 이름 규칙으로 되살린다 —
+        // 그러지 않으면 복원 후 세차 기록이 정비 타임라인에 섞인다.
+        isCare = isCare || isCareItemName(name)
     )
 
 fun MaintenanceSettingBackup.toEntity(): CarMaintenanceSettingEntity =
@@ -188,7 +208,8 @@ fun MaintenanceSettingBackup.toEntity(): CarMaintenanceSettingEntity =
         maintenanceTypeId = maintenanceTypeId,
         intervalKm = intervalKm,
         intervalMonths = intervalMonths,
-        isActive = isActive
+        isActive = isActive,
+        intervalWashCount = intervalWashCount
     )
 
 fun MaintenanceHistoryBackup.toEntity(): MaintenanceHistoryEntity =

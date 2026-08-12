@@ -6,5 +6,6 @@ data class MaintenanceTypePickUi(
     val defaultKm: Int?,
     val defaultMonths: Int?,
     val checked: Boolean,
-    val settingId: Long? // 있으면 enable/disable에 사용 가능
+    val settingId: Long?, // 있으면 enable/disable에 사용 가능
+    val isCare: Boolean = false
 )

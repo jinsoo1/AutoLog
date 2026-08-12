@@ -211,6 +211,17 @@ interface CarMaintenanceSettingDao {
     """)
     suspend fun setActive(settingId: Long, active: Boolean)
 
+    /**
+     * 세차·관리 항목의 주기. 세차 횟수와 기간을 함께 저장한다
+     * (화면에서는 하나만 고르지만, 저장 자체는 각각 독립이라 전환 시 잔여값을 지운다).
+     */
+    @Query("""
+        UPDATE car_maintenance_settings
+        SET intervalMonths = :months, intervalWashCount = :washCount
+        WHERE id = :settingId
+    """)
+    suspend fun updateCareInterval(settingId: Long, months: Int?, washCount: Int?)
+
     @Query("""
         SELECT * FROM car_maintenance_settings
         WHERE carId = :carId AND maintenanceTypeId = :typeId

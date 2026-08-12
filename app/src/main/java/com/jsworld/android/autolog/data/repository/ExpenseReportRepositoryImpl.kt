@@ -47,7 +47,9 @@ class ExpenseReportRepositoryImpl @Inject constructor(
 
             ExpenseReportCalc.build(
                 fuelByMonth = fuelMonthly.associate { it.month to it.total },
-                maintenanceRows = costRows.map { ExpenseCostRow(it.month, it.typeName, it.cost) },
+                maintenanceRows = costRows.map {
+                    ExpenseCostRow(it.month, it.typeName, it.cost, it.isCare)
+                },
                 mileagePoints = points,
                 current = YearMonth.now()
             )

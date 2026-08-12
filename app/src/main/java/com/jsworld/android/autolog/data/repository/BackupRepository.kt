@@ -325,7 +325,7 @@ class BackupRepository @Inject constructor(
         /**
          * 실제 AutoLogDatabase의 현재 버전과 동일하게 맞춘다.
          */
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
 
         /** Download 하위 백업 폴더 이름 */
         const val BACKUP_DIR_NAME = "AutoLog"

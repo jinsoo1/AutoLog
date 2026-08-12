@@ -1,7 +1,10 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems
 import com.jsworld.android.autolog.domain.model.isCareItemName
+import com.jsworld.android.autolog.domain.model.isWashName
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,13 +34,26 @@ class CareItemTest {
     }
 
     @Test
-    fun `기본값에서 세차·코팅은 주기가 없다`() {
-        // 주기가 있으면 한 달 세차를 안 했다고 "초과" 경고가 떠서
-        // 진짜 정비 경고를 묻어버린다. 기록 전용이 기본이어야 한다.
-        val care = DefaultMaintenanceItems.items.filter { isCareItemName(it.first) }
-        assertTrue(care.isNotEmpty())
-        care.forEach { (name, interval) ->
-            assertTrue("$name 은 주기가 없어야 함", interval.first == null && interval.second == null)
-        }
+    fun `세차 항목은 정비 기본 항목에 없다`() {
+        // 1.2.1 부터 세차는 정비 시스템에서 분리돼 DefaultCareItems 로 옮겨졌다.
+        // 정비 목록에 남아 있으면 정비 탭·홈 긴급·알림에 세차가 다시 섞인다.
+        val leaked = DefaultMaintenanceItems.items.map { it.first }.filter { isCareItemName(it) }
+        assertTrue("정비 기본 항목에 세차류가 남아 있음: $leaked", leaked.isEmpty())
+    }
+
+    @Test
+    fun `세차 기본 항목은 주기 없이 시딩되고 카운터 기준이 세차다`() {
+        // 주기 기본값을 넣으면 켜자마자 초과로 보인다 — 주기는 사용자가 정한다.
+        assertTrue(DefaultCareItems.items.isNotEmpty())
+        assertEquals(DefaultCareItems.WASH, DefaultCareItems.items.first())
+        // 카운터 기준 항목은 세차로 인식돼야 한다.
+        assertTrue(isWashName(DefaultCareItems.WASH))
+    }
+
+    @Test
+    fun `실내 클리닝은 이름만으로는 관리로 안 잡힌다 - 그래서 isCare 플래그가 필요하다`() {
+        // 이름 기반 판정의 한계. DB 플래그(maintenance_types.isCare)로 분류하는 이유다.
+        assertFalse(isCareItemName("실내 클리닝"))
+        assertTrue("기본 세차 항목에는 포함돼 있어야 함", "실내 클리닝" in DefaultCareItems.items)
     }
 }

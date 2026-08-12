@@ -14,6 +14,7 @@ import com.jsworld.android.autolog.data.local.dao.MileageHistoryDao
 import com.jsworld.android.autolog.data.local.db.AutoLogDatabase
 import com.jsworld.android.autolog.data.local.db.MIGRATION_1_2
 import com.jsworld.android.autolog.data.local.db.MIGRATION_2_3
+import com.jsworld.android.autolog.data.local.db.MIGRATION_3_4
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,7 +37,7 @@ object DatabaseModule {
             AutoLogDatabase::class.java,
             "autolog_db"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
 

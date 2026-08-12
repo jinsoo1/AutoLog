@@ -8,11 +8,12 @@ data class MonthlyAmountRow(
     @ColumnInfo(name = "total") val total: Long
 )
 
-/** 정비 기록의 월·항목명·금액 — 카테고리(정비·수리/세차) 분류는 이름 기반이라 코틀린에서 한다 */
+/** 정비 기록의 월·항목명·금액·카테고리 플래그 */
 data class MaintenanceCostRow(
     @ColumnInfo(name = "month") val month: String,
     @ColumnInfo(name = "typeName") val typeName: String,
-    @ColumnInfo(name = "cost") val cost: Int?
+    @ColumnInfo(name = "cost") val cost: Int?,
+    @ColumnInfo(name = "isCare") val isCare: Boolean = false
 )
 
 /** 주행거리 관측점(날짜, 누적 km) — 월간 주행거리 계산용 */

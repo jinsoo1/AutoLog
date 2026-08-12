@@ -80,7 +80,7 @@ fun topSpendItems(yearMaint: List<CarMaintenanceRecord>, limit: Int = 5): List<T
                 name = name,
                 count = records.size,
                 total = records.sumOf { it.cost!!.toLong() },
-                isCare = isCareItemName(name)
+                isCare = records.any { it.isCare }
             )
         }
         .sortedByDescending { it.total }
@@ -188,9 +188,9 @@ fun buildYearHighlights(
         }
     }
 
-    // 관리 기록 요약 — 세차 항목도 주기가 없어 isRepair 로 잡히므로 이름 기준을 먼저 뺀다
-    val cares = yearMaint.count { isCareItemName(it.typeName) }
-    val repairs = yearMaint.count { it.isRepair && !isCareItemName(it.typeName) }
+    // 관리 기록 요약 — 세차 항목은 주기가 없어 isRepair 로도 잡히므로 세차를 먼저 뺀다
+    val cares = yearMaint.count { it.isCare }
+    val repairs = yearMaint.count { it.isRepair && !it.isCare }
     val maints = yearMaint.size - repairs - cares
     val parts = buildList {
         if (maints > 0) add("정비 ${maints}건")
