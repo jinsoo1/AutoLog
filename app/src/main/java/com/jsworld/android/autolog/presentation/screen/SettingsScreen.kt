@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.NotificationImportant
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Repeat
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
@@ -104,6 +106,28 @@ fun SettingsScreen(
 
     var showAlertHourDialog by remember { mutableStateOf(false) }
     var showAlertRemindDialog by remember { mutableStateOf(false) }
+
+    // 앱에서 알림을 켰는데도 시스템이 막고 있으면 사용자는 "안 온다"고만 느낀다 —
+    // 시스템 설정에서 바꾸고 돌아올 수 있으니 화면에 돌아올 때마다 다시 확인한다.
+    var notificationBlock by remember {
+        mutableStateOf(AutoLogNotificationHelper.NotificationBlock.NONE)
+    }
+    val anyNotificationOn = alertPrefs.enabled || notificationEnabled
+    LifecycleResumeEffect(anyNotificationOn) {
+        notificationBlock = if (anyNotificationOn) {
+            AutoLogNotificationHelper.checkBlocked(
+                context,
+                listOf(
+                    AutoLogNotificationHelper.MAINT_SOON_CHANNEL_ID,
+                    AutoLogNotificationHelper.MAINT_OVERDUE_CHANNEL_ID,
+                    AutoLogNotificationHelper.WEEKLY_MILEAGE_CHANNEL_ID
+                )
+            )
+        } else {
+            AutoLogNotificationHelper.NotificationBlock.NONE
+        }
+        onPauseOrDispose { }
+    }
 
     // 복원 대상 선택(목록) 다이얼로그 표시 여부
     var showRestorePicker by remember { mutableStateOf(false) }
@@ -372,6 +396,36 @@ fun SettingsScreen(
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
                     SettingsSectionTitle("알림")
+                }
+
+                if (notificationBlock != AutoLogNotificationHelper.NotificationBlock.NONE) {
+                    item {
+                        NotificationBlockedCard(
+                            block = notificationBlock,
+                            onOpenSettings = {
+                                val channelId =
+                                    if (notificationBlock ==
+                                        AutoLogNotificationHelper.NotificationBlock.CHANNEL_BLOCKED
+                                    ) {
+                                        AutoLogNotificationHelper.MAINT_OVERDUE_CHANNEL_ID
+                                    } else {
+                                        null
+                                    }
+                                runCatching {
+                                    context.startActivity(
+                                        AutoLogNotificationHelper
+                                            .notificationSettingsIntent(context, channelId)
+                                    )
+                                }.onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        "시스템 설정을 열 수 없어요. 설정 > 앱 > 오토로그 > 알림에서 확인해주세요.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        )
+                    }
                 }
 
                 item {
@@ -884,6 +938,71 @@ fun SettingsScreen(
                 TextButton(onClick = { showAlertRemindDialog = false }) { Text("취소") }
             }
         )
+    }
+}
+
+/**
+ * 시스템 알림 차단 안내 — 앱 스위치는 켜져 있는데 알림이 오지 않는 유일한 원인이
+ * 대부분 이것이다. 경고 톤으로 보여주고 해당 설정 화면으로 바로 보낸다.
+ */
+@Composable
+private fun NotificationBlockedCard(
+    block: AutoLogNotificationHelper.NotificationBlock,
+    onOpenSettings: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.NotificationsOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) {
+                        "시스템에서 알림이 꺼져 있어요"
+                    } else {
+                        "일부 알림 종류가 차단돼 있어요"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) {
+                        "앱에서 켠 알림이 전달되지 않습니다. 시스템 설정에서 알림을 허용해주세요."
+                    } else {
+                        "'교체 임박' 또는 '교체 시기 초과' 알림이 시스템에서 꺼져 있어 전달되지 않습니다."
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f)
+                )
+                Spacer(Modifier.height(6.dp))
+                TextButton(
+                    onClick = onOpenSettings,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        "시스템 알림 설정 열기",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
     }
 }
 

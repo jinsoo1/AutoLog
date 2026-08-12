@@ -3,7 +3,10 @@ package com.jsworld.android.autolog.core.util
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 
 object AutoLogNotificationHelper {
 
@@ -42,4 +45,42 @@ object AutoLogNotificationHelper {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannels(listOf(weekly, maintSoon, maintOverdue))
     }
+
+    /** 알림이 시스템에서 막혀 있는 상태 — 앱은 켜져 있는데 알림이 오지 않는 원인 */
+    enum class NotificationBlock { NONE, APP_DISABLED, CHANNEL_BLOCKED }
+
+    /**
+     * 앱 설정에서 알림을 켰는데도 시스템이 막고 있는지 확인한다.
+     *
+     * 두 층을 모두 봐야 한다 — 앱 전체 권한(Android 13+ 거부)과 **채널별 차단**.
+     * 채널만 끈 경우 areNotificationsEnabled() 는 true 라서, 이걸 놓치면
+     * "앱에서 켰는데 알림이 안 온다"는 문의를 설명할 수 없다.
+     */
+    fun checkBlocked(context: Context, channelIds: List<String>): NotificationBlock {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return NotificationBlock.APP_DISABLED
+        }
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+            ?: return NotificationBlock.NONE
+
+        // 아직 만들지 않은 채널(알림을 한 번도 켜지 않은 상태)은 차단이 아니다.
+        val blocked = channelIds.mapNotNull { manager.getNotificationChannel(it) }
+            .any { it.importance == NotificationManager.IMPORTANCE_NONE }
+
+        return if (blocked) NotificationBlock.CHANNEL_BLOCKED else NotificationBlock.NONE
+    }
+
+    /** 시스템 알림 설정 화면 — 채널 차단이면 그 채널 화면으로 바로 보낸다 */
+    fun notificationSettingsIntent(context: Context, channelId: String? = null): Intent =
+        if (channelId != null) {
+            Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                putExtra(Settings.EXTRA_CHANNEL_ID, channelId)
+            }
+        } else {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+        }
 }
