@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -64,7 +65,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jsworld.android.autolog.domain.model.CARE_MONTH_OPTIONS
 import com.jsworld.android.autolog.domain.model.CARE_WASH_COUNT_OPTIONS
 import com.jsworld.android.autolog.domain.model.CareCycleProgress
 import com.jsworld.android.autolog.domain.model.CareRecord
@@ -74,7 +74,7 @@ import com.jsworld.android.autolog.domain.model.buildCareCycles
 import com.jsworld.android.autolog.domain.model.buildCareOverview
 import com.jsworld.android.autolog.domain.model.careNudgeCandidates
 import com.jsworld.android.autolog.domain.model.careCounts
-import com.jsworld.android.autolog.domain.model.isWashName
+import com.jsworld.android.autolog.domain.model.BASE_WASH_NAME
 import com.jsworld.android.autolog.domain.model.upkeepLines
 import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.presentation.component.ThousandsSeparatorTransformation
@@ -113,7 +113,8 @@ fun CareDetailScreen(
     val cycles = remember(pickItems, records) {
         buildCareCycles(
             items = pickItems,
-            washDates = records.filter { isWashName(it.itemName) }.mapNotNull { it.performedAt },
+            washDates = records.filter { it.itemName == BASE_WASH_NAME }
+                .mapNotNull { it.performedAt },
             lastByName = records
                 .filter { it.performedAt != null }
                 .groupBy { it.itemName }
@@ -260,7 +261,7 @@ fun CareDetailScreen(
             // 넛지에서 온 단일 기록이면 다중 선택을 겹치지 않게 숨긴다.
             togetherCandidates = if (pendingName == null) {
                 pickItems
-                    .filter { it.enabled && it.name != DefaultCareItems.WASH }
+                    .filter { it.enabled && it.name != BASE_WASH_NAME }
                     .map { it.name }
             } else {
                 emptyList()
@@ -278,7 +279,7 @@ fun CareDetailScreen(
                     pendingName = null
                     // 세차를 기록한 직후에만 — 세차 횟수 주기가 도달한 항목을 알려준다.
                     // 방금 함께 기록한 항목은 이미 했으니 넛지에서 뺀다.
-                    if (isWashName(name)) {
+                    if (name == BASE_WASH_NAME) {
                         nudge = careNudgeCandidates(cycles).filterNot { it.name in together }
                     }
                 }
@@ -426,7 +427,7 @@ private fun CareRecordRow(
                     fontWeight = FontWeight.SemiBold
                 )
                 // 세차가 아닌 항목(코팅·왁스)은 이름을 함께 보여 구분한다.
-                if (!isWashName(record.itemName)) {
+                if (record.itemName != BASE_WASH_NAME) {
                     Spacer(Modifier.width(6.dp))
                     Text(
                         record.itemName,
@@ -570,131 +571,6 @@ private fun CareNudgeCard(
     }
 }
 
-/** 세차 항목 관리 — 켜고 끄기, 주기 칩, 직접 추가 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CareItemsSheet(
-    items: List<CarePickItem>,
-    onToggle: (name: String, enabled: Boolean) -> Unit,
-    onAdd: (name: String) -> Unit,
-    onEditInterval: (Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var showAddField by rememberSaveable { mutableStateOf(false) }
-    var newName by rememberSaveable { mutableStateOf("") }
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
-        ) {
-            Text("관리 항목", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "켠 항목은 기록할 때 고를 수 있어요. 주기 버튼을 누르면 " +
-                    "'세차 3회마다'처럼 나만의 주기를 정할 수 있습니다.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(8.dp))
-
-            items.forEachIndexed { index, item ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            item.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        // 주기는 버튼처럼 보여야 누른다 — 상태를 담은 칩으로.
-                        if (item.enabled && item.itemId != null) {
-                            AssistChip(
-                                onClick = { onEditInterval(item.itemId) },
-                                label = {
-                                    Text(
-                                        when {
-                                            item.intervalWashCount != null ->
-                                                "세차 ${item.intervalWashCount}회마다"
-                                            item.intervalMonths != null ->
-                                                "${item.intervalMonths}개월마다"
-                                            else -> "주기 설정"
-                                        },
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Outlined.Schedule,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = item.enabled,
-                        onCheckedChange = { onToggle(item.name, it) }
-                    )
-                }
-                if (index != items.lastIndex) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // 직접 추가 — 하부 세차, 엔진룸 클리닝처럼 목록에 없는 항목
-            if (!showAddField) {
-                TextButton(
-                    onClick = { showAddField = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("항목 직접 추가", fontWeight = FontWeight.SemiBold)
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        placeholder = { Text("예: 하부 세차") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    FilledTonalButton(
-                        enabled = newName.trim().isNotEmpty() &&
-                            items.none { it.name == newName.trim() },
-                        onClick = {
-                            onAdd(newName.trim())
-                            newName = ""
-                            showAddField = false
-                        }
-                    ) { Text("추가") }
-                }
-                if (items.any { it.name == newName.trim() }) {
-                    Text(
-                        "이미 있는 항목이에요 — 목록에서 켜주세요.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** 세차 방식 빠른 선택 */
 private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차")
 
@@ -758,7 +634,7 @@ private fun CareRecordSheet(
             Spacer(Modifier.height(12.dp))
 
             // 방식 — 전용 필드. 칩으로 고르거나, 그 외 방식은 메모에 적으면 된다.
-            if (isWashName(selectedName)) {
+            if (selectedName == BASE_WASH_NAME) {
                 Text(
                     "방식 (선택)",
                     style = MaterialTheme.typography.labelMedium,
@@ -860,7 +736,7 @@ private fun CareRecordSheet(
                         method,
                         place,
                         memo,
-                        if (isWashName(selectedName)) together.toList() else emptyList()
+                        if (selectedName == BASE_WASH_NAME) together.toList() else emptyList()
                     )
                 },
                 enabled = !saving,
@@ -872,10 +748,18 @@ private fun CareRecordSheet(
     }
 
     if (showDatePicker) {
+        // 아직 하지 않은 세차를 미리 기록할 일은 없다 — 오늘 이후는 고를 수 없게 한다.
+        val todayEndUtc = remember {
+            LocalDate.now().plusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        }
         val state = rememberDatePickerState(
             initialSelectedDateMillis = runCatching {
                 LocalDate.parse(date).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
-            }.getOrNull()
+            }.getOrNull(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis < todayEndUtc
+                override fun isSelectableYear(year: Int) = year <= LocalDate.now().year
+            }
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },

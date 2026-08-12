@@ -19,7 +19,7 @@ interface CareRepository {
     suspend fun setItemEnabled(carId: Long, name: String, enabled: Boolean)
 
     /** 주기 설정. 둘 다 null 이면 기록 전용 */
-    suspend fun updateInterval(itemId: Long, months: Int?, washCount: Int?)
+    suspend fun updateInterval(itemId: Long, days: Int?, washCount: Int?)
 
     /** 기록 저장 — 항목은 이름으로 찾거나 만든다(켜지지 않았어도 기록하면 켜진다) */
     suspend fun addRecord(

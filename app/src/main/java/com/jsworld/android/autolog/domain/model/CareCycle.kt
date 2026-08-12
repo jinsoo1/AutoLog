@@ -17,7 +17,7 @@ data class CarePickItem(
     val enabled: Boolean,
     /** 켜져 있을 때만 존재 (care_items PK) */
     val itemId: Long?,
-    val intervalMonths: Int?,
+    val intervalDays: Int?,
     val intervalWashCount: Int?
 )
 
@@ -38,9 +38,17 @@ data class CareCycleProgress(
     val caption: String
 )
 
-/** 주기 선택지 — 세차 횟수 / 개월 */
+/** 빠른 선택지 — 세차 횟수 / 일수. 그 밖의 값은 직접 입력한다. */
 val CARE_WASH_COUNT_OPTIONS = listOf(2, 3, 5, 10)
-val CARE_MONTH_OPTIONS = listOf(1, 3, 6, 12)
+val CARE_DAY_OPTIONS = listOf(30, 90, 180, 365)
+
+/** 30·365의 배수는 친숙한 단위로, 나머지는 일수로 읽어준다 */
+fun careDaysLabel(days: Int): String = when {
+    days % 365 == 0 -> "${days / 365}년"
+    days % 30 == 0 -> "${days / 30}개월"
+    days % 7 == 0 -> "${days / 7}주"
+    else -> "${days}일"
+}
 
 /**
  * 세차 허브의 관리 주기 목록을 만든다.
@@ -59,7 +67,7 @@ fun buildCareCycles(
     return items.mapNotNull { item ->
         val itemId = item.itemId ?: return@mapNotNull null
         // 카운터 기준인 '세차' 자체에는 주기를 매기지 않는다(경과일 히어로가 그 역할).
-        if (isWashName(item.name) && item.intervalWashCount == null && item.intervalMonths == null) {
+        if (item.name == BASE_WASH_NAME && item.intervalWashCount == null && item.intervalDays == null) {
             return@mapNotNull null
         }
 
@@ -95,7 +103,7 @@ fun buildCareCycles(
                 )
             }
 
-            item.intervalMonths != null && item.intervalMonths > 0 -> {
+            item.intervalDays != null && item.intervalDays > 0 -> {
                 val lastDate = last?.toLocalDateOrNull()
                 if (lastDate == null) {
                     CareCycleProgress(
@@ -105,10 +113,10 @@ fun buildCareCycles(
                         progress = null,
                         remainText = "첫 기록 필요",
                         isOverdue = false,
-                        caption = "${item.intervalMonths}개월마다 · 아직 기록 없음"
+                        caption = "${careDaysLabel(item.intervalDays)}마다 · 아직 기록 없음"
                     )
                 } else {
-                    val due = lastDate.plusMonths(item.intervalMonths.toLong())
+                    val due = lastDate.plusDays(item.intervalDays.toLong())
                     val remainingDays = ChronoUnit.DAYS.between(today, due)
                     val total = ChronoUnit.DAYS.between(lastDate, due).coerceAtLeast(1)
                     val used = ChronoUnit.DAYS.between(lastDate, today).coerceAtLeast(0)
@@ -124,7 +132,7 @@ fun buildCareCycles(
                             else -> "${-remainingDays}일 지남"
                         },
                         isOverdue = remainingDays < 0,
-                        caption = "${item.intervalMonths}개월마다 · 마지막 ${lastDate.toShortDateText()}"
+                        caption = "${careDaysLabel(item.intervalDays)}마다 · 마지막 ${lastDate.toShortDateText()}"
                     )
                 }
             }

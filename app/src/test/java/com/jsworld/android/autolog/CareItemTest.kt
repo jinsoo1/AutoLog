@@ -2,6 +2,7 @@ package com.jsworld.android.autolog
 
 import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems
+import com.jsworld.android.autolog.domain.model.BASE_WASH_NAME
 import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.model.isWashName
 import org.junit.Assert.assertEquals
@@ -58,9 +59,20 @@ class CareItemTest {
     }
 
     @Test
-    fun `실내와 실외 세차는 각각 기본 항목이다`() {
-        // 기본 '세차'(실외)가 카운터 기준이고, 실내 세차는 선택 항목으로 함께 기록한다.
-        assertTrue("실내 세차" in DefaultCareItems.items)
-        assertTrue(isWashName("실내 세차")) // 세차 경과일·횟수 계산에도 잡힌다
+    fun `기본 세차가 카운터 기준이고 나머지는 선택 항목이다`() {
+        assertEquals(BASE_WASH_NAME, DefaultCareItems.items.first())
+        // 사용자가 요청한 관리 항목들이 기본으로 제공된다
+        listOf(
+            "실내세차", "휠·타이어", "철분·타르 제거", "유막 제거",
+            "발수코팅", "왁스코팅", "유리막코팅", "광택", "실내 클리닝"
+        ).forEach { assertTrue("$it 누락", it in DefaultCareItems.items) }
+    }
+
+    @Test
+    fun `옛 이름은 새 항목 이름으로 정규화된다`() {
+        assertEquals(BASE_WASH_NAME, DefaultCareItems.normalizeLegacyName("실내/외 세차(관리)"))
+        assertEquals("왁스코팅", DefaultCareItems.normalizeLegacyName("코팅/왁스(관리)"))
+        // 그 밖의 이름은 그대로 둔다
+        assertEquals("하부 세차", DefaultCareItems.normalizeLegacyName("하부 세차"))
     }
 }

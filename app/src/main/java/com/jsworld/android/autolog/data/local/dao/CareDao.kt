@@ -31,11 +31,11 @@ interface CareDao {
     @Query(
         """
         UPDATE care_items
-        SET intervalMonths = :months, intervalWashCount = :washCount
+        SET intervalDays = :days, intervalWashCount = :washCount
         WHERE id = :itemId
         """
     )
-    suspend fun updateInterval(itemId: Long, months: Int?, washCount: Int?)
+    suspend fun updateInterval(itemId: Long, days: Int?, washCount: Int?)
 
     /* ── 기록 ── */
 

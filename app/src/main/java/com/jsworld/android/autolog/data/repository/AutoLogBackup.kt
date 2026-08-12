@@ -117,7 +117,8 @@ data class CareItemBackup(
     val id: Long,
     val carId: Long,
     val name: String,
-    val intervalMonths: Int?,
+    /** N일마다 (v4 부터 일 단위) */
+    val intervalDays: Int?,
     val intervalWashCount: Int?,
     val isActive: Boolean
 )
@@ -279,7 +280,7 @@ fun CareItemEntity.toBackup(): CareItemBackup =
         id = id,
         carId = carId,
         name = name,
-        intervalMonths = intervalMonths,
+        intervalDays = intervalDays,
         intervalWashCount = intervalWashCount,
         isActive = isActive
     )
@@ -289,7 +290,7 @@ fun CareItemBackup.toEntity(): CareItemEntity =
         id = id,
         carId = carId,
         name = name,
-        intervalMonths = intervalMonths,
+        intervalDays = intervalDays,
         intervalWashCount = intervalWashCount,
         isActive = isActive
     )
@@ -351,7 +352,8 @@ fun AutoLogBackup.withLegacyCareConverted(): AutoLogBackup {
             id = existing?.id ?: nextItemId++,
             carId = s.carId,
             name = name,
-            intervalMonths = existing?.intervalMonths ?: s.intervalMonths,
+            // 옛 정비 주기는 개월 단위였다 — 일로 환산한다(1개월 = 30일).
+            intervalDays = existing?.intervalDays ?: s.intervalMonths?.let { it * 30 },
             intervalWashCount = null,
             isActive = (existing?.isActive ?: false) || s.isActive
         )

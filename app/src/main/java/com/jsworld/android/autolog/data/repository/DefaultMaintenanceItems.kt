@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.domain.model.BASE_WASH_NAME
 import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
 
 object DefaultMaintenanceItems {
@@ -112,15 +113,19 @@ object DefaultMaintenanceItems {
 object DefaultCareItems {
 
     /** 카운터 기준이 되는 기본 세차 항목 이름 */
-    const val WASH = "세차"
+    const val WASH = BASE_WASH_NAME
 
     val items = listOf(
-        WASH,          // 실외(기본) 세차 — 경과일·세차 횟수 카운터의 기준
-        "실내 세차",
-        "왁스 코팅",
-        "유리막 코팅",
-        "발수 코팅",
-        "광택"
+        WASH,          // 외부 세차 — 경과일·세차 횟수 카운터의 기준
+        "실내세차",
+        "휠·타이어",
+        "철분·타르 제거",
+        "유막 제거",
+        "발수코팅",
+        "왁스코팅",
+        "유리막코팅",
+        "광택",
+        "실내 클리닝"
     )
 
     /**
@@ -136,7 +141,7 @@ object DefaultCareItems {
         val n = name.replace(" ", "")
         return when {
             n.contains("실내/외세차") -> WASH
-            n.contains("코팅/왁스") -> "왁스 코팅"
+            n.contains("코팅/왁스") -> "왁스코팅"
             else -> name
         }
     }

@@ -195,7 +195,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     private val normalizedName = """
         CASE
             WHEN REPLACE(t.name, ' ', '') LIKE '%실내/외세차%' THEN '세차'
-            WHEN REPLACE(t.name, ' ', '') LIKE '%코팅/왁스%' THEN '왁스 코팅'
+            WHEN REPLACE(t.name, ' ', '') LIKE '%코팅/왁스%' THEN '왁스코팅'
             ELSE t.name
         END
     """.trimIndent()
@@ -216,7 +216,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
                 "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 "`carId` INTEGER NOT NULL, " +
                 "`name` TEXT NOT NULL, " +
-                "`intervalMonths` INTEGER, " +
+                "`intervalDays` INTEGER, " +
                 "`intervalWashCount` INTEGER, " +
                 "`isActive` INTEGER NOT NULL, " +
                 "FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) " +
@@ -249,9 +249,10 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         // 2) 세차 항목 이관 — 같은 차에 같은 이름이 중복돼 있어도 하나로 합친다.
         db.execSQL(
             """
-            INSERT INTO care_items (carId, name, intervalMonths, intervalWashCount, isActive)
+            INSERT INTO care_items (carId, name, intervalDays, intervalWashCount, isActive)
             SELECT s.carId, $normalizedName AS careName,
-                   MAX(s.intervalMonths), NULL, MAX(s.isActive)
+                   -- 옛 정비 주기는 개월 단위였다 → 일로 환산(1개월 = 30일)
+                   MAX(s.intervalMonths) * 30, NULL, MAX(s.isActive)
             FROM car_maintenance_settings s
             JOIN maintenance_types t ON t.id = s.maintenanceTypeId
             WHERE $careNameCondition

@@ -23,12 +23,12 @@ class CareCycleTest {
         name: String,
         itemId: Long? = 1L,
         washCount: Int? = null,
-        months: Int? = null
+        days: Int? = null
     ) = CarePickItem(
         name = name,
         enabled = itemId != null,
         itemId = itemId,
-        intervalMonths = months,
+        intervalDays = days,
         intervalWashCount = washCount
     )
 
@@ -44,7 +44,7 @@ class CareCycleTest {
     }
 
     @Test
-    fun `카운터 기준인 세차 자체는 주기가 없으면 제외된다`() {
+    fun `카운터 기준인 기본 세차는 주기가 없으면 제외된다`() {
         val cycles = buildCareCycles(
             items = listOf(item("세차")),
             washDates = listOf("2026-08-01"),
@@ -105,20 +105,20 @@ class CareCycleTest {
     @Test
     fun `기간 주기 - 마지막 기록 기준 남은 일수`() {
         val c = buildCareCycles(
-            items = listOf(item("유리막 코팅", months = 6)),
+            items = listOf(item("유리막 코팅", days = 180)),
             washDates = emptyList(),
             lastByName = mapOf("유리막 코팅" to "2026-06-27"),
             today = today
         ).single()
         assertEquals(CareCycleUnit.MONTHS, c.unit)
-        assertEquals("138일 남음", c.remainText)
+        assertEquals("135일 남음", c.remainText)
         assertFalse(c.isOverdue)
     }
 
     @Test
     fun `기간 주기 - 기록이 없으면 진행도를 만들지 않는다`() {
         val c = buildCareCycles(
-            items = listOf(item("유리막 코팅", months = 6)),
+            items = listOf(item("유리막 코팅", days = 180)),
             washDates = emptyList(),
             lastByName = emptyMap(),
             today = today
@@ -133,7 +133,7 @@ class CareCycleTest {
         val cycles = buildCareCycles(
             items = listOf(
                 item("왁스 코팅", itemId = 1L, washCount = 2),
-                item("유리막 코팅", itemId = 2L, months = 1)
+                item("유리막 코팅", itemId = 2L, days = 30)
             ),
             washDates = listOf("2026-08-01", "2026-08-05"),
             lastByName = mapOf("왁스 코팅" to "2026-07-10", "유리막 코팅" to "2026-01-01"),

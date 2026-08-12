@@ -63,14 +63,14 @@ class CareLegacyBackupTest {
         // 옛 이름은 새 항목 이름으로 정규화된다 — 그대로 두면 기본 '세차'와 중복되고
         // 과거 기록이 세차 카운터에 잡히지 않는다.
         assertEquals(
-            listOf("세차", "왁스 코팅"),
+            listOf("세차", "왁스코팅"),
             converted.careItems.map { it.name }
         )
         assertEquals(2, converted.careRecords.size)
 
         // 주기·활성 상태·기록 내용이 보존된다
         val wash = converted.careItems.first { it.name == "세차" }
-        assertEquals(1, wash.intervalMonths)
+        assertEquals(30, wash.intervalDays) // 옛 1개월 주기 → 30일
         assertTrue(wash.isActive)
 
         val washRecord = converted.careRecords.first { it.careItemId == wash.id }
@@ -94,7 +94,7 @@ class CareLegacyBackupTest {
         )
 
         val converted = mixed.withLegacyCareConverted()
-        assertEquals(listOf("세차", "왁스 코팅"), converted.careItems.map { it.name })
+        assertEquals(listOf("세차", "왁스코팅"), converted.careItems.map { it.name })
 
         val washId = converted.careItems.first { it.name == "세차" }.id
         assertEquals(2, converted.careRecords.count { it.careItemId == washId })

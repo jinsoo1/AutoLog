@@ -29,7 +29,7 @@ class CareRepositoryImpl @Inject constructor(
                         name = it,
                         enabled = false,
                         itemId = null,
-                        intervalMonths = null,
+                        intervalDays = null,
                         intervalWashCount = null
                     )
                 }
@@ -135,7 +135,7 @@ class CareRepositoryImpl @Inject constructor(
         name = name,
         enabled = isActive,
         itemId = id.takeIf { isActive },
-        intervalMonths = intervalMonths,
+        intervalDays = intervalDays,
         intervalWashCount = intervalWashCount
     )
 

@@ -34,8 +34,8 @@ data class CareItemEntity(
     val carId: Long,
     val name: String,
 
-    /** N개월마다 */
-    val intervalMonths: Int? = null,
+    /** N일마다. 개월이 아니라 일 단위 — "45일마다"처럼 세밀하게 정할 수 있어야 한다 */
+    val intervalDays: Int? = null,
 
     /**
      * 세차 N회마다. km·개월로 표현할 수 없는 단위라 세차에만 있다

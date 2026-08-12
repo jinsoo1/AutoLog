@@ -8,7 +8,18 @@ import java.time.temporal.ChronoUnit
  * 전부 순수 함수라 단위 테스트로 지킨다.
  */
 
-/** 이름에 '세차'가 들어가면 세차 기록 — 경과일 히어로의 기준 */
+/**
+ * 경과일·세차 횟수 카운터의 기준이 되는 기본 항목 이름.
+ *
+ * 이름으로 "세차류"를 판정하면 '실내세차'까지 카운터에 잡혀서
+ * "세차한 지 N일"과 "세차 3회마다"가 흔들린다 — 기준은 이 항목 하나로 고정한다.
+ */
+const val BASE_WASH_NAME = "세차"
+
+/**
+ * 이름에 '세차'가 들어가는지 — **레거시 전용**.
+ * v3→v4 마이그레이션과 구버전 백업 변환에서 옛 정비 항목을 골라낼 때만 쓴다.
+ */
 fun isWashName(name: String): Boolean = name.contains("세차")
 
 data class CareOverview(
@@ -27,7 +38,7 @@ fun buildCareOverview(
     today: LocalDate
 ): CareOverview {
     val washes = careRecords
-        .filter { isWashName(it.itemName) && it.performedAt != null }
+        .filter { it.itemName == BASE_WASH_NAME && it.performedAt != null }
         .sortedBy { it.performedAt }
 
     val last = washes.lastOrNull()
@@ -72,7 +83,7 @@ fun upkeepLines(
     today: LocalDate
 ): List<Pair<String, Int>> =
     careRecords
-        .filter { !isWashName(it.itemName) && it.performedAt != null }
+        .filter { it.itemName != BASE_WASH_NAME && it.performedAt != null }
         .groupBy { it.itemName }
         .mapNotNull { (name, records) ->
             records.mapNotNull { it.performedAt?.toLocalDateOrNull() }.maxOrNull()

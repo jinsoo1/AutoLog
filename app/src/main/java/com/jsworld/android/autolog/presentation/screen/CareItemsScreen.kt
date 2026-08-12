@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,12 +53,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.data.repository.DefaultCareItems
-import com.jsworld.android.autolog.domain.model.CARE_MONTH_OPTIONS
+import com.jsworld.android.autolog.domain.model.CARE_DAY_OPTIONS
 import com.jsworld.android.autolog.domain.model.CARE_WASH_COUNT_OPTIONS
+import com.jsworld.android.autolog.domain.model.careDaysLabel
 import com.jsworld.android.autolog.domain.model.CareCycleUnit
 import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.presentation.viewModel.CareDetailViewModel
@@ -236,8 +239,8 @@ private fun CareItemCard(
                                 when {
                                     item.intervalWashCount != null ->
                                         "세차 ${item.intervalWashCount}회마다"
-                                    item.intervalMonths != null ->
-                                        "${item.intervalMonths}개월마다"
+                                    item.intervalDays != null ->
+                                        "${careDaysLabel(item.intervalDays)}마다"
                                     else -> "주기 설정"
                                 },
                                 style = MaterialTheme.typography.labelMedium
@@ -321,13 +324,20 @@ private fun CareIntervalSheet(
         mutableStateOf(
             when {
                 item.intervalWashCount != null -> CareCycleUnit.WASH_COUNT
-                item.intervalMonths != null -> CareCycleUnit.MONTHS
+                item.intervalDays != null -> CareCycleUnit.MONTHS
                 else -> CareCycleUnit.WASH_COUNT
             }
         )
     }
-    var washCount by rememberSaveable(item.name) { mutableStateOf(item.intervalWashCount ?: 3) }
-    var months by rememberSaveable(item.name) { mutableStateOf(item.intervalMonths ?: 6) }
+    // 값 자체를 상태로 둔다 — 칩은 값과 같을 때만 선택 표시되고, 직접 입력도 같은 값을 고친다.
+    var washCountText by rememberSaveable(item.name) {
+        mutableStateOf((item.intervalWashCount ?: 3).toString())
+    }
+    var daysText by rememberSaveable(item.name) {
+        mutableStateOf((item.intervalDays ?: 180).toString())
+    }
+    val washCount = washCountText.toIntOrNull()
+    val days = daysText.toIntOrNull()
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -368,14 +378,30 @@ private fun CareIntervalSheet(
                         CARE_WASH_COUNT_OPTIONS.forEach { n ->
                             FilterChip(
                                 selected = washCount == n,
-                                onClick = { washCount = n },
+                                onClick = { washCountText = n.toString() },
                                 label = { Text("${n}회") }
                             )
                         }
                     }
                     Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = washCountText,
+                        onValueChange = { input ->
+                            washCountText = input.filter { it.isDigit() }.take(3)
+                        },
+                        label = { Text("직접 입력") },
+                        suffix = { Text("회마다") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요.",
+                        if (washCount != null && washCount > 0) {
+                            "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요."
+                        } else {
+                            "1 이상의 횟수를 입력해주세요."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -383,17 +409,35 @@ private fun CareIntervalSheet(
 
                 CareCycleUnit.MONTHS -> {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        CARE_MONTH_OPTIONS.forEach { m ->
+                        CARE_DAY_OPTIONS.forEach { d ->
                             FilterChip(
-                                selected = months == m,
-                                onClick = { months = m },
-                                label = { Text("${m}개월") }
+                                selected = days == d,
+                                onClick = { daysText = d.toString() },
+                                label = { Text(careDaysLabel(d)) }
                             )
                         }
                     }
                     Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = daysText,
+                        onValueChange = { input ->
+                            daysText = input.filter { it.isDigit() }.take(4)
+                        },
+                        label = { Text("직접 입력") },
+                        suffix = { Text("일마다") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "마지막 ${item.name} 기록에서 ${months}개월이 기준이 돼요.",
+                        if (days != null && days > 0) {
+                            "마지막 ${item.name} 기록에서 ${days}일" +
+                                (careDaysLabel(days).takeIf { it != "${days}일" }?.let { "($it)" } ?: "") +
+                                "이 기준이 돼요."
+                        } else {
+                            "1 이상의 일수를 입력해주세요."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -413,9 +457,14 @@ private fun CareIntervalSheet(
                 onClick = {
                     when (unit) {
                         CareCycleUnit.WASH_COUNT -> onSave(null, washCount)
-                        CareCycleUnit.MONTHS -> onSave(months, null)
+                        CareCycleUnit.MONTHS -> onSave(days, null)
                         CareCycleUnit.NONE -> onSave(null, null)
                     }
+                },
+                enabled = when (unit) {
+                    CareCycleUnit.WASH_COUNT -> washCount != null && washCount > 0
+                    CareCycleUnit.MONTHS -> days != null && days > 0
+                    CareCycleUnit.NONE -> true
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

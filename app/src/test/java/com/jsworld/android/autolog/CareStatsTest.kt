@@ -29,6 +29,16 @@ class CareStatsTest {
     }
 
     @Test
+    fun `실내세차는 카운터에 잡히지 않는다 - 기준은 기본 세차 하나`() {
+        // 이름으로 "세차류"를 세면 실내세차까지 잡혀 "세차한 지 N일"이 흔들린다.
+        val o = buildCareOverview(
+            listOf(record("실내세차", "2026-08-10"), record("세차", "2026-07-30")),
+            today
+        )
+        assertEquals(12, o.daysSinceWash) // 7/30 기준 — 8/10 실내세차는 무시
+    }
+
+    @Test
     fun `경과일은 마지막 세차 기준`() {
         val o = buildCareOverview(
             listOf(record("세차", "2026-07-30"), record("세차", "2026-07-10")),

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "bff418f8de888d9cc2c284056c0d1a83",
+    "identityHash": "5f88fd75828772239b0c3ceb2b0d85c4",
     "entities": [
       {
         "tableName": "cars",
@@ -466,7 +466,7 @@
       },
       {
         "tableName": "care_items",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `name` TEXT NOT NULL, `intervalMonths` INTEGER, `intervalWashCount` INTEGER, `isActive` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `name` TEXT NOT NULL, `intervalDays` INTEGER, `intervalWashCount` INTEGER, `isActive` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -487,8 +487,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "intervalMonths",
-            "columnName": "intervalMonths",
+            "fieldPath": "intervalDays",
+            "columnName": "intervalDays",
             "affinity": "INTEGER"
           },
           {
@@ -620,7 +620,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bff418f8de888d9cc2c284056c0d1a83')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5f88fd75828772239b0c3ceb2b0d85c4')"
     ]
   }
 }
