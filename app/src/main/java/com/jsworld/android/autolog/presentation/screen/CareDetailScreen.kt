@@ -92,14 +92,13 @@ import java.time.ZoneId
 fun CareDetailScreen(
     carId: Long,
     onBack: () -> Unit,
+    onManageItems: (Long) -> Unit,
     viewModel: CareDetailViewModel = hiltViewModel()
 ) {
     val records by viewModel.careRecordsState(carId).collectAsState()
     val pickItems by viewModel.carePickItemsState(carId).collectAsState()
 
     var showSheet by rememberSaveable { mutableStateOf(false) }
-    var showItemSheet by rememberSaveable { mutableStateOf(false) }
-    var intervalTarget by rememberSaveable { mutableStateOf<Long>(-1L) }
     // 저장 직후 "이번엔 왁스도 할 때예요" 안내 — 푸시가 아니라 화면 안 배너
     var nudge by remember { mutableStateOf<List<CareCycleProgress>>(emptyList()) }
     // 넛지에서 '왁스도 기록'을 누르면 그 항목이 미리 선택된 시트가 열린다
@@ -199,7 +198,7 @@ fun CareDetailScreen(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .clickable { showItemSheet = true }
+                            .clickable { onManageItems(carId) }
                             .padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
@@ -231,7 +230,8 @@ fun CareDetailScreen(
                 }
             } else {
                 items(items = cycles, key = { it.itemId }) { cycle ->
-                    CareCycleCard(cycle = cycle, onClick = { intervalTarget = cycle.itemId })
+                    // 주기 수정은 항목 관리 화면에서 한다(주기 설정이 거기 있다).
+                    CareCycleCard(cycle = cycle, onClick = { onManageItems(carId) })
                 }
             }
 
@@ -289,7 +289,6 @@ fun CareDetailScreen(
     editTarget?.let { target ->
         CareRecordSheet(
             togetherCandidates = emptyList(), // 수정에서는 항목을 바꾸지 않는다
-
             initialName = target.itemName,
             existing = target,
             onDismiss = { editTarget = null },
@@ -302,34 +301,6 @@ fun CareDetailScreen(
         )
     }
 
-    if (showItemSheet) {
-        CareItemsSheet(
-            items = pickItems,
-            onToggle = { name, enabled -> viewModel.setItemEnabled(carId, name, enabled) },
-            onAdd = { name -> viewModel.setItemEnabled(carId, name, true) },
-            onEditInterval = { itemId ->
-                showItemSheet = false
-                intervalTarget = itemId
-            },
-            onDismiss = { showItemSheet = false }
-        )
-    }
-
-    intervalTarget.takeIf { it > 0L }?.let { itemId ->
-        val item = pickItems.firstOrNull { it.itemId == itemId }
-        if (item == null) {
-            intervalTarget = -1L
-        } else {
-            CareIntervalSheet(
-                item = item,
-                onSave = { months, washCount ->
-                    viewModel.setInterval(itemId, months, washCount)
-                    intervalTarget = -1L
-                },
-                onDismiss = { intervalTarget = -1L }
-            )
-        }
-    }
 }
 
 /* ───────────────────────── 구성 요소 ───────────────────────── */
@@ -719,123 +690,6 @@ private fun CareItemsSheet(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-            }
-        }
-    }
-}
-
-/** 주기 설정 — 세차 횟수 / 기간 / 없음 */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun CareIntervalSheet(
-    item: CarePickItem,
-    onSave: (months: Int?, washCount: Int?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // 초기 단위 — 저장된 값이 있으면 그 단위, 없으면 세차 횟수를 권한다.
-    var unit by rememberSaveable(item.name) {
-        mutableStateOf(
-            when {
-                item.intervalWashCount != null -> CareCycleUnit.WASH_COUNT
-                item.intervalMonths != null -> CareCycleUnit.MONTHS
-                else -> CareCycleUnit.WASH_COUNT
-            }
-        )
-    }
-    var washCount by rememberSaveable(item.name) { mutableStateOf(item.intervalWashCount ?: 3) }
-    var months by rememberSaveable(item.name) { mutableStateOf(item.intervalMonths ?: 6) }
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
-        ) {
-            Text(
-                "${item.name} 주기",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(10.dp))
-
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = unit == CareCycleUnit.WASH_COUNT,
-                    onClick = { unit = CareCycleUnit.WASH_COUNT },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
-                ) { Text("세차 횟수") }
-                SegmentedButton(
-                    selected = unit == CareCycleUnit.MONTHS,
-                    onClick = { unit = CareCycleUnit.MONTHS },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
-                ) { Text("기간") }
-                SegmentedButton(
-                    selected = unit == CareCycleUnit.NONE,
-                    onClick = { unit = CareCycleUnit.NONE },
-                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
-                ) { Text("없음") }
-            }
-            Spacer(Modifier.height(12.dp))
-
-            when (unit) {
-                CareCycleUnit.WASH_COUNT -> {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        CARE_WASH_COUNT_OPTIONS.forEach { n ->
-                            FilterChip(
-                                selected = washCount == n,
-                                onClick = { washCount = n },
-                                label = { Text("${n}회") }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                CareCycleUnit.MONTHS -> {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        CARE_MONTH_OPTIONS.forEach { m ->
-                            FilterChip(
-                                selected = months == m,
-                                onClick = { months = m },
-                                label = { Text("${m}개월") }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "마지막 ${item.name} 기록에서 ${months}개월이 기준이 돼요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                CareCycleUnit.NONE -> {
-                    Text(
-                        "주기 없이 기록만 남겨요. 진행도는 표시되지 않습니다.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    when (unit) {
-                        CareCycleUnit.WASH_COUNT -> onSave(null, washCount)
-                        CareCycleUnit.MONTHS -> onSave(months, null)
-                        CareCycleUnit.NONE -> onSave(null, null)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("저장", fontWeight = FontWeight.Bold)
             }
         }
     }

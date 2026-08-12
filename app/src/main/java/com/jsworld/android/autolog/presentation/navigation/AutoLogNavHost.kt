@@ -35,6 +35,7 @@ import com.jsworld.android.autolog.presentation.screen.CarDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CarListScreen
 import com.jsworld.android.autolog.presentation.component.CarSwitcherSheet
 import com.jsworld.android.autolog.presentation.screen.CareDetailScreen
+import com.jsworld.android.autolog.presentation.screen.CareItemsScreen
 import com.jsworld.android.autolog.presentation.screen.ReportScreen
 import com.jsworld.android.autolog.presentation.screen.CarMaintenanceItemPickerScreen
 import com.jsworld.android.autolog.presentation.screen.EditCarScreen
@@ -241,6 +242,20 @@ fun AutoLogNavHost(
             val carId = entry.arguments!!.getLong("carId")
             CareDetailScreen(
                 carId = carId,
+                onBack = { navController.popBackStack() },
+                onManageItems = { id ->
+                    navController.navigate(Routes.careItems(id)) { launchSingleTop = true }
+                }
+            )
+        }
+
+        // 세차·관리 항목 관리
+        composable(
+            route = Routes.CARE_ITEMS,
+            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+        ) { entry ->
+            CareItemsScreen(
+                carId = entry.arguments!!.getLong("carId"),
                 onBack = { navController.popBackStack() }
             )
         }
