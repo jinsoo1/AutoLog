@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.ExpenseInsight
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
@@ -171,9 +172,10 @@ fun ReportScreen(
         val current = loaded.firstOrNull { it.month.toString() == selectedMonth } ?: loaded.last()
         val years = loaded.map { it.month.year }.distinct()
 
-        // 지출 내역 리스트·주유 요약용 원본 기록
+        // 지출 내역 리스트·주유 요약용 원본 기록 (세차는 별도 테이블)
         val fuelRecords by viewModel.fuelRecordsState(car.id).collectAsState()
         val maintRecords by viewModel.maintenanceRecordsState(car.id).collectAsState()
+        val careRecords by viewModel.careRecordsState(car.id).collectAsState()
 
         // 다가오는 지출 카드용 — 임박·초과 항목 + 항목별 지난 교체 비용.
         // 기록 없는 항목은 가짜 초과라 제외한다(홈·알림과 같은 원칙).
@@ -221,6 +223,7 @@ fun ReportScreen(
                 val isLatestMonth = monthKey == monthKeys.last()
                 val monthFuel = fuelRecords.filter { it.filledAt.startsWith(monthKey) }
                 val monthMaint = maintRecords.filter { it.serviceDate?.startsWith(monthKey) == true }
+                val monthCare = careRecords.filter { it.performedAt?.startsWith(monthKey) == true }
                 val prevMonthKey = current.month.minusMonths(1).toString()
                 val prevMonthFuel = fuelRecords.filter { it.filledAt.startsWith(prevMonthKey) }
 
@@ -241,7 +244,7 @@ fun ReportScreen(
                     val prev = loaded.getOrNull(monthKeys.indexOf(current.month.toString()) - 1)
                     // 증가 원인을 항목명으로 짚기 위한 이번 달 최대 정비·수리 지출
                     val topMaint = monthMaint
-                        .filter { !it.isCare && (it.cost ?: 0) > 0 }
+                        .filter { (it.cost ?: 0) > 0 }
                         .maxByOrNull { it.cost!! }
                     TotalCard(
                         title = "${current.month.monthValue}월 총지출",
@@ -292,7 +295,7 @@ fun ReportScreen(
                     item { FuelSummaryCard(monthFuel, prevMonthFuel) }
                 }
 
-                val entries = buildMonthEntries(monthFuel, monthMaint)
+                val entries = buildMonthEntries(monthFuel, monthMaint, monthCare)
                 if (entries.isNotEmpty()) {
                     item { SectionLabel("지출 내역 · ${entries.size}건") }
                     item {
@@ -357,6 +360,7 @@ fun ReportScreen(
                 val prevYearPrefix = "${selectedYear - 1}-"
                 val yearFuel = fuelRecords.filter { it.filledAt.startsWith(yearPrefix) }
                 val yearMaint = maintRecords.filter { it.serviceDate?.startsWith(yearPrefix) == true }
+                val yearCare = careRecords.filter { it.performedAt?.startsWith(yearPrefix) == true }
                 val prevYearFuel = fuelRecords.filter { it.filledAt.startsWith(prevYearPrefix) }
 
                 item {
@@ -374,7 +378,7 @@ fun ReportScreen(
                         .filter { it.month.year == selectedYear - 1 }
                         .takeIf { it.isNotEmpty() }
                         ?.sumOf { it.total }
-                    val yearRepairs = yearMaint.filter { it.isRepair && !it.isCare }
+                    val yearRepairs = yearMaint.filter { it.isRepair }
                     NarrativeCard(
                         buildYearNarrative(
                             yearTotal = yearMonths.sumOf { it.total },
@@ -438,13 +442,14 @@ fun ReportScreen(
                     }
                 }
 
-                val topItems = topSpendItems(yearMaint)
+                val topItems = topSpendItems(yearMaint, yearCare)
                 if (topItems.isNotEmpty()) {
                     item { SectionLabel("항목별 지출 TOP") }
                     item { TopSpendCard(topItems) }
                 }
 
-                val highlights = buildYearHighlights(yearMonths, yearFuel, yearMaint, prevYearFuel)
+                val highlights =
+                    buildYearHighlights(yearMonths, yearFuel, yearMaint, prevYearFuel, yearCare)
                 if (highlights.isNotEmpty()) {
                     item { SectionLabel("올해의 기록") }
                     item { YearHighlightsCard(highlights) }
@@ -1148,7 +1153,8 @@ private data class MonthEntry(
 /** 그 달의 주유·정비·세차 기록을 하나의 지출 내역으로 합친다(최신순) */
 private fun buildMonthEntries(
     fuel: List<FuelRecord>,
-    maint: List<CarMaintenanceRecord>
+    maint: List<CarMaintenanceRecord>,
+    care: List<CareRecord>
 ): List<MonthEntry> {
     val fuelEntries = fuel.map { record ->
         MonthEntry(
@@ -1165,11 +1171,20 @@ private fun buildMonthEntries(
             date = record.serviceDate.orEmpty(),
             title = record.typeName,
             amount = record.cost,
-            kind = if (record.isCare) EntryKind.CARE else EntryKind.MAINT,
+            kind = EntryKind.MAINT,
             isRepair = record.isRepair
         )
     }
-    return (fuelEntries + maintEntries).sortedByDescending { it.date }
+    val careEntries = care.map { record ->
+        MonthEntry(
+            date = record.performedAt.orEmpty(),
+            title = record.itemName +
+                (record.method?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+            amount = record.cost,
+            kind = EntryKind.CARE
+        )
+    }
+    return (fuelEntries + maintEntries + careEntries).sortedByDescending { it.date }
 }
 
 @Composable

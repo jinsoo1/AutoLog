@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.jsworld.android.autolog.data.local.dao.BackupDao
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.CarExportDao
+import com.jsworld.android.autolog.data.local.dao.CareDao
 import com.jsworld.android.autolog.data.local.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.data.local.dao.FuelRecordDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceFullDao
@@ -67,6 +68,9 @@ object DatabaseModule {
     @Provides
     fun provideCarExportDao(db: AutoLogDatabase): CarExportDao =
         db.carExportDao()
+
+    @Provides
+    fun provideCareDao(db: AutoLogDatabase): CareDao = db.careDao()
 
     @Provides
     fun provideFuelRecordDao(db: AutoLogDatabase): FuelRecordDao =

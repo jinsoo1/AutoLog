@@ -56,8 +56,7 @@ fun MaintenanceTypeEntity.toDomain(): MaintenanceType {
         id = id,
         name = name,
         defaultIntervalKm = defaultIntervalKm,
-        defaultIntervalMonths = defaultIntervalMonths,
-        isCare = isCare
+        defaultIntervalMonths = defaultIntervalMonths
     )
 }
 
@@ -66,8 +65,7 @@ fun MaintenanceType.toEntity(): MaintenanceTypeEntity {
         id = id,
         name = name,
         defaultIntervalKm = defaultIntervalKm,
-        defaultIntervalMonths = defaultIntervalMonths,
-        isCare = isCare
+        defaultIntervalMonths = defaultIntervalMonths
     )
 }
 
@@ -78,8 +76,7 @@ fun CarMaintenanceSettingEntity.toDomain(): CarMaintenanceSetting {
         maintenanceTypeId = maintenanceTypeId,
         intervalKm = intervalKm,
         intervalMonths = intervalMonths,
-        isActive = isActive,
-        intervalWashCount = intervalWashCount
+        isActive = isActive
     )
 }
 
@@ -113,10 +110,7 @@ fun SettingOptionRow.toDomain(): SettingOption {
         settingId = settingId,
         typeName = typeName,
         lastServiceDate = lastServiceDate,
-        lastServiceMileage = lastServiceMileage,
-        isCare = isCare,
-        intervalMonths = intervalMonths,
-        intervalWashCount = intervalWashCount
+        lastServiceMileage = lastServiceMileage
     )
 }
 
@@ -131,8 +125,7 @@ fun CarMaintenanceRecordRow.toDomain(): CarMaintenanceRecord {
         place = place,
         cost = cost,
         memo = memo,
-        isRepair = isRepair,
-        isCare = isCare
+        isRepair = isRepair
     )
 }
 

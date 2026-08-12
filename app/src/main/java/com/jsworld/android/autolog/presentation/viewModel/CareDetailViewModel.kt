@@ -2,12 +2,10 @@ package com.jsworld.android.autolog.presentation.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
-import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.data.repository.DefaultCareItems
-import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
-import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
-import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
+import com.jsworld.android.autolog.domain.model.CarePickItem
+import com.jsworld.android.autolog.domain.model.CareRecord
+import com.jsworld.android.autolog.domain.repository.CareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,48 +16,37 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CareDetailViewModel @Inject constructor(
-    private val historyRepository: MaintenanceHistoryRepository,
-    private val carMaintenanceRepository: CarMaintenanceRepository,
-    private val widgetUpdater: WidgetUpdater
+    private val careRepository: CareRepository
 ) : ViewModel() {
 
-    private val recordsMap = mutableMapOf<Long, StateFlow<List<CarMaintenanceRecord>>>()
+    private val recordsMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
+    private val itemsMap = mutableMapOf<Long, StateFlow<List<CarePickItem>>>()
     private val namesMap = mutableMapOf<Long, StateFlow<List<String>>>()
 
     /** 이 차량의 세차·관리 기록 전부(최신순) */
-    fun careRecordsState(carId: Long): StateFlow<List<CarMaintenanceRecord>> =
+    fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =
         recordsMap.getOrPut(carId) {
-            historyRepository.observeCarRecords(carId)
-                .map { list -> list.filter { it.isCare } }
+            careRepository.observeRecords(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
 
     /** 항목 관리 목록 — 기본 제공 + 사용자 추가, 켜짐 여부와 주기 포함 */
     fun carePickItemsState(carId: Long): StateFlow<List<CarePickItem>> =
-        pickItemsMap.getOrPut(carId) {
-            carMaintenanceRepository.observeCarePickItems(carId)
+        itemsMap.getOrPut(carId) {
+            careRepository.observeItems(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
 
-    private val pickItemsMap = mutableMapOf<Long, StateFlow<List<CarePickItem>>>()
-
-    fun setItemEnabled(carId: Long, name: String, enabled: Boolean) {
-        viewModelScope.launch { carMaintenanceRepository.setCareItemEnabled(carId, name, enabled) }
-    }
-
-    fun setInterval(settingId: Long, months: Int?, washCount: Int?) {
-        viewModelScope.launch { carMaintenanceRepository.updateCareInterval(settingId, months, washCount) }
-    }
-
     /**
-     * 기록 시트의 "무엇을" 칩 — 켜져 있는 세차 계열 항목 + 기록에 있던 이름 + 기본 '세차'.
-     * 없는 항목을 고르면 저장 시 이름으로 찾거나 만들어 쓴다(수리와 같은 방식).
+     * 기록 시트의 "무엇을" 칩 — 켜져 있는 항목 + 기본 '세차'.
+     * 켜지 않은 항목이라도 기록하면 저장 시 만들어 켠다.
      */
     fun careNamesState(carId: Long): StateFlow<List<String>> =
         namesMap.getOrPut(carId) {
-            carMaintenanceRepository.observeCareOptions(carId)
-                .map { options ->
-                    (listOf(DefaultCareItems.WASH) + options.map { it.typeName }).distinct()
+            careRepository.observeItems(carId)
+                .map { items ->
+                    (listOf(DefaultCareItems.WASH) +
+                        items.filter { it.enabled }.map { it.name }).distinct()
                 }
                 .stateIn(
                     viewModelScope,
@@ -68,27 +55,48 @@ class CareDetailViewModel @Inject constructor(
                 )
         }
 
+    fun setItemEnabled(carId: Long, name: String, enabled: Boolean) {
+        viewModelScope.launch { careRepository.setItemEnabled(carId, name, enabled) }
+    }
+
+    fun setInterval(itemId: Long, months: Int?, washCount: Int?) {
+        viewModelScope.launch { careRepository.updateInterval(itemId, months, washCount) }
+    }
+
     fun save(
         carId: Long,
         itemName: String,
-        serviceDate: String,
+        performedAt: String,
         cost: Int?,
+        method: String?,
         place: String?,
         memo: String?,
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
-            // 이름으로 항목을 찾거나(켜져 있으면 재사용) 주기 없는 항목으로 만든다.
-            val settingId = carMaintenanceRepository.getOrCreateRepairSetting(carId, itemName)
-            carMaintenanceRepository.insertHistory(
-                settingId = settingId,
-                serviceDate = serviceDate,
-                serviceMileage = null,
-                place = place?.trim()?.takeIf { it.isNotBlank() },
-                cost = cost,
-                memo = memo?.trim()?.takeIf { it.isNotBlank() }
-            )
-            widgetUpdater.requestUpdate()
+            careRepository.addRecord(carId, itemName, performedAt, cost, method, place, memo)
+            onDone()
+        }
+    }
+
+    fun update(
+        recordId: Long,
+        performedAt: String,
+        cost: Int?,
+        method: String?,
+        place: String?,
+        memo: String?,
+        onDone: () -> Unit
+    ) {
+        viewModelScope.launch {
+            careRepository.updateRecord(recordId, performedAt, cost, method, place, memo)
+            onDone()
+        }
+    }
+
+    fun delete(recordId: Long, onDone: () -> Unit) {
+        viewModelScope.launch {
+            careRepository.deleteRecord(recordId)
             onDone()
         }
     }

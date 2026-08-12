@@ -21,13 +21,13 @@ class CareCycleTest {
 
     private fun item(
         name: String,
-        settingId: Long? = 1L,
+        itemId: Long? = 1L,
         washCount: Int? = null,
         months: Int? = null
     ) = CarePickItem(
         name = name,
-        enabled = settingId != null,
-        settingId = settingId,
+        enabled = itemId != null,
+        itemId = itemId,
         intervalMonths = months,
         intervalWashCount = washCount
     )
@@ -35,7 +35,7 @@ class CareCycleTest {
     @Test
     fun `주기 없는 항목과 꺼진 항목은 목록에 나오지 않는다`() {
         val cycles = buildCareCycles(
-            items = listOf(item("왁스 코팅"), item("실내 클리닝", settingId = null, washCount = 3)),
+            items = listOf(item("왁스 코팅"), item("실내 클리닝", itemId = null, washCount = 3)),
             washDates = listOf("2026-08-01"),
             lastByName = emptyMap(),
             today = today
@@ -132,8 +132,8 @@ class CareCycleTest {
     fun `넛지는 세차 횟수 주기의 초과 항목만 - 기간 주기는 제외`() {
         val cycles = buildCareCycles(
             items = listOf(
-                item("왁스 코팅", settingId = 1L, washCount = 2),
-                item("유리막 코팅", settingId = 2L, months = 1)
+                item("왁스 코팅", itemId = 1L, washCount = 2),
+                item("유리막 코팅", itemId = 2L, months = 1)
             ),
             washDates = listOf("2026-08-01", "2026-08-05"),
             lastByName = mapOf("왁스 코팅" to "2026-07-10", "유리막 코팅" to "2026-01-01"),
@@ -149,8 +149,8 @@ class CareCycleTest {
     fun `초과 항목이 목록 위로 정렬된다`() {
         val cycles = buildCareCycles(
             items = listOf(
-                item("실내 클리닝", settingId = 1L, washCount = 10),
-                item("왁스 코팅", settingId = 2L, washCount = 2)
+                item("실내 클리닝", itemId = 1L, washCount = 10),
+                item("왁스 코팅", itemId = 2L, washCount = 2)
             ),
             washDates = listOf("2026-08-01", "2026-08-05"),
             lastByName = mapOf("실내 클리닝" to "2026-07-30", "왁스 코팅" to "2026-07-10"),

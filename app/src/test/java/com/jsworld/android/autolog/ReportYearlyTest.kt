@@ -1,6 +1,7 @@
 package com.jsworld.android.autolog
 
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
@@ -20,12 +21,16 @@ class ReportYearlyTest {
         name: String,
         cost: Int?,
         date: String = "2026-03-10",
-        repair: Boolean = false,
-        care: Boolean = false
+        repair: Boolean = false
     ) = CarMaintenanceRecord(
         historyId = 0, settingId = 0, typeId = 0, typeName = name,
         serviceDate = date, serviceMileage = null, place = null,
-        cost = cost, memo = null, isRepair = repair, isCare = care
+        cost = cost, memo = null, isRepair = repair
+    )
+
+    private fun care(name: String, cost: Int?, date: String = "2026-03-10") = CareRecord(
+        id = 0, careItemId = 0, itemName = name,
+        performedAt = date, cost = cost, method = null, place = null, memo = null
     )
 
     private fun fuel(
@@ -84,20 +89,46 @@ class ReportYearlyTest {
     }
 
     @Test
-    fun `항목별 TOP - 같은 항목은 합산되고 금액순 정렬`() {
+    fun `항목별 TOP - 정비와 세차가 합쳐져 금액순으로 정렬된다`() {
         val items = topSpendItems(
-            listOf(
+            yearMaint = listOf(
                 maint("엔진오일", 90_000),
                 maint("타이어 교체", 450_000),
                 maint("엔진오일", 90_000),
-                maint("세차", 20_000, care = true),
                 maint("금액없음", null)
-            )
+            ),
+            yearCare = listOf(care("세차", 20_000))
         )
         assertEquals(listOf("타이어 교체", "엔진오일", "세차"), items.map { it.name })
         assertEquals(180_000L, items[1].total)
         assertEquals(2, items[1].count)
         assertTrue(items[2].isCare)
+    }
+
+    @Test
+    fun `올해의 큰 지출 - 세차 기록도 후보가 된다`() {
+        val h = buildYearHighlights(
+            emptyList(), emptyList(),
+            yearMaint = listOf(maint("엔진오일", 90_000)),
+            yearCare = listOf(care("유리막 코팅", 500_000, date = "2026-06-27"))
+        )
+        assertEquals(
+            "6월 유리막 코팅 · 500,000원",
+            h.find { it.label == "올해의 큰 지출" }?.value
+        )
+    }
+
+    @Test
+    fun `관리 기록 요약 - 세차는 별도 목록에서 센다`() {
+        val h = buildYearHighlights(
+            emptyList(), emptyList(),
+            yearMaint = listOf(maint("엔진오일", 90_000), maint("써모스탯", 150_000, repair = true)),
+            yearCare = listOf(care("세차", 10_000), care("세차", 10_000))
+        )
+        assertEquals(
+            "정비 1건 · 수리 1건 · 세차·관리 2회",
+            h.find { it.label == "관리 기록" }?.value
+        )
     }
 
     @Test

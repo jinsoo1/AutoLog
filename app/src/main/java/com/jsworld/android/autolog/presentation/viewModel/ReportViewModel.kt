@@ -3,11 +3,13 @@ package com.jsworld.android.autolog.presentation.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.SettingLastCost
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
@@ -23,7 +25,8 @@ class ReportViewModel @Inject constructor(
     private val expenseReportRepository: ExpenseReportRepository,
     private val fuelRecordRepository: FuelRecordRepository,
     private val maintenanceHistoryRepository: MaintenanceHistoryRepository,
-    private val carMaintenanceRepository: CarMaintenanceRepository
+    private val carMaintenanceRepository: CarMaintenanceRepository,
+    private val careRepository: CareRepository
 ) : ViewModel() {
 
     // null = 로딩 중, emptyList = 기록 없음 — 빈 상태 화면이 로딩 중에 깜빡이지 않게 구분한다.
@@ -49,6 +52,15 @@ class ReportViewModel @Inject constructor(
             maintenanceHistoryRepository.observeCarRecords(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
+
+    /** 지출 내역·연간 통계용 세차 기록 (별도 테이블) */
+    fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =
+        careMap.getOrPut(carId) {
+            careRepository.observeRecords(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val careMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
 
     /** 다가오는 지출 카드용 — 임박·초과 항목 */
     fun urgentState(carId: Long): StateFlow<List<MaintenanceUiModel>> =

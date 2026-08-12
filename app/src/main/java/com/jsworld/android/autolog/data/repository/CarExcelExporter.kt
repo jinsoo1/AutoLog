@@ -64,6 +64,9 @@ class CarExcelExporter @Inject constructor(
             android.util.Log.d("CarExcelExporter", "createFuelSheet start")
             createFuelSheet(workbook, data)
 
+            android.util.Log.d("CarExcelExporter", "createCareSheet start")
+            createCareSheet(workbook, data)
+
             android.util.Log.d("CarExcelExporter", "write workbook start")
 
             context.contentResolver.openOutputStream(outputUri)?.use { outputStream ->
@@ -594,6 +597,40 @@ class CarExcelExporter @Inject constructor(
         sheet.setColumnWidth(5, 16 * 256) // 단가
         sheet.setColumnWidth(6, 22 * 256) // 주유소
         sheet.setColumnWidth(7, 30 * 256) // 메모
+    }
+
+    /** 세차·관리 기록 — 데이터가 있을 때만 시트를 만든다 */
+    private fun createCareSheet(
+        workbook: XSSFWorkbook,
+        data: CarExportData
+    ) {
+        if (data.careRecords.isEmpty()) return
+
+        val sheet = workbook.createSheet("세차관리기록")
+        val headerStyle = createHeaderStyle(workbook)
+
+        var rowIndex = 0
+        createRow(
+            sheet, rowIndex++,
+            listOf("날짜", "항목", "방식", "장소", "비용(원)", "메모"),
+            headerStyle
+        )
+
+        data.careRecords.forEach { record ->
+            createRow(
+                sheet, rowIndex++,
+                listOf(
+                    record.performedAt ?: "",
+                    record.itemName,
+                    record.method ?: "",
+                    record.place ?: "",
+                    record.cost?.toString() ?: "",
+                    record.memo ?: ""
+                )
+            )
+        }
+
+        setColumnWidths(sheet)
     }
 
     private fun createMaintenanceSettingSheet(

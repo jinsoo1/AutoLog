@@ -12,8 +12,7 @@ data class MonthlyAmountRow(
 data class MaintenanceCostRow(
     @ColumnInfo(name = "month") val month: String,
     @ColumnInfo(name = "typeName") val typeName: String,
-    @ColumnInfo(name = "cost") val cost: Int?,
-    @ColumnInfo(name = "isCare") val isCare: Boolean = false
+    @ColumnInfo(name = "cost") val cost: Int?
 )
 
 /** 주행거리 관측점(날짜, 누적 km) — 월간 주행거리 계산용 */

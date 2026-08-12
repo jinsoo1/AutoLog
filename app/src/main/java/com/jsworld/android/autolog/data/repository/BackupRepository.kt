@@ -76,6 +76,8 @@ class BackupRepository @Inject constructor(
                 maintenanceHistories = backupDao
                     .getAllMaintenanceHistories()
                     .map { it.toBackup() },
+                careItems = backupDao.getAllCareItems().map { it.toBackup() },
+                careRecords = backupDao.getAllCareRecords().map { it.toBackup() },
                 mileageHistories = backupDao
                     .getAllMileageHistories()
                     .map { it.toBackup() },
@@ -139,6 +141,10 @@ class BackupRepository @Inject constructor(
 
             require(it.carId in carIds)
         }
+
+        val careItemIds = backup.careItems.map { it.id }.toSet()
+        backup.careItems.forEach { require(it.carId in carIds) }
+        backup.careRecords.forEach { require(it.careItemId in careItemIds) }
     }
 
     suspend fun restoreBackup(
@@ -148,7 +154,8 @@ class BackupRepository @Inject constructor(
 
             runCatching {
 
-                val backup = readBackup(uri)
+                // v4 이전 백업은 세차가 정비 목록에 섞여 있다 — 새 구조로 옮긴다.
+                val backup = readBackup(uri).withLegacyCareConverted()
 
                 validateBackup(backup)
 
@@ -158,6 +165,8 @@ class BackupRepository @Inject constructor(
                     // 삭제
                     //
 
+                    backupDao.deleteAllCareRecords()
+                    backupDao.deleteAllCareItems()
                     backupDao.deleteAllFuelRecords()
                     backupDao.deleteAllMaintenanceHistories()
                     backupDao.deleteAllMileageHistories()
@@ -201,6 +210,14 @@ class BackupRepository @Inject constructor(
                         backup.fuelRecords.map {
                             it.toEntity()
                         }
+                    )
+
+                    backupDao.insertCareItems(
+                        backup.careItems.map { it.toEntity() }
+                    )
+
+                    backupDao.insertCareRecords(
+                        backup.careRecords.map { it.toEntity() }
                     )
                 }
             }

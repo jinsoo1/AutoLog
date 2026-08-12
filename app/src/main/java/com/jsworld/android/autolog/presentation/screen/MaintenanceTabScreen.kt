@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.buildCareOverview
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.upkeepLines
@@ -145,14 +146,13 @@ fun MaintenanceTabScreen(
                 return@Column
             }
 
-            val allRecords by viewModel.recordsState(car.id).collectAsState()
+            // 세차는 별도 테이블이라 이 기록엔 섞여 있지 않다.
+            val records by viewModel.recordsState(car.id).collectAsState()
 
             // 세차 카드 — 세차 항목이 켜져 있거나 기록이 있을 때만.
             // 세차를 안 쓰는 사용자의 탭은 카드 없이 지금과 완전히 같다.
             val careEnabled by viewModel.careEnabledState(car.id).collectAsState()
-            val careRecords = remember(allRecords) { allRecords.filter { it.isCare } }
-            // 정비 타임라인에서 세차는 빠진다 — 세차 허브가 전담한다.
-            val records = remember(allRecords) { allRecords.filterNot { it.isCare } }
+            val careRecords by viewModel.careRecordsState(car.id).collectAsState()
             if (careEnabled || careRecords.isNotEmpty()) {
                 CareEntryCard(
                     careRecords = careRecords,
@@ -391,7 +391,7 @@ private fun EmptyMessage(title: String, body: String) {
  */
 @Composable
 private fun CareEntryCard(
-    careRecords: List<CarMaintenanceRecord>,
+    careRecords: List<CareRecord>,
     onClick: () -> Unit
 ) {
     val today = remember { LocalDate.now() }

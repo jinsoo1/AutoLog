@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
@@ -21,8 +23,18 @@ class HomeViewModel @Inject constructor(
     private val carMaintenanceRepository: CarMaintenanceRepository,
     private val historyRepository: MaintenanceHistoryRepository,
     private val fuelRecordRepository: FuelRecordRepository,
+    private val careRepository: CareRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
+
+    /** '이번 달 지출' 카드용 세차 기록 — 세차는 별도 테이블이라 따로 가져온다 */
+    fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =
+        careRecordsMap.getOrPut(carId) {
+            careRepository.observeRecords(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val careRecordsMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
 
     // 차량을 전환해도 이미 만든 Flow 를 재사용한다(CarDetailViewModel 과 같은 방식).
     private val overviewMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()

@@ -71,8 +71,12 @@ data class TopSpendItem(
     val isCare: Boolean
 )
 
-fun topSpendItems(yearMaint: List<CarMaintenanceRecord>, limit: Int = 5): List<TopSpendItem> =
-    yearMaint
+fun topSpendItems(
+    yearMaint: List<CarMaintenanceRecord>,
+    yearCare: List<CareRecord> = emptyList(),
+    limit: Int = 5
+): List<TopSpendItem> {
+    val maint = yearMaint
         .filter { (it.cost ?: 0) > 0 }
         .groupBy { it.typeName }
         .map { (name, records) ->
@@ -80,11 +84,22 @@ fun topSpendItems(yearMaint: List<CarMaintenanceRecord>, limit: Int = 5): List<T
                 name = name,
                 count = records.size,
                 total = records.sumOf { it.cost!!.toLong() },
-                isCare = records.any { it.isCare }
+                isCare = false
             )
         }
-        .sortedByDescending { it.total }
-        .take(limit)
+    val care = yearCare
+        .filter { (it.cost ?: 0) > 0 }
+        .groupBy { it.itemName }
+        .map { (name, records) ->
+            TopSpendItem(
+                name = name,
+                count = records.size,
+                total = records.sumOf { it.cost!!.toLong() },
+                isCare = true
+            )
+        }
+    return (maint + care).sortedByDescending { it.total }.take(limit)
+}
 
 /** 올해의 기록 한 줄 */
 data class YearHighlight(val label: String, val value: String)
@@ -99,7 +114,8 @@ fun buildYearHighlights(
     yearMonths: List<MonthlyExpense>,
     yearFuel: List<FuelRecord>,
     yearMaint: List<CarMaintenanceRecord>,
-    prevYearFuel: List<FuelRecord> = emptyList()
+    prevYearFuel: List<FuelRecord> = emptyList(),
+    yearCare: List<CareRecord> = emptyList()
 ): List<YearHighlight> = buildList {
     // 올해 주행 — 지구 환산
     val drivenKm = yearMonths.mapNotNull { it.drivenKm }.sum()
@@ -111,11 +127,19 @@ fun buildYearHighlights(
         add(YearHighlight("올해 주행", "${"%,d".format(drivenKm)}km · $lapText"))
     }
 
-    // 올해의 큰 지출 — 단일 정비·수리 기록 중 최대
-    yearMaint.filter { (it.cost ?: 0) > 0 }.maxByOrNull { it.cost!! }?.let { top ->
-        val month = top.serviceDate?.substring(5, 7)?.toIntOrNull()
+    // 올해의 큰 지출 — 단일 기록 중 최대 (정비·수리·세차 통틀어)
+    val bigCandidates = buildList {
+        yearMaint.filter { (it.cost ?: 0) > 0 }.forEach {
+            add(Triple(it.typeName, it.cost!!, it.serviceDate))
+        }
+        yearCare.filter { (it.cost ?: 0) > 0 }.forEach {
+            add(Triple(it.itemName, it.cost!!, it.performedAt))
+        }
+    }
+    bigCandidates.maxByOrNull { it.second }?.let { (name, cost, date) ->
+        val month = date?.substring(5, 7)?.toIntOrNull()
         val prefix = month?.let { "${it}월 " }.orEmpty()
-        add(YearHighlight("올해의 큰 지출", "$prefix${top.typeName} · ${"%,d".format(top.cost)}원"))
+        add(YearHighlight("올해의 큰 지출", "$prefix$name · ${"%,d".format(cost)}원"))
     }
 
     // 가장 많이 달린 달
@@ -188,10 +212,10 @@ fun buildYearHighlights(
         }
     }
 
-    // 관리 기록 요약 — 세차 항목은 주기가 없어 isRepair 로도 잡히므로 세차를 먼저 뺀다
-    val cares = yearMaint.count { it.isCare }
-    val repairs = yearMaint.count { it.isRepair && !it.isCare }
-    val maints = yearMaint.size - repairs - cares
+    // 관리 기록 요약 — 세차는 별도 테이블이라 그대로 센다
+    val cares = yearCare.size
+    val repairs = yearMaint.count { it.isRepair }
+    val maints = yearMaint.size - repairs
     val parts = buildList {
         if (maints > 0) add("정비 ${maints}건")
         if (repairs > 0) add("수리 ${repairs}건")

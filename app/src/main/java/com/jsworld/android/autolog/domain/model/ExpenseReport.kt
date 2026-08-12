@@ -31,9 +31,7 @@ data class MonthlyExpense(
 data class ExpenseCostRow(
     val month: String, // "yyyy-MM"
     val typeName: String,
-    val cost: Int?,
-    /** 세차·관리 항목인지(타입 플래그) — 이름 판정은 '실내 클리닝'을 놓친다 */
-    val isCare: Boolean = false
+    val cost: Int?
 )
 
 /** 주행거리 관측점 — 주유 기록·정비 기록·주행거리 업데이트에서 모은다 */
@@ -56,9 +54,12 @@ object ExpenseReportCalc {
         fuelByMonth: Map<String, Long>,
         maintenanceRows: List<ExpenseCostRow>,
         mileagePoints: List<MileagePoint>,
-        current: YearMonth
+        current: YearMonth,
+        /** 세차·관리는 별도 테이블에서 온다(월 합계 / 금액 미입력 건수) */
+        careByMonth: Map<String, Long> = emptyMap(),
+        careMissingByMonth: Map<String, Int> = emptyMap()
     ): List<MonthlyExpense> {
-        val monthKeys = fuelByMonth.keys + maintenanceRows.map { it.month }
+        val monthKeys = fuelByMonth.keys + maintenanceRows.map { it.month } + careByMonth.keys
         val first = monthKeys.mapNotNull { it.toYearMonthOrNull() }.minOrNull() ?: return emptyList()
 
         val sortedPoints = mileagePoints.sortedBy { it.date }
@@ -68,15 +69,15 @@ object ExpenseReportCalc {
         while (m <= current) {
             val key = "%04d-%02d".format(m.year, m.monthValue)
             val rows = maintenanceRows.filter { it.month == key }
-            val (care, maint) = rows.filter { it.cost != null }
-                .partition { it.isCare }
+            val maint = rows.filter { it.cost != null }
 
             result += MonthlyExpense(
                 month = m,
                 fuelCost = fuelByMonth[key] ?: 0L,
                 maintenanceCost = maint.sumOf { it.cost!!.toLong() },
-                careCost = care.sumOf { it.cost!!.toLong() },
-                missingCostCount = rows.count { it.cost == null },
+                careCost = careByMonth[key] ?: 0L,
+                missingCostCount = rows.count { it.cost == null } +
+                    (careMissingByMonth[key] ?: 0),
                 drivenKm = drivenKmIn(m, sortedPoints)
             )
             m = m.plusMonths(1)

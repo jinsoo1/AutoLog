@@ -64,8 +64,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.CARE_MONTH_OPTIONS
 import com.jsworld.android.autolog.domain.model.CARE_WASH_COUNT_OPTIONS
-import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CareCycleProgress
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.CareCycleUnit
 import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.domain.model.buildCareCycles
@@ -89,7 +89,6 @@ import java.time.ZoneId
 fun CareDetailScreen(
     carId: Long,
     onBack: () -> Unit,
-    onEditHistory: (Long) -> Unit,
     viewModel: CareDetailViewModel = hiltViewModel()
 ) {
     val records by viewModel.careRecordsState(carId).collectAsState()
@@ -103,6 +102,8 @@ fun CareDetailScreen(
     var nudge by remember { mutableStateOf<List<CareCycleProgress>>(emptyList()) }
     // 넛지에서 '왁스도 기록'을 누르면 그 항목이 미리 선택된 시트가 열린다
     var pendingName by remember { mutableStateOf<String?>(null) }
+    // 기록 행을 누르면 그 기록을 수정하는 시트가 열린다
+    var editTarget by remember { mutableStateOf<CareRecord?>(null) }
 
     val today = remember { LocalDate.now() }
     val overview = remember(records) { buildCareOverview(records, today) }
@@ -111,11 +112,11 @@ fun CareDetailScreen(
     val cycles = remember(pickItems, records) {
         buildCareCycles(
             items = pickItems,
-            washDates = records.filter { isWashName(it.typeName) }.mapNotNull { it.serviceDate },
+            washDates = records.filter { isWashName(it.itemName) }.mapNotNull { it.performedAt },
             lastByName = records
-                .filter { it.serviceDate != null }
-                .groupBy { it.typeName }
-                .mapValues { (_, list) -> list.mapNotNull { it.serviceDate }.max() },
+                .filter { it.performedAt != null }
+                .groupBy { it.itemName }
+                .mapValues { (_, list) -> list.mapNotNull { it.performedAt }.max() },
             today = today
         )
     }
@@ -227,8 +228,8 @@ fun CareDetailScreen(
                     }
                 }
             } else {
-                items(items = cycles, key = { it.settingId }) { cycle ->
-                    CareCycleCard(cycle = cycle, onClick = { intervalTarget = cycle.settingId })
+                items(items = cycles, key = { it.itemId }) { cycle ->
+                    CareCycleCard(cycle = cycle, onClick = { intervalTarget = cycle.itemId })
                 }
             }
 
@@ -240,7 +241,7 @@ fun CareDetailScreen(
                             records.forEachIndexed { index, record ->
                                 CareRecordRow(
                                     record = record,
-                                    onClick = { onEditHistory(record.historyId) },
+                                    onClick = { editTarget = record },
                                     showDivider = index != records.lastIndex
                                 )
                             }
@@ -255,16 +256,33 @@ fun CareDetailScreen(
         CareRecordSheet(
             itemNames = itemNames,
             initialName = pendingName,
+            existing = null,
             onDismiss = {
                 showSheet = false
                 pendingName = null
             },
-            onSave = { name, date, cost, place, memo ->
-                viewModel.save(carId, name, date, cost, place, memo) {
+            onDelete = null,
+            onSave = { name, date, cost, method, place, memo ->
+                viewModel.save(carId, name, date, cost, method, place, memo) {
                     showSheet = false
                     pendingName = null
                     // 세차를 기록한 직후에만 — 세차 횟수 주기가 도달한 항목을 알려준다.
                     if (isWashName(name)) nudge = careNudgeCandidates(cycles)
+                }
+            }
+        )
+    }
+
+    editTarget?.let { target ->
+        CareRecordSheet(
+            itemNames = listOf(target.itemName), // 수정에서는 항목을 바꾸지 않는다
+            initialName = target.itemName,
+            existing = target,
+            onDismiss = { editTarget = null },
+            onDelete = { viewModel.delete(target.id) { editTarget = null } },
+            onSave = { _, date, cost, method, place, memo ->
+                viewModel.update(target.id, date, cost, method, place, memo) {
+                    editTarget = null
                 }
             }
         )
@@ -282,15 +300,15 @@ fun CareDetailScreen(
         )
     }
 
-    intervalTarget.takeIf { it > 0L }?.let { settingId ->
-        val item = pickItems.firstOrNull { it.settingId == settingId }
+    intervalTarget.takeIf { it > 0L }?.let { itemId ->
+        val item = pickItems.firstOrNull { it.itemId == itemId }
         if (item == null) {
             intervalTarget = -1L
         } else {
             CareIntervalSheet(
                 item = item,
                 onSave = { months, washCount ->
-                    viewModel.setInterval(settingId, months, washCount)
+                    viewModel.setInterval(itemId, months, washCount)
                     intervalTarget = -1L
                 },
                 onDismiss = { intervalTarget = -1L }
@@ -348,8 +366,8 @@ private fun CareHeroCard(overview: com.jsworld.android.autolog.domain.model.Care
                 overview.lastWash?.let { last ->
                     Text(
                         buildList {
-                            last.serviceDate?.toDisplayDateOrNull()?.let { add(it) }
-                            last.memo?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            last.performedAt?.toDisplayDateOrNull()?.let { add(it) }
+                            last.method?.takeIf { it.isNotBlank() }?.let { add(it) }
                             last.cost?.let { add("${it.formatThousands()}원") }
                         }.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
@@ -396,7 +414,7 @@ private fun CareStatCard(label: String, value: String, modifier: Modifier = Modi
 
 @Composable
 private fun CareRecordRow(
-    record: CarMaintenanceRecord,
+    record: CareRecord,
     onClick: () -> Unit,
     showDivider: Boolean
 ) {
@@ -417,15 +435,15 @@ private fun CareRecordRow(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    record.serviceDate?.toDisplayDateOrNull() ?: "날짜 없음",
+                    record.performedAt?.toDisplayDateOrNull() ?: "날짜 없음",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 // 세차가 아닌 항목(코팅·왁스)은 이름을 함께 보여 구분한다.
-                if (!isWashName(record.typeName)) {
+                if (!isWashName(record.itemName)) {
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        record.typeName,
+                        record.itemName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         fontWeight = FontWeight.Bold
@@ -433,8 +451,9 @@ private fun CareRecordRow(
                 }
             }
             val subtitle = buildList {
-                record.memo?.takeIf { it.isNotBlank() }?.let { add(it) }
+                record.method?.takeIf { it.isNotBlank() }?.let { add(it) }
                 record.place?.takeIf { it.isNotBlank() }?.let { add(it) }
+                record.memo?.takeIf { it.isNotBlank() }?.let { add(it) }
             }.joinToString(" · ")
             if (subtitle.isNotBlank()) {
                 Text(
@@ -617,8 +636,8 @@ private fun CareItemsSheet(
                             )
                         }
                     }
-                    if (item.enabled && item.settingId != null) {
-                        TextButton(onClick = { onEditInterval(item.settingId) }) { Text("주기") }
+                    if (item.enabled && item.itemId != null) {
+                        TextButton(onClick = { onEditInterval(item.itemId) }) { Text("주기") }
                     }
                     Switch(
                         checked = item.enabled,
@@ -757,23 +776,28 @@ private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차", "
 
 /**
  * 3초 기록 시트 — 정비 기록 화면(주행거리·정비소…)은 세차엔 과하다.
- * 무엇을 + 날짜 + 비용 + 장소 + 메모만 받는다.
+ * 무엇을 + 방식 + 날짜 + 비용 + 장소 + 메모만 받는다. existing 이 있으면 수정 모드.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun CareRecordSheet(
     itemNames: List<String>,
     initialName: String?,
+    existing: CareRecord?,
     onDismiss: () -> Unit,
-    onSave: (name: String, date: String, cost: Int?, place: String?, memo: String?) -> Unit
+    onDelete: (() -> Unit)?,
+    onSave: (name: String, date: String, cost: Int?, method: String?, place: String?, memo: String?) -> Unit
 ) {
     var selectedName by rememberSaveable {
         mutableStateOf(initialName ?: itemNames.firstOrNull() ?: "세차")
     }
-    var date by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
-    var costText by rememberSaveable { mutableStateOf("") }
-    var place by rememberSaveable { mutableStateOf("") }
-    var memo by rememberSaveable { mutableStateOf("") }
+    var date by rememberSaveable {
+        mutableStateOf(existing?.performedAt ?: LocalDate.now().toString())
+    }
+    var costText by rememberSaveable { mutableStateOf(existing?.cost?.toString() ?: "") }
+    var method by rememberSaveable { mutableStateOf(existing?.method ?: "") }
+    var place by rememberSaveable { mutableStateOf(existing?.place ?: "") }
+    var memo by rememberSaveable { mutableStateOf(existing?.memo ?: "") }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
 
@@ -784,10 +808,23 @@ private fun CareRecordSheet(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
         ) {
-            Text("세차 기록", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (existing == null) "세차 기록"
+                    else "${existing.itemName} 기록 수정",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text("삭제", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
 
-            if (itemNames.size > 1) {
+            if (existing == null && itemNames.size > 1) {
                 Text(
                     "무엇을 했나요?",
                     style = MaterialTheme.typography.labelMedium,
@@ -805,28 +842,19 @@ private fun CareRecordSheet(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // 방식 프리셋 — 세차일 때만. 누르면 메모에 들어가고, 자유롭게 수정 가능.
+            // 방식 — 전용 필드. 칩으로 고르거나, 그 외 방식은 메모에 적으면 된다.
             if (isWashName(selectedName)) {
                 Text(
-                    "방식 (선택 — 메모에 들어가요)",
+                    "방식 (선택)",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    WASH_METHODS.forEach { method ->
+                    WASH_METHODS.forEach { m ->
                         FilterChip(
-                            selected = memo.startsWith(method),
-                            onClick = {
-                                memo = if (memo.startsWith(method)) {
-                                    memo.removePrefix(method).trimStart(' ', '·').trim()
-                                } else {
-                                    val rest = WASH_METHODS.fold(memo) { acc, m ->
-                                        acc.removePrefix(m).trimStart(' ', '·').trim()
-                                    }
-                                    if (rest.isBlank()) method else "$method · $rest"
-                                }
-                            },
-                            label = { Text(method) }
+                            selected = method == m,
+                            onClick = { method = if (method == m) "" else m },
+                            label = { Text(m) }
                         )
                     }
                 }
@@ -884,6 +912,7 @@ private fun CareRecordSheet(
                         selectedName,
                         date,
                         costText.toIntOrNull(),
+                        method,
                         place,
                         memo
                     )

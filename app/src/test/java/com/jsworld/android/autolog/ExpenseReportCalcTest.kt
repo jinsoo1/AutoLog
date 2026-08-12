@@ -35,23 +35,36 @@ class ExpenseReportCalcTest {
     }
 
     @Test
-    fun `isCare 항목은 관리 비용으로, 나머지는 정비 비용으로 분류된다`() {
+    fun `세차는 별도 테이블에서 관리 비용으로 합쳐진다`() {
         val result = ExpenseReportCalc.build(
             fuelByMonth = emptyMap(),
             maintenanceRows = listOf(
-                // 분류는 이름이 아니라 타입 플래그(isCare)로 한다 — '실내 클리닝'처럼
-                // 키워드가 없는 관리 항목도 세차로 집계되어야 하기 때문.
-                ExpenseCostRow("2026-05", "세차", 20_000, isCare = true),
                 ExpenseCostRow("2026-05", "엔진오일", 80_000),
                 ExpenseCostRow("2026-05", "써모스탯 교체", 150_000)
             ),
             mileagePoints = emptyList(),
-            current = may
+            current = may,
+            careByMonth = mapOf("2026-05" to 20_000L)
         )
         val m = result.single()
         assertEquals(20_000L, m.careCost)
         assertEquals(230_000L, m.maintenanceCost)
         assertEquals(250_000L, m.total)
+    }
+
+    @Test
+    fun `세차만 있는 달도 리포트 기간에 포함되고 금액 미입력도 합산된다`() {
+        val result = ExpenseReportCalc.build(
+            fuelByMonth = emptyMap(),
+            maintenanceRows = emptyList(),
+            mileagePoints = emptyList(),
+            current = may,
+            careByMonth = mapOf("2026-04" to 15_000L),
+            careMissingByMonth = mapOf("2026-04" to 2)
+        )
+        assertEquals(listOf(4, 5), result.map { it.month.monthValue })
+        assertEquals(15_000L, result[0].careCost)
+        assertEquals(2, result[0].missingCostCount)
     }
 
     @Test

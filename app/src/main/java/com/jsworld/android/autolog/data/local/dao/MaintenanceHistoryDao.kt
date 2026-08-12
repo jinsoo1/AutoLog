@@ -101,8 +101,7 @@ interface MaintenanceHistoryDao {
                h.memo          AS memo,
                CASE WHEN s.intervalKm IS NULL AND s.intervalMonths IS NULL
                      AND t.defaultIntervalKm IS NULL AND t.defaultIntervalMonths IS NULL
-                    THEN 1 ELSE 0 END AS isRepair,
-               t.isCare        AS isCare
+                    THEN 1 ELSE 0 END AS isRepair
         FROM maintenance_history h
         JOIN car_maintenance_settings s ON s.id = h.settingId
         JOIN maintenance_types t ON t.id = s.maintenanceTypeId
@@ -118,8 +117,7 @@ interface MaintenanceHistoryDao {
     @Query("""
         SELECT substr(h.serviceDate, 1, 7) AS month,
                t.name AS typeName,
-               h.cost AS cost,
-               t.isCare AS isCare
+               h.cost AS cost
         FROM maintenance_history h
         JOIN car_maintenance_settings s ON s.id = h.settingId
         JOIN maintenance_types t ON t.id = s.maintenanceTypeId

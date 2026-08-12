@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "3139a46e98f336e58fa9c11f76e22cf2",
+    "identityHash": "bff418f8de888d9cc2c284056c0d1a83",
     "entities": [
       {
         "tableName": "cars",
@@ -68,7 +68,7 @@
       },
       {
         "tableName": "maintenance_types",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultIntervalKm` INTEGER, `defaultIntervalMonths` INTEGER, `isCare` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultIntervalKm` INTEGER, `defaultIntervalMonths` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -91,12 +91,6 @@
             "fieldPath": "defaultIntervalMonths",
             "columnName": "defaultIntervalMonths",
             "affinity": "INTEGER"
-          },
-          {
-            "fieldPath": "isCare",
-            "columnName": "isCare",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -119,7 +113,7 @@
       },
       {
         "tableName": "car_maintenance_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `maintenanceTypeId` INTEGER NOT NULL, `intervalKm` INTEGER, `intervalMonths` INTEGER, `isActive` INTEGER NOT NULL, `intervalWashCount` INTEGER, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`maintenanceTypeId`) REFERENCES `maintenance_types`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `maintenanceTypeId` INTEGER NOT NULL, `intervalKm` INTEGER, `intervalMonths` INTEGER, `isActive` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`maintenanceTypeId`) REFERENCES `maintenance_types`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -154,11 +148,6 @@
             "columnName": "isActive",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "intervalWashCount",
-            "columnName": "intervalWashCount",
-            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -474,11 +463,164 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "care_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `name` TEXT NOT NULL, `intervalMonths` INTEGER, `intervalWashCount` INTEGER, `isActive` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carId",
+            "columnName": "carId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intervalMonths",
+            "columnName": "intervalMonths",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "intervalWashCount",
+            "columnName": "intervalWashCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_care_items_carId",
+            "unique": false,
+            "columnNames": [
+              "carId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_care_items_carId` ON `${TABLE_NAME}` (`carId`)"
+          },
+          {
+            "name": "index_care_items_carId_name",
+            "unique": true,
+            "columnNames": [
+              "carId",
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_care_items_carId_name` ON `${TABLE_NAME}` (`carId`, `name`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "cars",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "carId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "care_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `careItemId` INTEGER NOT NULL, `performedAt` TEXT, `cost` INTEGER, `method` TEXT, `place` TEXT, `memo` TEXT, FOREIGN KEY(`careItemId`) REFERENCES `care_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "careItemId",
+            "columnName": "careItemId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "performedAt",
+            "columnName": "performedAt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "method",
+            "columnName": "method",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "place",
+            "columnName": "place",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "memo",
+            "columnName": "memo",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_care_records_careItemId",
+            "unique": false,
+            "columnNames": [
+              "careItemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_care_records_careItemId` ON `${TABLE_NAME}` (`careItemId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "care_items",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "careItemId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3139a46e98f336e58fa9c11f76e22cf2')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bff418f8de888d9cc2c284056c0d1a83')"
     ]
   }
 }

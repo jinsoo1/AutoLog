@@ -132,12 +132,14 @@ fun HomeScreen(
         }
         val isMixed = displayUnits.size > 1
 
-        // 이번 달 지출 = 주유·충전 + 정비·수리·세차(금액 입력된 기록만).
-        // 상세 분해는 리포트 탭이 담당하고, 여기서는 합계만 보여준다.
-        val thisMonthExpense = remember(fuelRecords, records) {
+        // 이번 달 지출 = 주유·충전 + 정비·수리 + 세차(금액 입력된 기록만).
+        // 상세 분해는 리포트가 담당하고, 여기서는 합계만 보여준다.
+        val careRecords by viewModel.careRecordsState(car.id).collectAsState()
+        val thisMonthExpense = remember(fuelRecords, records, careRecords) {
             val prefix = LocalDate.now().let { "%04d-%02d".format(it.year, it.monthValue) }
             fuelRecords.filter { it.filledAt.startsWith(prefix) }.sumOf { it.amount ?: 0 } +
-                records.filter { it.serviceDate?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 }
+                records.filter { it.serviceDate?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 } +
+                careRecords.filter { it.performedAt?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 }
         }
 
         LazyColumn(

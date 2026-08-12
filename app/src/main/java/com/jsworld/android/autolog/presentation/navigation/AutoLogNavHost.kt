@@ -241,12 +241,7 @@ fun AutoLogNavHost(
             val carId = entry.arguments!!.getLong("carId")
             CareDetailScreen(
                 carId = carId,
-                onBack = { navController.popBackStack() },
-                onEditHistory = { historyId ->
-                    navController.navigate("$EDIT_MAINTENANCE_HISTORY/$historyId") {
-                        launchSingleTop = true
-                    }
-                }
+                onBack = { navController.popBackStack() }
             )
         }
 

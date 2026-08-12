@@ -51,8 +51,9 @@ class CareItemTest {
     }
 
     @Test
-    fun `실내 클리닝은 이름만으로는 관리로 안 잡힌다 - 그래서 isCare 플래그가 필요하다`() {
-        // 이름 기반 판정의 한계. DB 플래그(maintenance_types.isCare)로 분류하는 이유다.
+    fun `실내 클리닝은 이름만으로는 세차로 안 잡힌다 - 이름 규칙은 이관·레거시 백업 전용`() {
+        // 이름 판정은 v3→v4 마이그레이션과 구버전 백업 변환에만 쓴다.
+        // 새 데이터의 분류는 테이블 자체(care_items)가 담당한다.
         assertFalse(isCareItemName("실내 클리닝"))
         assertTrue("기본 세차 항목에는 포함돼 있어야 함", "실내 클리닝" in DefaultCareItems.items)
     }

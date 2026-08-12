@@ -1,6 +1,6 @@
 package com.jsworld.android.autolog
 
-import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.buildCareOverview
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.upkeepLines
@@ -15,10 +15,9 @@ class CareStatsTest {
 
     private val today = LocalDate.of(2026, 8, 11)
 
-    private fun record(name: String, date: String?, cost: Int? = null) = CarMaintenanceRecord(
-        historyId = 0, settingId = 0, typeId = 0, typeName = name,
-        serviceDate = date, serviceMileage = null, place = null,
-        cost = cost, memo = null, isRepair = true
+    private fun record(name: String, date: String?, cost: Int? = null) = CareRecord(
+        id = 0, careItemId = 0, itemName = name,
+        performedAt = date, cost = cost, method = null, place = null, memo = null
     )
 
     @Test

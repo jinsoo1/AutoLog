@@ -3,7 +3,6 @@ package com.jsworld.android.autolog.domain.repository
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.domain.model.CarMaintenanceDigest
 import com.jsworld.android.autolog.domain.model.CarMaintenanceSetting
-import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.domain.model.MaintenanceSort
 import com.jsworld.android.autolog.domain.model.MaintenanceStarterPack
 import com.jsworld.android.autolog.domain.model.MaintenanceTypePickUi
@@ -22,21 +21,6 @@ interface CarMaintenanceRepository {
     fun observeMaintenanceOverview(carId: Long): Flow<List<MaintenanceUiModel>>
     fun getSettingsWithHistory(carId: Long): Flow<List<SettingWithHistory>>
     fun observeSettingOptions(carId: Long): Flow<List<SettingOption>>
-
-    /** 세차 허브용 — 이 차량에서 켜져 있는 세차·관리 항목만 */
-    fun observeCareOptions(carId: Long): Flow<List<SettingOption>>
-
-    /** 세차 허브의 항목 목록(기본 제공 + 사용자 추가) — 켜짐 여부와 주기 포함 */
-    fun observeCarePickItems(carId: Long): Flow<List<CarePickItem>>
-
-    /** 세차 항목 켜기/끄기. 이름으로 타입을 찾거나 만든다. */
-    suspend fun setCareItemEnabled(carId: Long, name: String, enabled: Boolean)
-
-    /**
-     * 세차 항목 주기 설정. 둘 다 null 이면 주기 없음(기록 전용).
-     * 세차 횟수와 기간은 배타적으로 쓰지만, 저장 자체는 각각 독립이다.
-     */
-    suspend fun updateCareInterval(settingId: Long, months: Int?, washCount: Int?)
     suspend fun insertHistory(
         settingId: Long,
         serviceDate: String?,

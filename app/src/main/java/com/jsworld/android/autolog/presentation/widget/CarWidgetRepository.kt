@@ -49,9 +49,6 @@ class CarWidgetRepository @Inject constructor(
             val setting = item.setting
             val type = typeMap[setting.maintenanceTypeId] ?: return@mapNotNull null
 
-            // 세차·관리는 정비 시스템에서 분리됐다 — 위젯에도 넣지 않는다.
-            if (type.isCare) return@mapNotNull null
-
             val intervalKm = setting.intervalKm ?: type.defaultIntervalKm
             val intervalMonths = setting.intervalMonths ?: type.defaultIntervalMonths
             if (intervalKm == null && intervalMonths == null) return@mapNotNull null

@@ -15,7 +15,5 @@ data class CarMaintenanceRecord(
     val cost: Int?,
     val memo: String?,
     /** 주기 없는 항목의 기록 = 일회성 수리. 타임라인에서 배지로 구분한다. */
-    val isRepair: Boolean = false,
-    /** 세차·관리 항목의 기록인지(타입 플래그 기준) */
-    val isCare: Boolean = false
+    val isRepair: Boolean = false
 )

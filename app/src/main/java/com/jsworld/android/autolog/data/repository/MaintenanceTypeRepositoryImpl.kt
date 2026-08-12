@@ -60,14 +60,6 @@ class MaintenanceTypeRepositoryImpl @Inject constructor(
                 defaultIntervalKm = pair.first,
                 defaultIntervalMonths = pair.second
             )
-        } + DefaultCareItems.items.map { name ->
-            // 세차·관리 항목 — 주기 없이 시딩하고, 주기는 세차 허브에서 사용자가 정한다.
-            MaintenanceTypeEntity(
-                name = name,
-                defaultIntervalKm = null,
-                defaultIntervalMonths = null,
-                isCare = true
-            )
         }
         maintenanceTypeDao.insertAll(defaults)
     }

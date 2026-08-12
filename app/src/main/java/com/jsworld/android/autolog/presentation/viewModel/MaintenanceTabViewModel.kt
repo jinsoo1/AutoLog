@@ -3,9 +3,10 @@ package com.jsworld.android.autolog.presentation.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
-import com.jsworld.android.autolog.domain.model.isCareItemName
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.stateIn
 @HiltViewModel
 class MaintenanceTabViewModel @Inject constructor(
     private val historyRepository: MaintenanceHistoryRepository,
-    private val carMaintenanceRepository: CarMaintenanceRepository
+    private val carMaintenanceRepository: CarMaintenanceRepository,
+    private val careRepository: CareRepository
 ) : ViewModel() {
 
     private val recordsMap = mutableMapOf<Long, StateFlow<List<CarMaintenanceRecord>>>()
@@ -29,15 +31,23 @@ class MaintenanceTabViewModel @Inject constructor(
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
 
-    /** 세차 계열 항목이 하나라도 켜져 있는지 — 세차 카드 노출 조건 */
+    /** 세차 항목이 하나라도 켜져 있는지 — 세차 카드 노출 조건 */
     fun careEnabledState(carId: Long): StateFlow<Boolean> =
         careEnabledMap.getOrPut(carId) {
-            carMaintenanceRepository.observeSettingOptions(carId)
-                .map { options -> options.any { isCareItemName(it.typeName) } }
+            careRepository.observeItems(carId)
+                .map { items -> items.any { it.enabled } }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
         }
 
+    /** 세차 카드 내용(경과일·횟수)용 세차 기록 */
+    fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =
+        careRecordsMap.getOrPut(carId) {
+            careRepository.observeRecords(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
     private val careEnabledMap = mutableMapOf<Long, StateFlow<Boolean>>()
+    private val careRecordsMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
 
     /**
      * 주기는 있는데 기록이 하나도 없는 항목들 — 상단 배너와 바텀시트용.

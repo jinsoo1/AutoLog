@@ -15,8 +15,8 @@ import java.time.temporal.ChronoUnit
 data class CarePickItem(
     val name: String,
     val enabled: Boolean,
-    /** 켜져 있을 때만 존재 */
-    val settingId: Long?,
+    /** 켜져 있을 때만 존재 (care_items PK) */
+    val itemId: Long?,
     val intervalMonths: Int?,
     val intervalWashCount: Int?
 )
@@ -25,7 +25,7 @@ enum class CareCycleUnit { WASH_COUNT, MONTHS, NONE }
 
 /** 세차 허브의 '관리 주기' 한 줄 */
 data class CareCycleProgress(
-    val settingId: Long,
+    val itemId: Long,
     val name: String,
     val unit: CareCycleUnit,
     /** 0~1. 주기가 없으면 null */
@@ -57,7 +57,7 @@ fun buildCareCycles(
     val sortedWashes = washDates.distinct().sorted()
 
     return items.mapNotNull { item ->
-        val settingId = item.settingId ?: return@mapNotNull null
+        val itemId = item.itemId ?: return@mapNotNull null
         // 카운터 기준인 '세차' 자체에는 주기를 매기지 않는다(경과일 히어로가 그 역할).
         if (isWashName(item.name) && item.intervalWashCount == null && item.intervalMonths == null) {
             return@mapNotNull null
@@ -74,7 +74,7 @@ fun buildCareCycles(
                 val remaining = n - since
 
                 CareCycleProgress(
-                    settingId = settingId,
+                    itemId = itemId,
                     name = item.name,
                     unit = CareCycleUnit.WASH_COUNT,
                     progress = (since.toFloat() / n).coerceIn(0f, 1f),
@@ -99,7 +99,7 @@ fun buildCareCycles(
                 val lastDate = last?.toLocalDateOrNull()
                 if (lastDate == null) {
                     CareCycleProgress(
-                        settingId = settingId,
+                        itemId = itemId,
                         name = item.name,
                         unit = CareCycleUnit.MONTHS,
                         progress = null,
@@ -114,7 +114,7 @@ fun buildCareCycles(
                     val used = ChronoUnit.DAYS.between(lastDate, today).coerceAtLeast(0)
 
                     CareCycleProgress(
-                        settingId = settingId,
+                        itemId = itemId,
                         name = item.name,
                         unit = CareCycleUnit.MONTHS,
                         progress = (used.toFloat() / total).coerceIn(0f, 1f),

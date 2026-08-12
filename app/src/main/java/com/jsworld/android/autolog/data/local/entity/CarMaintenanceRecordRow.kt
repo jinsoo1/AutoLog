@@ -17,6 +17,5 @@ data class CarMaintenanceRecordRow(
     @ColumnInfo(name = "cost") val cost: Int?,
     @ColumnInfo(name = "memo") val memo: String?,
     /** 주기(차량 설정·기본값 모두)가 없는 항목의 기록 = 일회성 수리 */
-    @ColumnInfo(name = "isRepair") val isRepair: Boolean,
-    @ColumnInfo(name = "isCare") val isCare: Boolean = false
+    @ColumnInfo(name = "isRepair") val isRepair: Boolean
 )
