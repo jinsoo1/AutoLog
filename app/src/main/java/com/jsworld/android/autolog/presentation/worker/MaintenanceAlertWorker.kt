@@ -47,8 +47,21 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val prefs = userPrefsRepository.observeMaintenanceAlertPrefs().first()
         val forceTest = inputData.getBoolean(KEY_FORCE_TEST, false)
+
+        // ⚠️ 설정 읽기가 실패해도 체인은 살려야 한다 — 이 한 번의 실패로 예약이 끊기면
+        // 앱을 다시 열 때까지 알림이 영구히 멈춘다(과거 위젯 갱신 체인에서 겪은 문제).
+        val prefs = runCatching { userPrefsRepository.observeMaintenanceAlertPrefs().first() }
+            .getOrElse { e ->
+                android.util.Log.e(TAG, "prefs read failed — 기본 시각으로 재예약", e)
+                if (!forceTest) {
+                    MaintenanceAlertScheduler.scheduleNext(
+                        applicationContext,
+                        MaintenanceAlertPrefs.DEFAULT_HOUR
+                    )
+                }
+                return Result.success()
+            }
 
         // 꺼져 있으면 체인도 세운다(끌 때 cancel 되지만 경합 대비 안전망).
         if (!prefs.enabled) {

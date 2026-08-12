@@ -230,19 +230,29 @@ private fun CareItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (item.enabled && item.itemId != null) {
+                    val hasCycle = item.intervalWashCount != null || item.intervalDays != null
+
+                    // 현재 주기를 값으로 보여주고(읽기), 칩은 편집 버튼 역할만 한다.
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        when {
+                            item.intervalWashCount != null ->
+                                "주기 · 세차 ${item.intervalWashCount}회마다"
+                            item.intervalDays != null ->
+                                "주기 · ${careDaysLabel(item.intervalDays)}마다"
+                            else -> "주기 없음 · 기록만 남겨요"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (hasCycle) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.outline
+                    )
+
                     Spacer(Modifier.height(4.dp))
-                    // 주기는 버튼처럼 보여야 누른다 — 상태를 담은 칩으로.
                     AssistChip(
                         onClick = onEditInterval,
                         label = {
                             Text(
-                                when {
-                                    item.intervalWashCount != null ->
-                                        "세차 ${item.intervalWashCount}회마다"
-                                    item.intervalDays != null ->
-                                        "${careDaysLabel(item.intervalDays)}마다"
-                                    else -> "주기 설정"
-                                },
+                                if (hasCycle) "주기 변경" else "주기 설정",
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
