@@ -55,7 +55,7 @@ class CareCycleTest {
     }
 
     @Test
-    fun `세차 3회마다 - 마지막 기록 이후 세차 2회면 1회 남음`() {
+    fun `세차 3회마다 - 마지막 기록 이후 세차 2회면 다음 세차 때`() {
         val cycles = buildCareCycles(
             items = listOf(item("실내 클리닝", washCount = 3)),
             washDates = listOf("2026-07-01", "2026-07-20", "2026-08-05"),
@@ -64,9 +64,34 @@ class CareCycleTest {
         )
         val c = cycles.single()
         assertEquals(CareCycleUnit.WASH_COUNT, c.unit)
-        assertEquals("1회 남음", c.remainText)
+        // 1회 남았다 = 다음에 세차할 때 하면 된다
+        assertEquals("다음 세차 때", c.remainText)
         assertFalse(c.isOverdue)
         assertEquals("세차 3회마다 · 마지막 7월 10일", c.caption)
+    }
+
+    @Test
+    fun `매 세차마다 항목 - 같이 한 직후엔 다음 세차 때, 세차만 하면 이번에 할 때`() {
+        // 내부세차처럼 세차할 때마다 하는 항목. 방금 세차와 함께 기록한 상태
+        val justDone = buildCareCycles(
+            items = listOf(item("내부세차", washCount = 1)),
+            washDates = listOf("2026-08-11"),
+            lastByName = mapOf("내부세차" to "2026-08-11"),
+            today = today
+        ).single()
+        assertEquals("다음 세차 때", justDone.remainText)
+        assertFalse(justDone.isOverdue)
+        assertEquals("매 세차마다 · 마지막 8월 11일", justDone.caption)
+
+        // 그 뒤에 세차만 한 번 더 하면 바로 할 때가 된다
+        val due = buildCareCycles(
+            items = listOf(item("내부세차", washCount = 1)),
+            washDates = listOf("2026-08-11", "2026-08-20"),
+            lastByName = mapOf("내부세차" to "2026-08-11"),
+            today = today
+        ).single()
+        assertEquals("이번에 할 때", due.remainText)
+        assertTrue(due.isOverdue)
     }
 
     @Test
@@ -157,5 +182,30 @@ class CareCycleTest {
             today = today
         )
         assertEquals(listOf("왁스 코팅", "실내 클리닝"), cycles.map { it.name })
+    }
+
+    @Test
+    fun `임박한 순 정렬 - 많이 지난 것이 위, 첫 기록 필요는 맨 뒤`() {
+        // 항목이 많아지면 목록을 3개만 남기고 접는다. 그때 위에 남는 게
+        // "지금 할 것"이 되려면 초과 정도까지 순서에 들어가야 한다.
+        val cycles = buildCareCycles(
+            items = listOf(
+                item("첫 기록 항목", itemId = 1L, days = 30),      // 기록 없음 → 맨 뒤
+                item("살짝 지남", itemId = 2L, washCount = 3),      // 4/3 = 1.33
+                item("많이 지남", itemId = 3L, washCount = 2),      // 4/2 = 2.0
+                item("아직 여유", itemId = 4L, washCount = 10)      // 4/10 = 0.4
+            ),
+            washDates = listOf("2026-08-01", "2026-08-03", "2026-08-05", "2026-08-07"),
+            lastByName = mapOf(
+                "살짝 지남" to "2026-07-20",
+                "많이 지남" to "2026-07-20",
+                "아직 여유" to "2026-07-20"
+            ),
+            today = today
+        )
+        assertEquals(
+            listOf("많이 지남", "살짝 지남", "아직 여유", "첫 기록 항목"),
+            cycles.map { it.name }
+        )
     }
 }

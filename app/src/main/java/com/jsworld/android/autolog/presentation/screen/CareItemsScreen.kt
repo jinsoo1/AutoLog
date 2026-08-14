@@ -61,6 +61,7 @@ import com.jsworld.android.autolog.data.repository.DefaultCareItems
 import com.jsworld.android.autolog.domain.model.CARE_DAY_OPTIONS
 import com.jsworld.android.autolog.domain.model.CARE_WASH_COUNT_OPTIONS
 import com.jsworld.android.autolog.domain.model.careDaysLabel
+import com.jsworld.android.autolog.domain.model.careWashCountLabel
 import com.jsworld.android.autolog.domain.model.CareCycleUnit
 import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.presentation.viewModel.CareDetailViewModel
@@ -237,7 +238,7 @@ private fun CareItemCard(
                     Text(
                         when {
                             item.intervalWashCount != null ->
-                                "주기 · 세차 ${item.intervalWashCount}회마다"
+                                "주기 · ${careWashCountLabel(item.intervalWashCount)}"
                             item.intervalDays != null ->
                                 "주기 · ${careDaysLabel(item.intervalDays)}마다"
                             else -> "주기 없음 · 기록만 남겨요"
@@ -408,7 +409,11 @@ private fun CareIntervalSheet(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         if (washCount != null && washCount > 0) {
-                            "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요."
+                            if (washCount == 1) {
+                                "매 세차마다 ${item.name} — 세차를 기록할 때 미리 선택돼 있어요."
+                            } else {
+                                "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요."
+                            }
                         } else {
                             "1 이상의 횟수를 입력해주세요."
                         },

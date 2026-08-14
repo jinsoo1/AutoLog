@@ -35,12 +35,27 @@ data class CareCycleProgress(
     /** 주기를 넘겼는지. 빨간 경고가 아니라 차분한 강조에만 쓴다 */
     val isOverdue: Boolean,
     /** "세차 3회마다 · 마지막 7월 2일" 같은 보조 설명 */
-    val caption: String
+    val caption: String,
+    /**
+     * 정렬용 임박도 — [progress] 와 달리 1을 넘을 수 있다(많이 지날수록 크다).
+     * 항목이 많아지면 목록을 접어야 하는데, 그때 위에 남는 몇 개가
+     * "지금 할 것"이 되려면 초과 정도까지 순서에 반영돼야 한다.
+     * 기록이 없어 계산할 수 없으면 null — 맨 뒤로 보낸다.
+     */
+    val urgency: Float?
 )
 
 /** 빠른 선택지 — 세차 횟수 / 일수. 그 밖의 값은 직접 입력한다. */
 val CARE_WASH_COUNT_OPTIONS = listOf(2, 3, 5, 10)
 val CARE_DAY_OPTIONS = listOf(30, 90, 180, 365)
+
+/**
+ * "세차 3회마다" / "매 세차마다".
+ * 1회 주기는 "세차 1회마다"보다 "매 세차마다"가 사람 말에 가깝다 —
+ * 내부세차처럼 세차할 때 늘 같이 하는 항목이 여기 해당한다.
+ */
+fun careWashCountLabel(n: Int): String =
+    if (n == 1) "매 세차마다" else "세차 ${n}회마다"
 
 /** 30·365의 배수는 친숙한 단위로, 나머지는 일수로 읽어준다 */
 fun careDaysLabel(days: Int): String = when {
@@ -87,19 +102,23 @@ fun buildCareCycles(
                     unit = CareCycleUnit.WASH_COUNT,
                     progress = (since.toFloat() / n).coerceIn(0f, 1f),
                     remainText = when {
-                        remaining > 0 -> "${remaining}회 남음"
+                        remaining > 1 -> "${remaining}회 남음"
+                        // 1회 남았다 = 다음에 세차할 때 하면 된다. '매 세차마다' 항목은
+                        // 방금 같이 한 직후가 늘 이 상태라, 숫자보다 이 말이 정확하다.
+                        remaining == 1 -> "다음 세차 때"
                         remaining == 0 -> "이번에 할 때"
                         else -> "${-remaining}회 지남"
                     },
                     isOverdue = remaining <= 0,
                     caption = buildString {
-                        append("세차 ${n}회마다")
+                        append(careWashCountLabel(n))
                         append(" · ")
                         append(
                             if (last == null) "아직 기록 없음"
                             else "마지막 ${last.toShortDateText()}"
                         )
-                    }
+                    },
+                    urgency = since.toFloat() / n
                 )
             }
 
@@ -113,7 +132,8 @@ fun buildCareCycles(
                         progress = null,
                         remainText = "첫 기록 필요",
                         isOverdue = false,
-                        caption = "${careDaysLabel(item.intervalDays)}마다 · 아직 기록 없음"
+                        caption = "${careDaysLabel(item.intervalDays)}마다 · 아직 기록 없음",
+                        urgency = null
                     )
                 } else {
                     val due = lastDate.plusDays(item.intervalDays.toLong())
@@ -132,14 +152,19 @@ fun buildCareCycles(
                             else -> "${-remainingDays}일 지남"
                         },
                         isOverdue = remainingDays < 0,
-                        caption = "${careDaysLabel(item.intervalDays)}마다 · 마지막 ${lastDate.toShortDateText()}"
+                        caption = "${careDaysLabel(item.intervalDays)}마다 · 마지막 ${lastDate.toShortDateText()}",
+                        urgency = used.toFloat() / total
                     )
                 }
             }
 
             else -> null // 주기 없음 — 기록만 남기는 항목
         }
-    }.sortedWith(compareByDescending<CareCycleProgress> { it.isOverdue }.thenBy { it.name })
+    }
+        // 임박한 순 — 많이 지난 것이 맨 위, 첫 기록이 필요한 항목은 맨 뒤
+        .sortedWith(
+            compareByDescending<CareCycleProgress> { it.urgency ?: -1f }.thenBy { it.name }
+        )
 }
 
 /**
