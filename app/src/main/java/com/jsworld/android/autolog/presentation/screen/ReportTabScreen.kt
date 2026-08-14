@@ -44,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -66,6 +67,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CareRecord
+import com.jsworld.android.autolog.domain.model.buildCareSessions
 import com.jsworld.android.autolog.domain.model.ExpenseInsight
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
@@ -559,7 +561,8 @@ private fun TotalCard(
             if (missingCostCount > 0) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "금액이 입력되지 않은 정비 기록 ${missingCostCount}건은 합계에서 빠져 있어요",
+                    // 정비뿐 아니라 세차·관리 묶음도 함께 세므로 '기록'으로 뭉뚱그린다
+                    "금액이 입력되지 않은 기록 ${missingCostCount}건은 합계에서 빠져 있어요",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1119,7 +1122,9 @@ private data class MonthEntry(
     /** 주기 없는 정비 항목의 기록 = 일회성 수리 (공구 아이콘) */
     val isRepair: Boolean = false,
     /** 충전 기록 (번개 아이콘) */
-    val isElectric: Boolean = false
+    val isElectric: Boolean = false,
+    /** 제목 옆 작은 표식 — 세차 묶음의 '항목 3개' */
+    val badge: String? = null
 )
 
 /** 그 달의 주유·정비·세차 기록을 하나의 지출 내역으로 합친다(최신순) */
@@ -1147,13 +1152,16 @@ private fun buildMonthEntries(
             isRepair = record.isRepair
         )
     }
-    val careEntries = care.map { record ->
+    // 세차와 함께 한 관리는 한 줄로 — 목록에 '세차·왁스·실내'가 따로 쌓이면
+    // 그날 실제로 한 건 한 번인데 지출이 여러 번 있었던 것처럼 보인다.
+    val careEntries = buildCareSessions(care).map { session ->
         MonthEntry(
-            date = record.performedAt.orEmpty(),
-            title = record.itemName +
-                (record.method?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-            amount = record.cost,
-            kind = EntryKind.CARE
+            date = session.performedAt.orEmpty(),
+            title = session.primary.itemName +
+                (session.primary.method?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+            amount = session.totalCost,
+            kind = EntryKind.CARE,
+            badge = if (session.records.size > 1) "항목 ${session.records.size}개" else null
         )
     }
     return (fuelEntries + maintEntries + careEntries).sortedByDescending { it.date }
@@ -1186,11 +1194,28 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
         )
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                entry.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    entry.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                entry.badge?.let { badge ->
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            badge,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
             Text(
                 entry.date.toDisplayDateOrNull() ?: entry.date.ifBlank { "날짜 없음" },
                 style = MaterialTheme.typography.labelSmall,
