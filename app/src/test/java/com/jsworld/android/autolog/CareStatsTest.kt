@@ -2,6 +2,7 @@ package com.jsworld.android.autolog
 
 import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.buildCareOverview
+import com.jsworld.android.autolog.domain.model.buildCareSessions
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.upkeepLines
 import org.junit.Assert.assertEquals
@@ -15,8 +16,10 @@ class CareStatsTest {
 
     private val today = LocalDate.of(2026, 8, 11)
 
+    private var nextId = 1L
+
     private fun record(name: String, date: String?, cost: Int? = null) = CareRecord(
-        id = 0, careItemId = 0, itemName = name,
+        id = nextId++, careItemId = 0, itemName = name,
         performedAt = date, cost = cost, method = null, place = null, memo = null
     )
 
@@ -70,6 +73,58 @@ class CareStatsTest {
             today
         )
         assertTrue(due.isDue)
+    }
+
+    @Test
+    fun `같은 날 기록은 한 묶음 - 세차가 맨 앞`() {
+        val sessions = buildCareSessions(
+            listOf(
+                record("왁스", "2026-08-05"),
+                record("세차", "2026-08-05", 15_000),
+                record("실내 클리닝", "2026-08-05", 5_000),
+                record("세차", "2026-07-30", 8_000)
+            )
+        )
+        assertEquals(2, sessions.size)
+        val first = sessions.first()
+        assertEquals("2026-08-05", first.performedAt)
+        assertEquals(listOf("세차", "왁스", "실내 클리닝"), first.itemNames)
+        assertEquals(20_000, first.totalCost) // 비용 적은 항목만 더한다
+        assertTrue(first.includesWash)
+    }
+
+    @Test
+    fun `비용을 아무도 안 적었으면 묶음 비용은 없다`() {
+        val session = buildCareSessions(
+            listOf(record("세차", "2026-08-05"), record("왁스", "2026-08-05"))
+        ).single()
+        assertNull(session.totalCost)
+    }
+
+    @Test
+    fun `날짜 없는 옛 기록은 묶지 않고 맨 뒤에 둔다`() {
+        val sessions = buildCareSessions(
+            listOf(record("세차", null), record("세차", null), record("세차", "2026-08-05"))
+        )
+        assertEquals(3, sessions.size)
+        assertEquals("2026-08-05", sessions.first().performedAt)
+        assertTrue(sessions.drop(1).all { it.performedAt == null })
+    }
+
+    @Test
+    fun `횟수는 기록 수가 아니라 묶음 수`() {
+        // 8/5 에 세차+왁스+실내를 함께 했어도 "이번 달 1회"다
+        val c = careCounts(
+            listOf(
+                record("세차", "2026-08-05", 15_000),
+                record("왁스", "2026-08-05"),
+                record("실내 클리닝", "2026-08-05", 5_000)
+            ),
+            today
+        )
+        assertEquals(1, c.monthCount)
+        assertEquals(1, c.yearCount)
+        assertEquals(20_000L, c.yearCost) // 비용은 항목별 합계 그대로
     }
 
     @Test

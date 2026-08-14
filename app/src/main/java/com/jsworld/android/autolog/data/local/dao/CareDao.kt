@@ -82,14 +82,25 @@ interface CareDao {
     )
     fun observeMonthlyCost(carId: Long): Flow<List<MonthlyAmountRow>>
 
-    /** 리포트 '금액 미입력 N건' 표기용 */
+    /**
+     * 리포트 '금액 미입력 N건' 표기용.
+     *
+     * 세는 단위는 기록이 아니라 하루 묶음이다 — 세차에 비용을 적고 함께 한 왁스를
+     * 비워두는 게 정상 사용이라, 기록 단위로 세면 멀쩡한 날이 미입력으로 잡힌다.
+     * 그날 아무 항목에도 비용이 없을 때만 1건으로 센다.
+     */
     @Query(
         """
-        SELECT substr(r.performedAt, 1, 7) AS month, COUNT(*) AS total
-        FROM care_records r
-        JOIN care_items i ON i.id = r.careItemId
-        WHERE i.carId = :carId AND r.performedAt IS NOT NULL AND r.cost IS NULL
-        GROUP BY substr(r.performedAt, 1, 7)
+        SELECT month, COUNT(*) AS total FROM (
+            SELECT substr(r.performedAt, 1, 7) AS month,
+                   COUNT(r.cost) AS costed
+            FROM care_records r
+            JOIN care_items i ON i.id = r.careItemId
+            WHERE i.carId = :carId AND r.performedAt IS NOT NULL
+            GROUP BY r.performedAt
+        )
+        WHERE costed = 0
+        GROUP BY month
         """
     )
     fun observeMonthlyMissingCostCount(carId: Long): Flow<List<MonthlyAmountRow>>
