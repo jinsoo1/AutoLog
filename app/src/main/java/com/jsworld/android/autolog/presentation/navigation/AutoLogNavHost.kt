@@ -33,10 +33,8 @@ import com.jsworld.android.autolog.presentation.screen.AddMaintenanceScreen
 import com.jsworld.android.autolog.presentation.screen.AddMaintenanceTypeScreen
 import com.jsworld.android.autolog.presentation.screen.CarDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CarListScreen
-import com.jsworld.android.autolog.presentation.component.CarSwitcherSheet
 import com.jsworld.android.autolog.presentation.screen.CareDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CareItemsScreen
-import com.jsworld.android.autolog.presentation.screen.ReportScreen
 import com.jsworld.android.autolog.presentation.screen.CarMaintenanceItemPickerScreen
 import com.jsworld.android.autolog.presentation.screen.EditCarScreen
 import com.jsworld.android.autolog.presentation.screen.EditMaintenanceSettingScreen
@@ -194,44 +192,8 @@ fun AutoLogNavHost(
                 onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
                 onOpenCareDetail = { carId ->
                     navController.navigate(Routes.careDetail(carId)) { launchSingleTop = true }
-                },
-                onOpenReport = {
-                    navController.navigate(Routes.REPORT) { launchSingleTop = true }
                 }
             )
-        }
-
-        // 지출 리포트 — 홈 카드·설정에서 진입. 차량 전환은 이 화면에서도 가능하다.
-        composable(Routes.REPORT) {
-            val cars by carContextViewModel.cars.collectAsState()
-            val selectedCar by carContextViewModel.selectedCar.collectAsState()
-            var showSwitcher by rememberSaveable { mutableStateOf(false) }
-
-            ReportScreen(
-                car = selectedCar,
-                onBack = { navController.popBackStack() },
-                onSwitchCar = { showSwitcher = true }
-            )
-
-            if (showSwitcher) {
-                CarSwitcherSheet(
-                    cars = cars,
-                    selectedCarId = selectedCar?.id,
-                    onSelect = { car ->
-                        carContextViewModel.selectCar(car.id)
-                        showSwitcher = false
-                    },
-                    onAddCar = {
-                        showSwitcher = false
-                        navController.navigate(Routes.addCarFirst(false))
-                    },
-                    onManageCars = {
-                        showSwitcher = false
-                        navController.navigate(Routes.CAR_LIST) { launchSingleTop = true }
-                    },
-                    onDismiss = { showSwitcher = false }
-                )
-            }
         }
 
         // 세차·관리 허브
@@ -285,7 +247,6 @@ fun AutoLogNavHost(
                 onBackClick = { navController.popBackStack() },
                 onNoticeClick = { navController.navigate(Routes.NOTICE) },
                 onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
-                onReportClick = { navController.navigate(Routes.REPORT) { launchSingleTop = true } },
                 viewModel = hiltViewModel()
             )
         }

@@ -44,12 +44,6 @@ object Routes {
     const val CARE_ITEMS = "care_items/{carId}"
     fun careItems(carId: Long) = "care_items/$carId"
 
-    /**
-     * 지출 리포트 — 탭이 아니라 홈의 '이번 달 지출' 카드와 설정에서 진입한다.
-     * 차량은 현재 차량 컨텍스트를 쓰므로 인자가 없다.
-     */
-    const val REPORT = "report"
-
     /** 항목 주기 수정 — 항목 상세에서 진입 */
     const val EDIT_MAINTENANCE_SETTING = "edit_maintenance_setting"
 
