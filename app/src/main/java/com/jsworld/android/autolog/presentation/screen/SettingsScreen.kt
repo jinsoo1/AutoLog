@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.NotificationImportant
@@ -40,10 +41,16 @@ import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TableView
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,6 +82,7 @@ import com.jsworld.android.autolog.presentation.state.BackupUiEvent
 import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
 import com.jsworld.android.autolog.BuildConfig
 import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertScheduler
+import com.jsworld.android.autolog.presentation.scheduler.MonthlyReportScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
@@ -102,6 +110,9 @@ fun SettingsScreen(
     val alertPrefs by viewModel.maintenanceAlertPrefs
         .collectAsStateWithLifecycle(initialValue = MaintenanceAlertPrefs())
 
+    val monthlyReportEnabled by viewModel.monthlyReportNotificationEnabled
+        .collectAsStateWithLifecycle(initialValue = true)
+
     var showAlertHourDialog by remember { mutableStateOf(false) }
     var showAlertRemindDialog by remember { mutableStateOf(false) }
 
@@ -110,6 +121,8 @@ fun SettingsScreen(
     var notificationBlock by remember {
         mutableStateOf(AutoLogNotificationHelper.NotificationBlock.NONE)
     }
+    // 월간 리포트는 기본 켜짐이라 여기 넣으면 권한 없는 모든 사용자에게 경고가 뜬다 —
+    // 배너는 사용자가 직접 켠 기능이 막혔을 때만.
     val anyNotificationOn = alertPrefs.enabled || notificationEnabled
     LifecycleResumeEffect(anyNotificationOn) {
         notificationBlock = if (anyNotificationOn) {
@@ -118,7 +131,8 @@ fun SettingsScreen(
                 listOf(
                     AutoLogNotificationHelper.MAINT_SOON_CHANNEL_ID,
                     AutoLogNotificationHelper.MAINT_OVERDUE_CHANNEL_ID,
-                    AutoLogNotificationHelper.WEEKLY_MILEAGE_CHANNEL_ID
+                    AutoLogNotificationHelper.WEEKLY_MILEAGE_CHANNEL_ID,
+                    AutoLogNotificationHelper.MONTHLY_REPORT_CHANNEL_ID
                 )
             )
         } else {
@@ -270,6 +284,59 @@ fun SettingsScreen(
             }
         } else {
             disableMaintenanceAlert()
+        }
+    }
+
+    /**
+     * 월간 리포트 알림 — 기본 켜짐이라 대개는 끄는 쪽만 쓰인다.
+     * 다시 켤 때는 다른 알림처럼 권한을 확인하고 예약을 새로 건다.
+     */
+    val enableMonthlyReport: () -> Unit = {
+        AutoLogNotificationHelper.createChannels(context)
+        MonthlyReportScheduler.reschedule(context)
+        viewModel.setMonthlyReportNotificationEnabled(true)
+        Toast.makeText(context, "매월 1일에 지난달 리포트를 알려드릴게요.", Toast.LENGTH_SHORT).show()
+    }
+
+    val monthlyReportPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { granted ->
+                if (granted) {
+                    enableMonthlyReport()
+                } else {
+                    viewModel.setMonthlyReportNotificationEnabled(false)
+                    Toast.makeText(
+                        context,
+                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+
+    val onMonthlyReportToggleChange: (Boolean) -> Unit = { checked ->
+        if (checked) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    enableMonthlyReport()
+                } else {
+                    monthlyReportPermissionLauncher.launch(
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                }
+            } else {
+                enableMonthlyReport()
+            }
+        } else {
+            MonthlyReportScheduler.cancel(context)
+            viewModel.setMonthlyReportNotificationEnabled(false)
+            Toast.makeText(context, "월간 리포트 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -501,6 +568,36 @@ fun SettingsScreen(
                 }
 
                 item {
+                    SettingsSwitchMenuItem(
+                        icon = Icons.Outlined.BarChart,
+                        title = "월간 리포트 알림",
+                        subtitle = "매월 1일, 지난달 지출 요약을 알려드립니다",
+                        checked = monthlyReportEnabled,
+                        onCheckedChange = onMonthlyReportToggleChange
+                    )
+                }
+
+                // 리포트 알림 테스트 — 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
+                if (BuildConfig.DEBUG && monthlyReportEnabled) {
+                    item {
+                        SettingsMenuItem(
+                            icon = Icons.Outlined.BugReport,
+                            title = "리포트 알림 테스트 (디버그 전용)",
+                            subtitle = "10초 뒤 지난달 집계로 알림을 보내봅니다",
+                            indented = true,
+                            onClick = {
+                                MonthlyReportScheduler.enqueueTest(context)
+                                Toast.makeText(
+                                    context,
+                                    "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                    }
+                }
+
+                item {
                     Spacer(modifier = Modifier.height(12.dp))
                     SettingsSectionTitle("데이터 관리")
                 }
@@ -581,55 +678,115 @@ fun SettingsScreen(
     }
 
     /**
-     * 복원 대상 선택: AutoLog 폴더의 백업 목록 + 다른 파일에서 복원(SAF)
+     * 복원 대상 선택 — AutoLog 폴더의 백업 목록 + 다른 파일에서 복원(SAF).
+     * 안내(이 기기 백업만 보임)를 목록보다 위에 둔다 — 새 기기에서 예전 백업이
+     * 안 보일 때 사용자가 목록을 훑기 전에 이유부터 읽어야 하기 때문.
      */
     if (showRestorePicker) {
-        AlertDialog(
-            onDismissRequest = { showRestorePicker = false },
-            title = { Text("백업에서 복원") },
-            text = {
-                Column {
-                    when {
-                        backupUiState.isLoadingBackups -> {
+        ModalBottomSheet(onDismissRequest = { showRestorePicker = false }) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+            ) {
+                Text(
+                    "백업에서 복원",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(10.dp))
+
+                // 안내 카드 — 항상 맨 위
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(Modifier.padding(12.dp)) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "이 목록에는 이 기기에서 만든 백업만 보여요.\n" +
+                                "앱을 다시 설치했거나 기기를 바꿨다면 예전 백업은 " +
+                                "'다운로드 > AutoLog' 폴더에 파일로 남아 있어요 — " +
+                                "아래 '다른 파일에서 복원'으로 직접 선택해주세요.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                when {
+                    backupUiState.isLoadingBackups -> {
+                        Text(
+                            text = "불러오는 중…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+
+                    backupUiState.backups.isEmpty() -> {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Outlined.Inbox,
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "불러오는 중…",
+                                "이 기기에서 만든 백업이 아직 없어요",
                                 style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "예전 백업 파일이 있다면 아래 버튼으로 직접 선택해주세요.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
 
-                        backupUiState.backups.isEmpty() -> {
-                            Text(
-                                text = "이 목록에 표시할 백업이 없습니다.\n\n" +
-                                        "앱을 다시 설치했거나 기기를 바꾼 경우, 예전 백업은 " +
-                                        "목록에 나타나지 않을 수 있어요. 하지만 파일은 " +
-                                        "'다운로드 > AutoLog' 폴더에 그대로 남아 있습니다.\n\n" +
-                                        "'다른 파일에서 복원'을 눌러 그 파일을 직접 선택하면 복원할 수 있어요.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        else -> {
-                            Column(
-                                modifier = Modifier
-                                    .heightIn(max = 280.dp)
-                                    .verticalScroll(rememberScrollState())
-                            ) {
-                                backupUiState.backups.forEach { info ->
+                    else -> {
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 320.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            backupUiState.backups.forEachIndexed { index, info ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                showRestorePicker = false
+                                                pendingRestoreUri = info.uri
+                                            }
+                                            .padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clickable {
-                                                    showRestorePicker = false
-                                                    pendingRestoreUri = info.uri
-                                                }
-                                                .padding(vertical = 12.dp)
-                                        ) {
+                                        Icon(
+                                            Icons.Outlined.Description,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column {
                                             Text(
                                                 text = formatBackupDate(info.dateMillis),
                                                 style = MaterialTheme.typography.bodyLarge,
@@ -641,22 +798,28 @@ fun SettingsScreen(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        IconButton(onClick = { shareBackup(context, info.uri) }) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Share,
-                                                contentDescription = "백업 공유"
-                                            )
-                                        }
                                     }
-                                    HorizontalDivider()
+                                    IconButton(onClick = { shareBackup(context, info.uri) }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Share,
+                                            contentDescription = "백업 공유"
+                                        )
+                                    }
+                                }
+                                if (index != backupUiState.backups.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 32.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant
+                                            .copy(alpha = 0.45f)
+                                    )
                                 }
                             }
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
+
+                Spacer(Modifier.height(16.dp))
+                FilledTonalButton(
                     onClick = {
                         showRestorePicker = false
                         restoreFileLauncher.launch(
@@ -667,17 +830,19 @@ fun SettingsScreen(
                                 "application/octet-stream"
                             )
                         )
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
+                    Icon(
+                        Icons.Outlined.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text("다른 파일에서 복원")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestorePicker = false }) {
-                    Text("닫기")
-                }
             }
-        )
+        }
     }
 
     /**
