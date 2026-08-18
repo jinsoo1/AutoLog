@@ -43,7 +43,7 @@ class WeeklyMileageReminderWorker @AssistedInject constructor(
                 android.util.Log.d("WeeklyWorker", "no cars to notify")
             }
 
-            WeeklyMileageWorkScheduler.enqueueNext(applicationContext)
+            WeeklyMileageWorkScheduler.enqueueNextFromWorker(applicationContext)
             android.util.Log.d("WeeklyWorker", "next work enqueued")
 
             Result.success()
@@ -51,7 +51,7 @@ class WeeklyMileageReminderWorker @AssistedInject constructor(
             android.util.Log.e("WeeklyWorker", "doWork failed", e)
 
             // 다음 주 예약은 유지
-            WeeklyMileageWorkScheduler.enqueueNext(applicationContext)
+            WeeklyMileageWorkScheduler.enqueueNextFromWorker(applicationContext)
             Result.failure()
         }
     }

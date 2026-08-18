@@ -23,6 +23,15 @@ object WeeklyMileageWorkScheduler {
         enqueueNextInternal(context, ExistingWorkPolicy.REPLACE)
     }
 
+    /**
+     * 워커 안에서의 다음 주 예약 — KEEP 은 "실행 중인 자기 자신"을 살아있는
+     * 예약으로 보고 새 요청을 버리므로 체인이 앱 시작 복구에만 의존하게 된다.
+     * APPEND_OR_REPLACE 는 실행 중인 자신 뒤에 이어 붙는다.
+     */
+    fun enqueueNextFromWorker(context: Context) {
+        enqueueNextInternal(context, ExistingWorkPolicy.APPEND_OR_REPLACE)
+    }
+
     private fun enqueueNextInternal(
         context: Context,
         policy: ExistingWorkPolicy

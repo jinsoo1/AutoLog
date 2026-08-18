@@ -22,9 +22,20 @@ object MaintenanceAlertScheduler {
     private const val UNIQUE_WORK_NAME = "maintenance_alert_daily"
     private const val TEST_WORK_NAME = "maintenance_alert_test"
 
-    /** 이미 예약이 있으면 유지(KEEP). 워커의 자기 재예약, 앱 시작 복구용 */
+    /** 앱 시작 복구용 — 살아있는 예약이 있으면 유지(KEEP) */
     fun scheduleNext(context: Context, hour: Int) {
         enqueue(context, hour, ExistingWorkPolicy.KEEP)
+    }
+
+    /**
+     * 워커 안에서의 내일 예약 — KEEP 을 쓰면 안 된다.
+     * KEEP 은 "실행 중인 자기 자신"을 살아있는 예약으로 보고 새 요청을 버리므로,
+     * 체인이 앱 시작 복구에만 의존하게 된다(앱을 안 열면 알림이 멈춘다).
+     * APPEND_OR_REPLACE 는 실행 중인 자신 뒤에 이어 붙는다 — 자신을
+     * 취소하지도(REPLACE), 무시되지도(KEEP) 않는 유일한 정책.
+     */
+    fun scheduleNextFromWorker(context: Context, hour: Int) {
+        enqueue(context, hour, ExistingWorkPolicy.APPEND_OR_REPLACE)
     }
 
     /** 알림 켜기·시간 변경 시 — 기존 예약을 새 시각으로 교체 */

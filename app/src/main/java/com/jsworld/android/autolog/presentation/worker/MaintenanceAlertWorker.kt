@@ -55,7 +55,7 @@ class MaintenanceAlertWorker @AssistedInject constructor(
             .getOrElse { e ->
                 android.util.Log.e(TAG, "prefs read failed — 기본 시각으로 재예약", e)
                 if (!forceTest) {
-                    MaintenanceAlertScheduler.scheduleNext(
+                    MaintenanceAlertScheduler.scheduleNextFromWorker(
                         applicationContext,
                         MaintenanceAlertPrefs.DEFAULT_HOUR
                     )
@@ -72,7 +72,7 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         // ⚠️ 검사보다 예약을 먼저 — 도중에 예외가 나도 내일 체인이 살아야 한다.
         // 테스트 실행은 일일 체인을 건드리지 않는다.
         if (!forceTest) {
-            MaintenanceAlertScheduler.scheduleNext(applicationContext, prefs.hour)
+            MaintenanceAlertScheduler.scheduleNextFromWorker(applicationContext, prefs.hour)
         }
 
         runCatching { checkAndNotify(prefs, forceTest) }
