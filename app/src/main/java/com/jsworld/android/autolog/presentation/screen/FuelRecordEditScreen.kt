@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Payments
@@ -26,16 +28,21 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,7 +63,9 @@ import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.model.FuelField
 import com.jsworld.android.autolog.presentation.viewModel.FuelRecordEditViewModel
 import kotlinx.coroutines.flow.flowOf
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * 주유(충전) 기록 입력·수정.
@@ -123,6 +132,8 @@ fun FuelRecordEditScreen(
 
     // 주행거리를 직접 입력하기 시작하면 자동 제안을 멈춘다 — 사용자의 숫자가 항상 이긴다.
     var mileageAuto by rememberSaveable(recordId) { mutableStateOf(recordId == null) }
+
+    var showDatePicker by rememberSaveable(recordId) { mutableStateOf(false) }
 
     // 새 기록: 오늘 날짜면 차량 현재 주행거리를 채워둔다.
     // 과거 날짜면 현재 값은 확실히 틀린 값이다(7월 기록에 8월 주행거리) —
@@ -246,19 +257,34 @@ fun FuelRecordEditScreen(
         ) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = dateText,
-                        onValueChange = { dateText = it },
-                        label = { Text("날짜") },
-                        singleLine = true,
-                        isError = dateText.isNotBlank() && !dateValid,
-                        supportingText = {
-                            if (dateText.isNotBlank() && !dateValid) {
-                                Text("yyyy-MM-dd 형식", color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    // 직접 타이핑하는 것보다 달력에서 고르는 게 훨씬 빠르다.
+                    // readOnly 텍스트필드는 탭을 자체 소비하므로, 투명 오버레이로 받는다.
+                    Box(Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = dateText.toDisplayDateOrNull() ?: dateText,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("날짜") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                // 비활성처럼 흐려 보이면 안 된다 — 누를 수 있는 필드다
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .clickable { showDatePicker = true }
+                        )
+                    }
                     OutlinedTextField(
                         value = mileageText,
                         onValueChange = {
@@ -394,6 +420,39 @@ fun FuelRecordEditScreen(
                 TextButton(onClick = { showDeleteDialog = false }) { Text("취소") }
             }
         )
+    }
+
+    if (showDatePicker) {
+        // 아직 넣지 않은 주유를 미리 기록할 일은 없다 — 오늘 이후는 고를 수 없게.
+        val todayEndUtc = remember {
+            LocalDate.now().plusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        }
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = runCatching {
+                LocalDate.parse(dateText).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+            }.getOrNull(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis < todayEndUtc
+                override fun isSelectableYear(year: Int) = year <= LocalDate.now().year
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { millis ->
+                        dateText = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.of("UTC")).toLocalDate().toString()
+                    }
+                    showDatePicker = false
+                }) { Text("확인") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("취소") }
+            }
+        ) {
+            DatePicker(state = state)
+        }
     }
 }
 
