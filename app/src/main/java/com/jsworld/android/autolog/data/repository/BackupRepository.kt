@@ -330,6 +330,17 @@ class BackupRepository @Inject constructor(
             }
         }
 
+    /**
+     * 전체 기록 수(정비+주유+세차) — 백업 권유 다이얼로그의 기준점.
+     * 백업 성공 시점의 값을 저장해 두고, 그보다 한참 더 쌓이면 다시 권한다.
+     */
+    suspend fun countAllRecords(): Int =
+        withContext(Dispatchers.IO) {
+            backupDao.countMaintenanceHistories() +
+                backupDao.countFuelRecords() +
+                backupDao.countCareRecords()
+        }
+
     private fun buildBackupFileName(): String {
         val formatter = java.text.SimpleDateFormat(
             "yyyy-MM-dd_HHmmss",

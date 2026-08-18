@@ -19,11 +19,27 @@ interface UserPrefsRepository {
     suspend fun setBackupBannerDismissedAt(millis: Long)
 
     /**
+     * 백업 권유 다이얼로그를 마지막으로 보여줬을 때의 기록 수. 0 = 보여준 적 없음.
+     * '나중에'를 눌러도 기록이 이 값보다 한참 더 쌓이면 한 번 더 권한다 —
+     * 잃으면 아까운 양이 커졌는데 영구히 침묵하는 건 취지와 어긋난다.
+     */
+    fun observeBackupPromptRecordCount(): Flow<Int>
+    suspend fun setBackupPromptRecordCount(count: Int)
+
+    /**
      * 탭 화면이 현재 보고 있는 차량. 없으면 null(→ 대표 차량으로 대체).
      * 차량이 삭제돼 유효하지 않을 수 있으므로 화면에서 실제 차량 목록과 대조해야 한다.
      */
     fun observeSelectedCarId(): Flow<Long?>
     suspend fun setSelectedCarId(carId: Long)
+
+    /**
+     * 월간 리포트 도착 알림 — **기본 켜짐**. 이 알림의 존재 이유가 리포트를 만든 걸
+     * 모르는 사용자를 데려오는 것이라, 꺼두면 목적을 잃는다. 시스템 알림 권한이
+     * 없으면 어차피 나가지 않고(워커에서 확인), 설정에서 끌 수 있다.
+     */
+    fun observeMonthlyReportNotificationEnabled(): Flow<Boolean>
+    suspend fun setMonthlyReportNotificationEnabled(enabled: Boolean)
 
     /** 정비 임박/초과 푸시 알림 설정 */
     fun observeMaintenanceAlertPrefs(): Flow<MaintenanceAlertPrefs>

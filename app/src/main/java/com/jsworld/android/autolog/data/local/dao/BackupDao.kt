@@ -44,6 +44,13 @@ interface BackupDao {
     @Query("SELECT COUNT(*) FROM fuel_records")
     suspend fun countFuelRecords(): Int
 
+    /** 백업 권유 다이얼로그용 — "지킬 만한 기록"이 쌓였는지 */
+    @Query("SELECT COUNT(*) FROM maintenance_history")
+    suspend fun countMaintenanceHistories(): Int
+
+    @Query("SELECT COUNT(*) FROM care_records")
+    suspend fun countCareRecords(): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertCars(cars: List<CarEntity>)
 

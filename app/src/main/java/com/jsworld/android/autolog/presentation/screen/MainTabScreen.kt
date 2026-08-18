@@ -28,6 +28,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jsworld.android.autolog.domain.model.FuelUnit
+import com.jsworld.android.autolog.presentation.component.BackupPromptHost
 import com.jsworld.android.autolog.presentation.component.CarSwitcherSheet
 import com.jsworld.android.autolog.presentation.viewModel.CarContextViewModel
 import kotlinx.coroutines.launch
@@ -79,10 +81,24 @@ fun MainTabScreen(
     onEditFuel: (Long) -> Unit,
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
-    onOpenCareDetail: (Long) -> Unit
+    onOpenCareDetail: (Long) -> Unit,
+    /** 월간 리포트 알림 탭 → 리포트 탭 열기 요청. 소비하면 반드시 알린다 */
+    openReportRequested: Boolean = false,
+    onConsumeOpenReport: () -> Unit = {}
 ) {
     var tab by rememberSaveable { mutableStateOf(MainTab.HOME) }
     var showSwitcher by rememberSaveable { mutableStateOf(false) }
+
+    // 리포트 알림에서 진입 — 콜드 스타트는 셸이 뜬 직후, 웜 스타트는 즉시 소비된다.
+    LaunchedEffect(openReportRequested) {
+        if (openReportRequested) {
+            tab = MainTab.REPORT
+            onConsumeOpenReport()
+        }
+    }
+
+    // 기록이 쌓였는데 백업이 없으면 딱 1회 백업을 권한다 (조건은 ViewModel에)
+    BackupPromptHost()
 
     val cars by carContextViewModel.cars.collectAsState()
     val selectedCar by carContextViewModel.selectedCar.collectAsState()

@@ -48,6 +48,15 @@ class SettingsViewModel @Inject constructor(
     val maintenanceAlertPrefs: Flow<MaintenanceAlertPrefs> =
         userPrefsRepository.observeMaintenanceAlertPrefs()
 
+    val monthlyReportNotificationEnabled: Flow<Boolean> =
+        userPrefsRepository.observeMonthlyReportNotificationEnabled()
+
+    fun setMonthlyReportNotificationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPrefsRepository.setMonthlyReportNotificationEnabled(enabled)
+        }
+    }
+
     fun setMaintenanceAlertEnabled(enabled: Boolean) {
         viewModelScope.launch { userPrefsRepository.setMaintenanceAlertEnabled(enabled) }
     }
@@ -90,6 +99,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 백업 성공 공통 처리 — 시각과 함께 그 시점의 기록 수도 저장한다.
+     * 백업 권유 다이얼로그가 이 기준점에서 +N건 쌓였을 때만 다시 권한다.
+     */
+    private suspend fun markBackedUp() {
+        userPrefsRepository.setLastBackupAt(System.currentTimeMillis())
+        runCatching {
+            userPrefsRepository.setBackupPromptRecordCount(backupRepository.countAllRecords())
+        }
+    }
+
     fun exportBackup(uri: Uri) {
         if (_backupUiState.value.isExporting) return
 
@@ -100,7 +120,7 @@ class SettingsViewModel @Inject constructor(
 
             backupRepository.exportBackup(uri)
                 .onSuccess {
-                    userPrefsRepository.setLastBackupAt(System.currentTimeMillis())
+                    markBackedUp()
                     _backupEvent.send(
                         BackupUiEvent.ExportSuccess()
                     )
@@ -129,7 +149,7 @@ class SettingsViewModel @Inject constructor(
 
             backupRepository.exportToAutoLogFolder()
                 .onSuccess { path ->
-                    userPrefsRepository.setLastBackupAt(System.currentTimeMillis())
+                    markBackedUp()
                     _backupEvent.send(BackupUiEvent.ExportSuccess(path))
                     refreshBackupsInternal()
                 }

@@ -85,6 +85,28 @@ class UserPrefsRepositoryImpl @Inject constructor(
         dataStore.edit { it[backupBannerDismissedAtKey] = millis }
     }
 
+    private val backupPromptRecordCountKey = intPreferencesKey("backup_prompt_record_count")
+
+    override fun observeBackupPromptRecordCount(): Flow<Int> =
+        dataStore.data.map { it[backupPromptRecordCountKey] ?: 0 }
+
+    override suspend fun setBackupPromptRecordCount(count: Int) {
+        dataStore.edit { it[backupPromptRecordCountKey] = count.coerceAtLeast(0) }
+    }
+
+    /**
+     * 월간 리포트 도착 알림 — 기본 켜짐 (인터페이스 주석 참조)
+     */
+    private val monthlyReportEnabledKey =
+        booleanPreferencesKey("monthly_report_notification_enabled")
+
+    override fun observeMonthlyReportNotificationEnabled(): Flow<Boolean> =
+        dataStore.data.map { it[monthlyReportEnabledKey] ?: true }
+
+    override suspend fun setMonthlyReportNotificationEnabled(enabled: Boolean) {
+        dataStore.edit { it[monthlyReportEnabledKey] = enabled }
+    }
+
     /**
      * 정비 임박/초과 푸시 알림 설정
      */
