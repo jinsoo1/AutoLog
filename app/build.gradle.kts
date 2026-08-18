@@ -60,6 +60,19 @@ android {
                 "proguard-rules.pro"
             )
         }
+
+        /**
+         * R8 검증용 — release 와 동일한 축소·난독화를 별도 패키지(.qa)로 설치해
+         * 실기기에서 확인한다. Play 설치본은 Google 재서명이라 로컬 릴리즈 APK 를
+         * 덮어쓸 수 없어서(데이터 날리지 않고는 못 지움) 이 우회가 필요하다.
+         * (릴리즈 전용 위젯 투명화 버그를 이걸로 잡았다 — InputMerger keep 참조)
+         */
+        create("releaseQa") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {

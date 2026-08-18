@@ -15,6 +15,21 @@
 -renamesourcefileattribute SourceFile
 
 ############################################
+# WorkManager InputMerger (위젯 렌더링)
+#
+# WorkSpec 에 "클래스 이름 문자열"로 저장되고 리플렉션(Class.forName +
+# 기본 생성자)으로 생성된다. Glance 는 위젯을 SessionWorker 로 렌더링하는데
+# 그 워커가 OverwritingInputMerger 를 쓴다 — 기본 생성자가 축소되면
+# 렌더링 워커가 시작조차 못 해 위젯이 투명한 초기 레이아웃에 머문다.
+# (릴리즈 위젯이 투명하게 나오던 버그의 원인. WorkManager 2.9.0 의
+# consumer 규칙 누락 — 2.10.0 에서 수정됐지만 규칙으로 직접 잠근다)
+############################################
+
+-keep class * extends androidx.work.InputMerger {
+    <init>();
+}
+
+############################################
 # Apache POI (엑셀 내보내기)
 #
 # 앱은 XSSFWorkbook 을 직접 생성하므로 POI 본체는 R8 이 정적 참조로
