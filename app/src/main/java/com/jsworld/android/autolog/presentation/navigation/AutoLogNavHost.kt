@@ -63,7 +63,10 @@ fun AutoLogNavHost(
     navController: NavHostController,
     carContextViewModel: CarContextViewModel,
     initialWidgetCarId: Long?,
-    onConsumeInitialWidget: () -> Unit = {}
+    onConsumeInitialWidget: () -> Unit = {},
+    /** 월간 리포트 알림 탭 → 리포트 탭 열기. MainTabScreen 이 소비한다 */
+    openReportRequested: Boolean = false,
+    onConsumeOpenReport: () -> Unit = {}
 ) {
     val viewModel: MainViewModel = hiltViewModel()
 
@@ -192,7 +195,9 @@ fun AutoLogNavHost(
                 onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
                 onOpenCareDetail = { carId ->
                     navController.navigate(Routes.careDetail(carId)) { launchSingleTop = true }
-                }
+                },
+                openReportRequested = openReportRequested,
+                onConsumeOpenReport = onConsumeOpenReport
             )
         }
 

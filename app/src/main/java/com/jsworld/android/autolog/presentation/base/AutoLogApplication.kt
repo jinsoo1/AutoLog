@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.jsworld.android.autolog.core.util.MaintenanceAlertStartupManager
+import com.jsworld.android.autolog.core.util.MonthlyReportStartupManager
 import com.jsworld.android.autolog.core.util.WeeklyNotificationStartupManager
 import dagger.hilt.android.HiltAndroidApp
 import jakarta.inject.Inject
@@ -24,6 +25,9 @@ class AutoLogApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var maintenanceAlertStartupManager: MaintenanceAlertStartupManager
 
+    @Inject
+    lateinit var monthlyReportStartupManager: MonthlyReportStartupManager
+
     override fun onCreate() {
         super.onCreate()
         android.util.Log.d("AutoLogApp", "Application onCreate")
@@ -31,6 +35,7 @@ class AutoLogApplication : Application(), Configuration.Provider {
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             weeklyNotificationStartupManager.restoreIfNeeded(this@AutoLogApplication)
             maintenanceAlertStartupManager.restoreIfNeeded(this@AutoLogApplication)
+            monthlyReportStartupManager.restoreIfNeeded(this@AutoLogApplication)
         }
     }
 
