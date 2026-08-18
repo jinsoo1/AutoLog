@@ -19,6 +19,12 @@ interface FuelRecordRepository {
     /** 직전 주유 기록의 주행거리 */
     suspend fun getLatestMileage(carId: Long): Int?
 
+    /**
+     * [date] 이전(포함)·이후 이웃 기록의 주행거리 — 과거 날짜 기록의 프리필 근거.
+     * @return (직전 기록의 km, 다음 기록의 km) — 없으면 각각 null
+     */
+    suspend fun getMileageAround(carId: Long, date: String): Pair<Int?, Int?>
+
     suspend fun insert(
         carId: Long,
         filledAt: String,

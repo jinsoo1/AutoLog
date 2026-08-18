@@ -118,3 +118,22 @@ enum class FuelUnit(val symbol: String) {
             entries.firstOrNull { it.symbol == symbol } ?: LITER
     }
 }
+
+/**
+ * 과거 날짜로 기록을 넣을 때의 주행거리 제안.
+ *
+ * 오늘 값(차량 현재 주행거리)을 그대로 두면 7월 기록에 8월 주행거리가 저장돼
+ * 월별 주행거리 계산이 통째로 어긋난다. 대신 그 날짜 앞뒤 이웃 기록 사이에
+ * 들어가는 값을 제안한다 — 직전 기록 +1km, 직전이 없으면 다음 기록 -1km.
+ *
+ * 제안일 뿐이라 정확하진 않지만, 순서(단조 증가)는 절대 깨지 않는다.
+ * 이웃이 하나도 없으면 null — 근거 없는 숫자를 지어내지 않고 비워둔다.
+ */
+fun suggestBackdatedMileage(prevMileage: Int?, nextMileage: Int?): Int? = when {
+    // 앞뒤가 다 있으면 그 사이로 — 직전 +1이 다음을 넘지 않게 잘라준다
+    prevMileage != null && nextMileage != null ->
+        (prevMileage + 1).coerceAtMost(nextMileage)
+    prevMileage != null -> prevMileage + 1
+    nextMileage != null -> (nextMileage - 1).coerceAtLeast(0)
+    else -> null
+}

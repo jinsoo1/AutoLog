@@ -31,6 +31,10 @@ class FuelRecordRepositoryImpl @Inject constructor(
     override suspend fun getLatestMileage(carId: Long): Int? =
         fuelRecordDao.getLatestMileage(carId)
 
+    override suspend fun getMileageAround(carId: Long, date: String): Pair<Int?, Int?> =
+        fuelRecordDao.getMileageOnOrBefore(carId, date) to
+            fuelRecordDao.getMileageAfter(carId, date)
+
     override suspend fun insert(
         carId: Long,
         filledAt: String,

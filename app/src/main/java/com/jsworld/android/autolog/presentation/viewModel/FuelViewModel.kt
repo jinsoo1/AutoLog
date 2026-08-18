@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.domain.model.MonthlyFuelCost
+import com.jsworld.android.autolog.domain.model.suggestBackdatedMileage
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
@@ -58,6 +59,12 @@ class FuelRecordEditViewModel @Inject constructor(
 
     suspend fun latestMileage(carId: Long): Int? =
         fuelRecordRepository.getLatestMileage(carId)
+
+    /** 과거 날짜 기록의 주행거리 제안 — 그 날짜 앞뒤 기록 사이의 값 */
+    suspend fun suggestMileageFor(carId: Long, date: String): Int? {
+        val (prev, next) = fuelRecordRepository.getMileageAround(carId, date)
+        return suggestBackdatedMileage(prev, next)
+    }
 
     fun save(
         recordId: Long?,

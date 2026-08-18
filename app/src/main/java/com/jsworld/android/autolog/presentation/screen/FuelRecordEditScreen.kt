@@ -121,12 +121,22 @@ fun FuelRecordEditScreen(
         }
     }
 
-    // 새 기록: 마지막 주유 이후 주행거리를 참고하도록 차량 주행거리를 채워둔다.
-    LaunchedEffect(car?.id, recordId) {
-        if (recordId != null) return@LaunchedEffect
-        val current = car?.mileage ?: return@LaunchedEffect
-        if (mileageText.isNotBlank()) return@LaunchedEffect
-        if (current > 0) mileageText = current.toString()
+    // 주행거리를 직접 입력하기 시작하면 자동 제안을 멈춘다 — 사용자의 숫자가 항상 이긴다.
+    var mileageAuto by rememberSaveable(recordId) { mutableStateOf(recordId == null) }
+
+    // 새 기록: 오늘 날짜면 차량 현재 주행거리를 채워둔다.
+    // 과거 날짜면 현재 값은 확실히 틀린 값이다(7월 기록에 8월 주행거리) —
+    // 그 날짜 앞뒤 기록 사이에 들어가는 값을 제안하고, 근거가 없으면 비워둔다.
+    LaunchedEffect(car?.id, recordId, dateText) {
+        if (recordId != null || !mileageAuto) return@LaunchedEffect
+        val targetCar = car ?: return@LaunchedEffect
+        val date = runCatching { LocalDate.parse(dateText) }.getOrNull() ?: return@LaunchedEffect
+
+        mileageText = if (date >= LocalDate.now()) {
+            targetCar.mileage.takeIf { it > 0 }?.toString().orEmpty()
+        } else {
+            viewModel.suggestMileageFor(targetCar.id, dateText)?.toString().orEmpty()
+        }
     }
 
     val stationsFlow = remember(car?.id, unit) {
@@ -251,7 +261,10 @@ fun FuelRecordEditScreen(
                     )
                     OutlinedTextField(
                         value = mileageText,
-                        onValueChange = { mileageText = it.filter(Char::isDigit) },
+                        onValueChange = {
+                            mileageText = it.filter(Char::isDigit)
+                            mileageAuto = false
+                        },
                         label = { Text("주행거리") },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },

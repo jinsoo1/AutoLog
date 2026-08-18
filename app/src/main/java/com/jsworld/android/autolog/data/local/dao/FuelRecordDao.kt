@@ -102,4 +102,26 @@ interface FuelRecordDao {
         """
     )
     suspend fun getLatestMileage(carId: Long): Int?
+
+    /* ── 과거 날짜 기록의 주행거리 제안용 — 그 날짜 앞뒤의 이웃 기록 ── */
+
+    @Query(
+        """
+        SELECT mileage FROM fuel_records
+        WHERE carId = :carId AND mileage IS NOT NULL AND filledAt <= :date
+        ORDER BY filledAt DESC, mileage DESC, id DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getMileageOnOrBefore(carId: Long, date: String): Int?
+
+    @Query(
+        """
+        SELECT mileage FROM fuel_records
+        WHERE carId = :carId AND mileage IS NOT NULL AND filledAt > :date
+        ORDER BY filledAt ASC, mileage ASC, id ASC
+        LIMIT 1
+        """
+    )
+    suspend fun getMileageAfter(carId: Long, date: String): Int?
 }
