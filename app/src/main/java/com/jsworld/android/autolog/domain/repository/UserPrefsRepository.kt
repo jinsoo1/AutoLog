@@ -49,6 +49,19 @@ interface UserPrefsRepository {
     suspend fun setMaintenanceAlertHour(hour: Int)
     suspend fun setMaintenanceAlertRemindDays(days: Int)
 
+    /**
+     * 날짜 일정 알림 — **기본 켜짐**. 일정을 직접 등록한 것 자체가 "알려달라"는
+     * 신호라, 등록해두고 알림이 없으면 기능의 의미가 사라진다.
+     */
+    fun observeScheduleAlertEnabled(): Flow<Boolean>
+    suspend fun setScheduleAlertEnabled(enabled: Boolean)
+
+    /** scheduleId → 마지막으로 알린 단계(ScheduleAlertStage.name). 전이 감지용 */
+    suspend fun getScheduleAlertStages(): Map<Long, String>
+    suspend fun setScheduleAlertStage(scheduleId: Long, stage: String)
+    /** keep 에 없는 일정의 기록을 지운다 — 삭제된 일정의 찌꺼기 방지 */
+    suspend fun retainScheduleAlertStages(keep: Set<Long>)
+
     /** settingId → 마지막으로 알림 보낸 상태. 전이 감지용 */
     suspend fun getMaintenanceAlertNotifiedStates(): Map<Long, MaintenanceAlertNotifiedState>
     suspend fun setMaintenanceAlertNotifiedState(settingId: Long, status: String, notifiedAt: Long)

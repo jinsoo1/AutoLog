@@ -106,3 +106,65 @@ fun dDayLabel(remainingDays: Long): String = when {
     remainingDays == 0L -> "D-DAY"
     else -> "D+${-remainingDays}"
 }
+
+/* ───────────────────────── 알림 ───────────────────────── */
+
+/**
+ * 일정 알림 단계. 정비 알림과 같은 원칙 — **단계가 바뀔 때만** 알린다.
+ * 매일 "D-13일 남았어요"를 보내면 알림을 꺼버리게 된다.
+ */
+enum class ScheduleAlertStage {
+    /** 아직 멀었다 — 알리지 않는다 */
+    FAR,
+
+    /** 2주 전 */
+    TWO_WEEKS,
+
+    /** 1주 전 */
+    ONE_WEEK,
+
+    /** 당일 */
+    TODAY,
+
+    /** 지났다 */
+    OVERDUE
+}
+
+/** 남은 일수 → 단계 */
+fun scheduleAlertStage(remainingDays: Long): ScheduleAlertStage = when {
+    remainingDays < 0 -> ScheduleAlertStage.OVERDUE
+    remainingDays == 0L -> ScheduleAlertStage.TODAY
+    remainingDays <= 7 -> ScheduleAlertStage.ONE_WEEK
+    remainingDays <= 14 -> ScheduleAlertStage.TWO_WEEKS
+    else -> ScheduleAlertStage.FAR
+}
+
+/**
+ * 지금 알려야 하는가. FAR 은 알리지 않고, 나머지는 **직전 단계와 다를 때만**.
+ *
+ * 되돌아가는 전이(사용자가 날짜를 미뤘을 때)에도 알리지 않는다 —
+ * 사용자가 방금 그 날짜를 직접 바꿨으니 알려줄 필요가 없다.
+ */
+fun shouldNotifySchedule(stage: ScheduleAlertStage, previous: ScheduleAlertStage?): Boolean {
+    if (stage == ScheduleAlertStage.FAR) return false
+    if (previous == null) return true
+    return stage.ordinal > previous.ordinal
+}
+
+/** 알림 본문 — 남은 일수를 사람 말로. 제목 뒤에 조사가 붙으므로 띄우지 않는다 */
+fun scheduleAlertText(title: String, remainingDays: Long): String = when {
+    remainingDays < 0 -> "$title 날짜가 ${-remainingDays}일 지났어요"
+    remainingDays == 0L -> "오늘이 $title 날짜예요"
+    remainingDays == 1L -> "내일이 $title 날짜예요"
+    else -> "${title}까지 ${remainingDays}일 남았어요"
+}
+
+/**
+ * 알림·목록에 쓰는 날짜 표기 — **연도를 반드시 포함한다.**
+ * 일정은 몇 년 뒤가 흔해서 연도가 없으면 지난 날짜처럼 읽힌다.
+ */
+fun formatScheduleDate(dueDate: String, today: LocalDate): String = runCatching {
+    val date = LocalDate.parse(dueDate)
+    if (date.year == today.year) "${date.monthValue}월 ${date.dayOfMonth}일"
+    else "${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일"
+}.getOrDefault(dueDate)

@@ -43,7 +43,9 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val carRepository: CarRepository,
     private val carMaintenanceRepository: CarMaintenanceRepository,
-    private val userPrefsRepository: UserPrefsRepository
+    private val userPrefsRepository: UserPrefsRepository,
+    /** 날짜 일정 알림 — 같은 하루 1회 검사에 얹는다(체인을 늘리지 않는다) */
+    private val scheduleAlertNotifier: ScheduleAlertNotifier
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -63,6 +65,11 @@ class MaintenanceAlertWorker @AssistedInject constructor(
                 return Result.success()
             }
 
+        // ⚠️ 일정 알림은 정비 알림 스위치와 **별개**다 — 정비 알림을 꺼둔 사용자도
+        // 보험 만기·정기검사는 받아야 한다. 그래서 prefs.enabled 검사보다 먼저 돈다.
+        runCatching { notifySchedules(forceTest) }
+            .onFailure { android.util.Log.e(TAG, "schedule alert failed", it) }
+
         // 꺼져 있으면 체인도 세운다(끌 때 cancel 되지만 경합 대비 안전망).
         if (!prefs.enabled) {
             android.util.Log.d(TAG, "doWork skipped — alert disabled (forceTest=$forceTest)")
@@ -78,6 +85,16 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         runCatching { checkAndNotify(prefs, forceTest) }
 
         return Result.success()
+    }
+
+    private suspend fun notifySchedules(forceTest: Boolean) {
+        val cars = carRepository.getAllCars().first().associateBy { it.id }
+        val sent = scheduleAlertNotifier.checkAndNotify(
+            context = applicationContext,
+            carsById = cars,
+            forceTest = forceTest
+        )
+        android.util.Log.d(TAG, "schedule alerts sent=$sent")
     }
 
     private suspend fun checkAndNotify(prefs: MaintenanceAlertPrefs, forceTest: Boolean) {

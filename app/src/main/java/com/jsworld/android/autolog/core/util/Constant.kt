@@ -8,6 +8,9 @@ object Constant {
     /** 월간 리포트 알림 탭 → 리포트 탭으로 바로 */
     const val ACTION_OPEN_REPORT = "autolog.action.OPEN_REPORT"
 
+    /** 일정 알림 탭 → 그 차량의 날짜 일정 화면으로 */
+    const val ACTION_OPEN_SCHEDULE = "autolog.action.OPEN_SCHEDULE"
+
     const val AUTOLOG_NOTICE = "autolog_notice.json"
 
 }

@@ -48,6 +48,13 @@ class SettingsViewModel @Inject constructor(
     val maintenanceAlertPrefs: Flow<MaintenanceAlertPrefs> =
         userPrefsRepository.observeMaintenanceAlertPrefs()
 
+    val scheduleAlertEnabled: Flow<Boolean> =
+        userPrefsRepository.observeScheduleAlertEnabled()
+
+    fun setScheduleAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setScheduleAlertEnabled(enabled) }
+    }
+
     val monthlyReportNotificationEnabled: Flow<Boolean> =
         userPrefsRepository.observeMonthlyReportNotificationEnabled()
 

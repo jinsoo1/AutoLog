@@ -151,6 +151,44 @@ class UserPrefsRepositoryImpl @Inject constructor(
      * 항목별 마지막 알림 상태 — "maintenance_alert_state_<settingId>" = "STATUS|millis".
      * 항목 수가 수십 개 수준이라 DataStore 로 충분하다(테이블 추가·마이그레이션 회피).
      */
+    private val scheduleAlertEnabledKey = booleanPreferencesKey("schedule_alert_enabled")
+
+    override fun observeScheduleAlertEnabled(): Flow<Boolean> =
+        dataStore.data.map { it[scheduleAlertEnabledKey] ?: true }
+
+    override suspend fun setScheduleAlertEnabled(enabled: Boolean) {
+        dataStore.edit { it[scheduleAlertEnabledKey] = enabled }
+    }
+
+    private fun scheduleStageKey(scheduleId: Long) =
+        stringPreferencesKey("$SCHEDULE_STAGE_PREFIX$scheduleId")
+
+    override suspend fun getScheduleAlertStages(): Map<Long, String> {
+        val prefs = dataStore.data.first()
+        return prefs.asMap().mapNotNull { (key, value) ->
+            val id = key.name.removePrefix(SCHEDULE_STAGE_PREFIX)
+                .takeIf { it != key.name }?.toLongOrNull() ?: return@mapNotNull null
+            val stage = value as? String ?: return@mapNotNull null
+            id to stage
+        }.toMap()
+    }
+
+    override suspend fun setScheduleAlertStage(scheduleId: Long, stage: String) {
+        dataStore.edit { it[scheduleStageKey(scheduleId)] = stage }
+    }
+
+    override suspend fun retainScheduleAlertStages(keep: Set<Long>) {
+        dataStore.edit { prefs ->
+            prefs.asMap().keys
+                .filter { key ->
+                    val id = key.name.removePrefix(SCHEDULE_STAGE_PREFIX)
+                        .takeIf { it != key.name }?.toLongOrNull()
+                    id != null && id !in keep
+                }
+                .forEach { prefs -= it }
+        }
+    }
+
     private fun alertStateKey(settingId: Long) =
         stringPreferencesKey("$ALERT_STATE_PREFIX$settingId")
 
@@ -187,6 +225,7 @@ class UserPrefsRepositoryImpl @Inject constructor(
     }
 
     private companion object {
+        const val SCHEDULE_STAGE_PREFIX = "schedule_alert_stage_"
         const val ALERT_STATE_PREFIX = "maintenance_alert_state_"
     }
 }

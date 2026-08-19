@@ -116,6 +116,9 @@ fun SettingsScreen(
     val monthlyReportEnabled by viewModel.monthlyReportNotificationEnabled
         .collectAsStateWithLifecycle(initialValue = true)
 
+    val scheduleAlertEnabled by viewModel.scheduleAlertEnabled
+        .collectAsStateWithLifecycle(initialValue = true)
+
     var showAlertHourDialog by remember { mutableStateOf(false) }
     var showAlertRemindDialog by remember { mutableStateOf(false) }
 
@@ -577,6 +580,19 @@ fun SettingsScreen(
                             )
                         }
                     }
+                }
+
+                item {
+                    SettingsSwitchMenuItem(
+                        icon = Icons.Outlined.CalendarMonth,
+                        title = "날짜 일정 알림",
+                        subtitle = "정기검사·보험 만기 2주 전부터 알려드립니다",
+                        checked = scheduleAlertEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked) AutoLogNotificationHelper.createChannels(context)
+                            viewModel.setScheduleAlertEnabled(checked)
+                        }
+                    )
                 }
 
                 item {

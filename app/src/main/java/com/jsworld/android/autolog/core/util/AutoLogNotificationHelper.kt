@@ -18,6 +18,7 @@ object AutoLogNotificationHelper {
     const val MAINT_OVERDUE_CHANNEL_ID = "maintenance_overdue_channel"
 
     const val MONTHLY_REPORT_CHANNEL_ID = "monthly_report_channel"
+    const val SCHEDULE_CHANNEL_ID = "schedule_channel"
 
     fun createChannels(context: Context) {
         val weekly = NotificationChannel(
@@ -52,8 +53,18 @@ object AutoLogNotificationHelper {
             description = "매월 1일 지난달 지출 리포트가 준비되면 알려줍니다."
         }
 
+        val schedule = NotificationChannel(
+            SCHEDULE_CHANNEL_ID,
+            "날짜 일정 알림",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "정기검사·보험 만기·자동차세 날짜가 다가오면 알려줍니다."
+        }
+
         val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannels(listOf(weekly, maintSoon, maintOverdue, monthlyReport))
+        manager.createNotificationChannels(
+            listOf(weekly, maintSoon, maintOverdue, monthlyReport, schedule)
+        )
     }
 
     /** 알림이 시스템에서 막혀 있는 상태 — 앱은 켜져 있는데 알림이 오지 않는 원인 */

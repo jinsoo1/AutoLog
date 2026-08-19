@@ -13,9 +13,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.jsworld.android.autolog.presentation.theme.AutoLogTheme
 import com.jsworld.android.autolog.presentation.navigation.AutoLogNavHost
+import com.jsworld.android.autolog.presentation.navigation.Routes
 import com.jsworld.android.autolog.presentation.navigation.navigateToMainRoot
 import com.jsworld.android.autolog.core.util.Constant.ACTION_OPEN_CAR_DETAIL
 import com.jsworld.android.autolog.core.util.Constant.ACTION_OPEN_REPORT
+import com.jsworld.android.autolog.core.util.Constant.ACTION_OPEN_SCHEDULE
 import com.jsworld.android.autolog.core.util.Constant.EXTRA_CAR_ID
 import com.jsworld.android.autolog.presentation.viewModel.CarContextViewModel
 import com.jsworld.android.autolog.presentation.viewModel.MainViewModel
@@ -39,6 +41,9 @@ class MainActivity : ComponentActivity() {
     /** 웜 스타트에서 다른 화면에 있을 때 탭 셸로 복귀시키는 신호 (onNewIntent 전용) */
     private val navToRootRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    /** 일정 알림 탭 → 그 차량의 날짜 일정 화면. 소비될 때까지 유지 */
+    private val openScheduleRequests = MutableStateFlow<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -50,6 +55,9 @@ class MainActivity : ComponentActivity() {
         // savedInstanceState 가 있으면 회전 등 재생성 — 이미 처리한 인텐트를 다시 소비하지 않는다.
         if (savedInstanceState == null && intent?.action == ACTION_OPEN_REPORT) {
             openReportRequests.value = true
+        }
+        if (savedInstanceState == null && intent?.action == ACTION_OPEN_SCHEDULE) {
+            openScheduleRequests.value = intent?.getLongExtra(EXTRA_CAR_ID, -1L)?.takeIf { it > 0L }
         }
 
 
@@ -81,6 +89,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val openReportRequested by openReportRequests.collectAsState()
+                val openScheduleCarId by openScheduleRequests.collectAsState()
+
+                // 일정 알림에서 진입 — 탭 셸이 준비된 뒤 그 차량의 일정 화면을 띄운다
+                LaunchedEffect(openScheduleCarId) {
+                    val carId = openScheduleCarId ?: return@LaunchedEffect
+                    carContextViewModel.selectCar(carId)
+                    navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
+                    openScheduleRequests.value = null
+                }
 
                 AutoLogNavHost(
                     navController = navController,
@@ -110,6 +127,12 @@ class MainActivity : ComponentActivity() {
         if (intent.action == ACTION_OPEN_REPORT) {
             openReportRequests.value = true
             navToRootRequests.tryEmit(Unit)
+        }
+
+        if (intent.action == ACTION_OPEN_SCHEDULE) {
+            intent.getLongExtra(EXTRA_CAR_ID, -1L).takeIf { it > 0L }?.let {
+                openScheduleRequests.value = it
+            }
         }
     }
 }
