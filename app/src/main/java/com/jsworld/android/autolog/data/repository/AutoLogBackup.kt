@@ -5,6 +5,7 @@ import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
 import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.data.local.entity.MaintenanceTypeEntity
+import com.jsworld.android.autolog.data.local.entity.CarScheduleEntity
 import com.jsworld.android.autolog.data.local.entity.CareItemEntity
 import com.jsworld.android.autolog.data.local.entity.CareRecordEntity
 import com.jsworld.android.autolog.data.local.entity.MileageHistoryEntity
@@ -47,7 +48,13 @@ data class AutoLogBackup(
      * 복원 시 [withLegacyCareConverted] 로 이 목록으로 옮긴다.
      */
     val careItems: List<CareItemBackup> = emptyList(),
-    val careRecords: List<CareRecordBackup> = emptyList()
+    val careRecords: List<CareRecordBackup> = emptyList(),
+
+    /**
+     * 날짜 기반 일정 (v5). 기본값이 있으므로 구버전 백업도 그대로 복원된다 —
+     * CURRENT_BACKUP_VERSION 은 올리지 않는다(care 때와 같은 규칙).
+     */
+    val schedules: List<CarScheduleBackup> = emptyList()
 ) {
     companion object {
         const val CURRENT_BACKUP_VERSION = 1
@@ -131,6 +138,17 @@ data class CareRecordBackup(
     val cost: Int?,
     val method: String?,
     val place: String?,
+    val memo: String?
+)
+
+@Serializable
+data class CarScheduleBackup(
+    val id: Long,
+    val carId: Long,
+    val type: String,
+    val title: String,
+    val dueDate: String,
+    val repeatMonths: Int?,
     val memo: String?
 )
 
@@ -387,3 +405,25 @@ fun AutoLogBackup.withLegacyCareConverted(): AutoLogBackup {
         careRecords = records
     )
 }
+
+fun CarScheduleEntity.toBackup(): CarScheduleBackup =
+    CarScheduleBackup(
+        id = id,
+        carId = carId,
+        type = type,
+        title = title,
+        dueDate = dueDate,
+        repeatMonths = repeatMonths,
+        memo = memo
+    )
+
+fun CarScheduleBackup.toEntity(): CarScheduleEntity =
+    CarScheduleEntity(
+        id = id,
+        carId = carId,
+        type = type,
+        title = title,
+        dueDate = dueDate,
+        repeatMonths = repeatMonths,
+        memo = memo
+    )

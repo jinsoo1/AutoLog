@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.jsworld.android.autolog.data.local.dao.BackupDao
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.CarExportDao
+import com.jsworld.android.autolog.data.local.dao.CarScheduleDao
 import com.jsworld.android.autolog.data.local.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.data.local.dao.CareDao
 import com.jsworld.android.autolog.data.local.dao.FuelRecordDao
@@ -16,6 +17,7 @@ import com.jsworld.android.autolog.data.local.dao.MaintenanceTypeDao
 import com.jsworld.android.autolog.data.local.dao.MileageHistoryDao
 import com.jsworld.android.autolog.data.local.entity.CarEntity
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.CarScheduleEntity
 import com.jsworld.android.autolog.data.local.entity.CareItemEntity
 import com.jsworld.android.autolog.data.local.entity.CareRecordEntity
 import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
@@ -33,7 +35,8 @@ import com.jsworld.android.autolog.data.repository.BackupRepository.Companion.DA
         MileageHistoryEntity::class,
         FuelRecordEntity::class,
         CareItemEntity::class,
-        CareRecordEntity::class
+        CareRecordEntity::class,
+        CarScheduleEntity::class
     ],
     version = DATABASE_VERSION,
     exportSchema = true
@@ -47,6 +50,7 @@ abstract class AutoLogDatabase : RoomDatabase() {
     abstract fun maintenanceFullDao(): MaintenanceFullDao
     abstract fun mileageHistoryDao(): MileageHistoryDao
     abstract fun carExportDao(): CarExportDao
+    abstract fun carScheduleDao(): CarScheduleDao
     abstract fun fuelRecordDao(): FuelRecordDao
     abstract fun careDao(): CareDao
 
@@ -295,6 +299,33 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL(
             "DELETE FROM maintenance_types WHERE id IN " +
                 "(SELECT t.id FROM maintenance_types t WHERE $careNameCondition)"
+        )
+    }
+}
+
+/**
+ * v5 — 날짜 기반 일정(car_schedules).
+ *
+ * 새 테이블 하나만 만든다. 기존 데이터는 건드리지 않으므로 되돌릴 것도 없다.
+ * SQL 은 schemas/5.json 의 createSql 과 같아야 한다(Room 검증 대상).
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `car_schedules` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`carId` INTEGER NOT NULL, " +
+                "`type` TEXT NOT NULL, " +
+                "`title` TEXT NOT NULL, " +
+                "`dueDate` TEXT NOT NULL, " +
+                "`repeatMonths` INTEGER, " +
+                "`memo` TEXT, " +
+                "FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_car_schedules_carId` " +
+                "ON `car_schedules` (`carId`)"
         )
     }
 }

@@ -6,6 +6,7 @@ import com.jsworld.android.autolog.data.datastore.UserPrefsRepositoryImpl
 import com.jsworld.android.autolog.data.repository.CarMaintenanceRepositoryImpl
 import com.jsworld.android.autolog.data.repository.CarRepositoryImpl
 import com.jsworld.android.autolog.data.repository.CareRepositoryImpl
+import com.jsworld.android.autolog.data.repository.CarScheduleRepositoryImpl
 import com.jsworld.android.autolog.data.repository.ExpenseReportRepositoryImpl
 import com.jsworld.android.autolog.data.repository.FuelRecordRepositoryImpl
 import com.jsworld.android.autolog.data.repository.MaintenanceHistoryRepositoryImpl
@@ -14,6 +15,7 @@ import com.jsworld.android.autolog.data.repository.NoticeRepositoryImpl
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
+import com.jsworld.android.autolog.domain.repository.CarScheduleRepository
 import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.CarSortPreferenceRepository
@@ -70,6 +72,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindExpenseReportRepository(impl: ExpenseReportRepositoryImpl): ExpenseReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCarScheduleRepository(impl: CarScheduleRepositoryImpl): CarScheduleRepository
 
     @Binds
     @Singleton

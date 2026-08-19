@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.jsworld.android.autolog.data.local.dao.BackupDao
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.CarExportDao
+import com.jsworld.android.autolog.data.local.dao.CarScheduleDao
 import com.jsworld.android.autolog.data.local.dao.CareDao
 import com.jsworld.android.autolog.data.local.dao.CarMaintenanceSettingDao
 import com.jsworld.android.autolog.data.local.dao.FuelRecordDao
@@ -16,6 +17,7 @@ import com.jsworld.android.autolog.data.local.db.AutoLogDatabase
 import com.jsworld.android.autolog.data.local.db.MIGRATION_1_2
 import com.jsworld.android.autolog.data.local.db.MIGRATION_2_3
 import com.jsworld.android.autolog.data.local.db.MIGRATION_3_4
+import com.jsworld.android.autolog.data.local.db.MIGRATION_4_5
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,7 +40,7 @@ object DatabaseModule {
             AutoLogDatabase::class.java,
             "autolog_db"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
 
 
@@ -71,6 +73,9 @@ object DatabaseModule {
 
     @Provides
     fun provideCareDao(db: AutoLogDatabase): CareDao = db.careDao()
+
+    @Provides
+    fun provideCarScheduleDao(db: AutoLogDatabase): CarScheduleDao = db.carScheduleDao()
 
     @Provides
     fun provideFuelRecordDao(db: AutoLogDatabase): FuelRecordDao =

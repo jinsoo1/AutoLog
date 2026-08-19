@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.jsworld.android.autolog.data.local.entity.CarEntity
 import com.jsworld.android.autolog.data.local.entity.CarMaintenanceSettingEntity
+import com.jsworld.android.autolog.data.local.entity.CarScheduleEntity
 import com.jsworld.android.autolog.data.local.entity.CareItemEntity
 import com.jsworld.android.autolog.data.local.entity.CareRecordEntity
 import com.jsworld.android.autolog.data.local.entity.FuelRecordEntity
@@ -43,6 +44,17 @@ interface BackupDao {
     /** 복원 전 경고에 쓰는 현재 주유 기록 수 */
     @Query("SELECT COUNT(*) FROM fuel_records")
     suspend fun countFuelRecords(): Int
+
+    /* ── 날짜 일정 (v5) ── */
+
+    @Query("SELECT * FROM car_schedules")
+    suspend fun getAllSchedules(): List<CarScheduleEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSchedules(schedules: List<CarScheduleEntity>)
+
+    @Query("DELETE FROM car_schedules")
+    suspend fun deleteAllSchedules()
 
     /** 백업 권유 다이얼로그용 — "지킬 만한 기록"이 쌓였는지 */
     @Query("SELECT COUNT(*) FROM maintenance_history")
