@@ -67,19 +67,21 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 
         // ⚠️ 일정 알림은 정비 알림 스위치와 **별개**다 — 정비 알림을 꺼둔 사용자도
         // 보험 만기·정기검사는 받아야 한다. 그래서 prefs.enabled 검사보다 먼저 돈다.
-        runCatching { notifySchedules(forceTest) }
+        val hasSchedules = runCatching { notifySchedules(forceTest) }
             .onFailure { android.util.Log.e(TAG, "schedule alert failed", it) }
+            .getOrDefault(false)
 
-        // 꺼져 있으면 체인도 세운다(끌 때 cancel 되지만 경합 대비 안전망).
-        if (!prefs.enabled) {
-            android.util.Log.d(TAG, "doWork skipped — alert disabled (forceTest=$forceTest)")
-            return Result.success()
+        // ⚠️ 내일 예약은 **두 알림 중 하나라도 살아 있으면** 건다.
+        // prefs.enabled 만 보고 예약하면, 정비 알림을 꺼두고 일정만 쓰는 사용자의
+        // 체인이 오늘 한 번 돌고 끊긴다(1.2.2 의 체인 끊김과 같은 종류).
+        // 테스트 실행은 일일 체인을 건드리지 않는다.
+        if (!forceTest && (prefs.enabled || hasSchedules)) {
+            MaintenanceAlertScheduler.scheduleNextFromWorker(applicationContext, prefs.hour)
         }
 
-        // ⚠️ 검사보다 예약을 먼저 — 도중에 예외가 나도 내일 체인이 살아야 한다.
-        // 테스트 실행은 일일 체인을 건드리지 않는다.
-        if (!forceTest) {
-            MaintenanceAlertScheduler.scheduleNextFromWorker(applicationContext, prefs.hour)
+        if (!prefs.enabled) {
+            android.util.Log.d(TAG, "maintenance check skipped — alert disabled")
+            return Result.success()
         }
 
         runCatching { checkAndNotify(prefs, forceTest) }
@@ -87,14 +89,19 @@ class MaintenanceAlertWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    private suspend fun notifySchedules(forceTest: Boolean) {
+    /** @return 등록된 일정이 있는지 — 내일 체인을 이어야 하는지 판단에 쓴다 */
+    private suspend fun notifySchedules(forceTest: Boolean): Boolean {
         val cars = carRepository.getAllCars().first().associateBy { it.id }
-        val sent = scheduleAlertNotifier.checkAndNotify(
+        val result = scheduleAlertNotifier.checkAndNotify(
             context = applicationContext,
             carsById = cars,
             forceTest = forceTest
         )
-        android.util.Log.d(TAG, "schedule alerts sent=$sent")
+        android.util.Log.d(
+            TAG,
+            "schedule alerts sent=${result.sent} hasSchedules=${result.hasSchedules}"
+        )
+        return result.hasSchedules
     }
 
     private suspend fun checkAndNotify(prefs: MaintenanceAlertPrefs, forceTest: Boolean) {

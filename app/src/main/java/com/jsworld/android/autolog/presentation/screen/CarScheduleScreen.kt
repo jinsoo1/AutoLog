@@ -1,5 +1,10 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,11 +64,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.domain.model.CarSchedule
+import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.domain.model.REPEAT_INSPECTION
 import com.jsworld.android.autolog.domain.model.REPEAT_INSURANCE
 import com.jsworld.android.autolog.domain.model.REPEAT_TAX
@@ -73,6 +82,7 @@ import com.jsworld.android.autolog.domain.model.formatScheduleDate
 import com.jsworld.android.autolog.domain.model.sortSchedules
 import com.jsworld.android.autolog.domain.model.suggestInspectionDate
 import com.jsworld.android.autolog.domain.model.suggestTaxDate
+import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertScheduler
 import com.jsworld.android.autolog.presentation.viewModel.CarScheduleViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -99,6 +109,14 @@ fun CarScheduleScreen(
     val sorted = remember(schedules, today) { sortSchedules(schedules, today) }
     val nearest = sorted.firstOrNull { (it.remainingDays(today) ?: Long.MIN_VALUE) >= 0 }
         ?: sorted.firstOrNull()
+
+    val context = LocalContext.current
+
+    // 첫 일정을 등록할 때만 물어본다 — 화면에 들어오자마자 권한부터 묻지 않는다.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { /* 거부해도 일정 자체는 저장된다 — 화면에서 D-day 로 볼 수 있다 */ }
+    )
 
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<CarSchedule?>(null) }
@@ -208,9 +226,34 @@ fun CarScheduleScreen(
             onDismiss = { showAddSheet = false },
             onDelete = null,
             onSave = { type, title, dueDate, repeatMonths, memo ->
-                viewModel.add(carId, type, title, dueDate, repeatMonths, memo) {
-                    showAddSheet = false
-                }
+                viewModel.add(
+                    carId = carId,
+                    type = type,
+                    title = title,
+                    dueDate = dueDate,
+                    repeatMonths = repeatMonths,
+                    memo = memo,
+                    // 첫 일정 — 알림 채널을 만들고 하루 1회 체인을 세운다.
+                    // (정비 알림이 꺼져 있으면 이 체인이 아예 없던 상태다)
+                    onNeedsAlertSetup = {
+                        AutoLogNotificationHelper.createChannels(context)
+                        MaintenanceAlertScheduler.scheduleNext(
+                            context,
+                            MaintenanceAlertPrefs.DEFAULT_HOUR
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            notificationPermissionLauncher.launch(
+                                Manifest.permission.POST_NOTIFICATIONS
+                            )
+                        }
+                    },
+                    onDone = { showAddSheet = false }
+                )
             }
         )
     }

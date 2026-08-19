@@ -38,26 +38,34 @@ class ScheduleAlertNotifier @Inject constructor(
     private val userPrefsRepository: UserPrefsRepository
 ) {
 
+    /** 검사 결과 — 보낸 건수와, 일정이 하나라도 있는지(체인 유지 판단용) */
+    data class Result(val sent: Int, val hasSchedules: Boolean)
+
     /**
      * @param carsById 알림 제목에 차량 이름을 넣기 위한 조회용
-     * @param forceTest 디버그 테스트 — 전이 검사 없이 임박한 일정을 전부 보낸다
+     * @param forceTest 디버그 테스트 — 전이 검사 없이 등록된 일정을 전부 보낸다
      */
     suspend fun checkAndNotify(
         context: Context,
         carsById: Map<Long, Car>,
         today: LocalDate = LocalDate.now(),
         forceTest: Boolean = false
-    ): Int {
+    ): Result {
         // 설정 읽기가 실패해도 알림 자체를 막지는 않는다(기본 켜짐)
+        // 일정 유무는 알림 설정·권한과 무관하게 먼저 확인한다 —
+        // 알림을 꺼뒀어도 일정이 있으면 체인은 살려둬야 다시 켤 때 바로 동작한다.
+        val schedules = runCatching { scheduleRepository.getAll() }.getOrDefault(emptyList())
+        val hasSchedules = schedules.isNotEmpty()
+
         val enabled = runCatching {
             userPrefsRepository.observeScheduleAlertEnabled().first()
         }.getOrDefault(true)
-        if (!enabled) return 0
+        if (!enabled) return Result(0, hasSchedules)
 
-        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
-
-        val schedules = runCatching { scheduleRepository.getAll() }.getOrDefault(emptyList())
-        if (schedules.isEmpty()) return 0
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return Result(0, hasSchedules)
+        }
+        if (!hasSchedules) return Result(0, false)
 
         val previous = runCatching { userPrefsRepository.getScheduleAlertStages() }
             .getOrDefault(emptyMap())
@@ -97,7 +105,7 @@ class ScheduleAlertNotifier @Inject constructor(
             runCatching { userPrefsRepository.retainScheduleAlertStages(stillFar) }
         }
 
-        return sent
+        return Result(sent, hasSchedules)
     }
 
     private fun notify(

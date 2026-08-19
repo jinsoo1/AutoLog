@@ -6,6 +6,7 @@ import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.model.ScheduleType
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.CarScheduleRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class CarScheduleViewModel @Inject constructor(
     private val scheduleRepository: CarScheduleRepository,
-    private val carRepository: CarRepository
+    private val carRepository: CarRepository,
+    private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
 
     private val map = mutableMapOf<Long, StateFlow<List<CarSchedule>>>()
@@ -34,6 +36,10 @@ class CarScheduleViewModel @Inject constructor(
     fun carYear(carId: Long): Flow<String?> =
         carRepository.getAllCars().map { cars -> cars.firstOrNull { it.id == carId }?.year }
 
+    /**
+     * @param onNeedsAlertSetup 첫 일정을 등록했을 때 — 화면이 알림 채널 생성과
+     *   하루 1회 체인 예약을 해준다. 앱을 다시 켤 때까지 기다리면 그 사이 알림이 없다.
+     */
     fun add(
         carId: Long,
         type: ScheduleType,
@@ -41,9 +47,13 @@ class CarScheduleViewModel @Inject constructor(
         dueDate: String,
         repeatMonths: Int?,
         memo: String?,
+        onNeedsAlertSetup: () -> Unit = {},
         onDone: () -> Unit = {}
     ) {
         viewModelScope.launch {
+            val wasEmpty = runCatching { scheduleRepository.getAll().isEmpty() }
+                .getOrDefault(true)
+
             scheduleRepository.add(
                 CarSchedule(
                     id = 0,
@@ -55,6 +65,11 @@ class CarScheduleViewModel @Inject constructor(
                     memo = memo?.takeIf { it.isNotBlank() }
                 )
             )
+
+            val alertOn = runCatching { userPrefsRepository.observeScheduleAlertEnabled().first() }
+                .getOrDefault(true)
+            if (wasEmpty && alertOn) onNeedsAlertSetup()
+
             onDone()
         }
     }
