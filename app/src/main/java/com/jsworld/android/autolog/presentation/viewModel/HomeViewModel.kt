@@ -10,6 +10,7 @@ import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -24,8 +25,21 @@ class HomeViewModel @Inject constructor(
     private val historyRepository: MaintenanceHistoryRepository,
     private val fuelRecordRepository: FuelRecordRepository,
     private val careRepository: CareRepository,
+    private val userPrefsRepository: UserPrefsRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
+
+    /**
+     * 계절별 관리 카드를 '올해는 넘어가기'로 닫은 계절 키.
+     * 카드는 계절이 바뀌면 저절로 돌아온다 — 영구 스위치가 아니다.
+     */
+    val seasonalCareDismissedKey: StateFlow<String> =
+        userPrefsRepository.observeSeasonalCareDismissedKey()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun dismissSeasonalCare(key: String) {
+        viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(key) }
+    }
 
     /** '이번 달 지출' 카드용 세차 기록 — 세차는 별도 테이블이라 따로 가져온다 */
     fun careRecordsState(carId: Long): StateFlow<List<CareRecord>> =

@@ -168,6 +168,11 @@ fun AutoLogNavHost(
                 onManageItems = { carId ->
                     navController.navigate(Routes.carDetail(carId)) { launchSingleTop = true }
                 },
+                onAddMaintenanceItem = { carId ->
+                    navController.navigate("${Routes.CAR_MAINTENANCE_ITEM_PICKER}/$carId") {
+                        launchSingleTop = true
+                    }
+                },
                 onAddMaintenance = { carId, settingId ->
                     navController.navigate(Routes.addMaintenance(carId, settingId)) {
                         launchSingleTop = true

@@ -73,6 +73,8 @@ fun MainTabScreen(
     onManageCars: () -> Unit,
     onEditCar: (Long) -> Unit,
     onManageItems: (Long) -> Unit,
+    /** 계절 카드 — 아직 켜지 않은 항목 추가 */
+    onAddMaintenanceItem: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onOpenItemDetail: (Long) -> Unit,
     onEditHistory: (Long) -> Unit,
@@ -169,6 +171,7 @@ fun MainTabScreen(
                     onSwitchCar = { showSwitcher = true },
                     onNoticeClick = onNoticeClick,
                     onEditCar = onEditCar,
+                    onAddMaintenanceItem = onAddMaintenanceItem,
                     onAddMaintenance = onAddMaintenance,
                     onOpenItemDetail = onOpenItemDetail,
                     onSeeAllRecords = { tab = MainTab.MAINTENANCE },

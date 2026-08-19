@@ -63,6 +63,14 @@ interface UserPrefsRepository {
     fun observeScheduleAlertEnabled(): Flow<Boolean>
     suspend fun setScheduleAlertEnabled(enabled: Boolean)
 
+    /**
+     * 계절별 관리 카드를 '올해는 넘어가기'로 닫은 계절 키(SeasonalCare.seasonKey).
+     * 없으면 빈 문자열. 계절이 바뀌면 키가 달라져 카드가 저절로 돌아온다 —
+     * 영구히 끄는 스위치가 아니라 **이번 계절만** 넘기는 장치다.
+     */
+    fun observeSeasonalCareDismissedKey(): Flow<String>
+    suspend fun setSeasonalCareDismissedKey(key: String)
+
     /** scheduleId → 마지막으로 알린 단계(ScheduleAlertStage.name). 전이 감지용 */
     suspend fun getScheduleAlertStages(): Map<Long, String>
     suspend fun setScheduleAlertStage(scheduleId: Long, stage: String)

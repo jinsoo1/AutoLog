@@ -64,6 +64,18 @@ class UserPrefsRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 계절별 관리 카드 — '올해는 넘어가기'
+     */
+    private val seasonalCareDismissedKey = stringPreferencesKey("seasonal_care_dismissed_key")
+
+    override fun observeSeasonalCareDismissedKey(): Flow<String> =
+        dataStore.data.map { it[seasonalCareDismissedKey] ?: "" }
+
+    override suspend fun setSeasonalCareDismissedKey(key: String) {
+        dataStore.edit { it[seasonalCareDismissedKey] = key }
+    }
+
+    /**
      * 탭 화면의 현재 차량
      */
     private val selectedCarIdKey = longPreferencesKey("selected_car_id")

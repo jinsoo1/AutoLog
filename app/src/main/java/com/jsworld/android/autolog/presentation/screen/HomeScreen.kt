@@ -20,14 +20,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Umbrella
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -46,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +60,13 @@ import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
+import com.jsworld.android.autolog.domain.model.Season
+import com.jsworld.android.autolog.domain.model.SeasonalCareGuide
+import com.jsworld.android.autolog.domain.model.SeasonalCareRow
+import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
+import com.jsworld.android.autolog.domain.model.lastCareLabel
+import com.jsworld.android.autolog.domain.model.seasonKey
+import com.jsworld.android.autolog.domain.model.seasonalGuide
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.HomeViewModel
@@ -74,6 +86,8 @@ fun HomeScreen(
     onSwitchCar: () -> Unit,
     onNoticeClick: () -> Unit,
     onEditCar: (Long) -> Unit,
+    /** 계절 카드에서 아직 켜지 않은 항목을 눌렀을 때 — 항목 추가 화면으로 */
+    onAddMaintenanceItem: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onOpenItemDetail: (Long) -> Unit,
     onSeeAllRecords: () -> Unit,
@@ -142,6 +156,24 @@ fun HomeScreen(
                 careRecords.filter { it.performedAt?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 }
         }
 
+        // 계절별 관리 — 주행거리로 안 잡히는 것들(배터리는 추워지면, 와이퍼는 장마 전에).
+        // 기록이 없어도 카드를 숨기지 않는다. "무엇을 봐야 하나"가 이 카드의 값이고,
+        // 각 줄의 버튼이 곧 첫 기록을 남기는 입구가 된다.
+        val today = LocalDate.now()
+        val seasonalKey = remember(today.monthValue) { seasonKey(today) }
+        val dismissedSeasonKey by viewModel.seasonalCareDismissedKey.collectAsState()
+        val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
+        val seasonalRows = remember(seasonalGuide, overview, records) {
+            val lastDates = records
+                .mapNotNull { rec ->
+                    rec.serviceDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        ?.let { rec.settingId to it }
+                }
+                .groupBy({ it.first }, { it.second })
+                .mapValues { (_, dates) -> dates.max() }
+            buildSeasonalCareRows(seasonalGuide, overview, lastDates)
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
@@ -175,6 +207,21 @@ fun HomeScreen(
                     UrgentCard(
                         item = item,
                         onClick = { onAddMaintenance(car.id, item.settingId) }
+                    )
+                }
+            }
+
+            // 임박·초과 카드 아래에 둔다. 계절 카드는 읽는 콘텐츠라,
+            // 지금 당장 해야 할 항목보다 위에 오면 급한 것을 밀어낸다.
+            if (dismissedSeasonKey != seasonalKey) {
+                item {
+                    SeasonalCareCard(
+                        guide = seasonalGuide,
+                        rows = seasonalRows,
+                        today = today,
+                        onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
+                        onAddItem = { onAddMaintenanceItem(car.id) },
+                        onSkip = { viewModel.dismissSeasonalCare(seasonalKey) }
                     )
                 }
             }
@@ -388,6 +435,154 @@ private fun UrgentCard(
             )
         }
     }
+}
+
+/**
+ * 계절별 관리 카드 — "이번 겨울 전에 확인할 3가지".
+ *
+ * 임박 카드(빨강)와 달리 **재촉하지 않는다**. 계절이 바뀔 때 한 번 읽고 넘기는
+ * 콘텐츠라 포인트색(tertiary)을 옅게 깔고, 각 줄에 다음 행동만 붙인다.
+ */
+@Composable
+private fun SeasonalCareCard(
+    guide: SeasonalCareGuide,
+    rows: List<SeasonalCareRow>,
+    today: LocalDate,
+    onRecord: (Long) -> Unit,
+    onAddItem: () -> Unit,
+    onSkip: () -> Unit
+) {
+    val accent = MaterialTheme.colorScheme.tertiary
+    // 세 항목 모두 기록이 없으면 안내 문구를 바꾼다 — 빈 화면을 사과하는 대신 다음 행동을 준다.
+    val hasAnyRecord = rows.any { it.lastServiceDate != null }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.09f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = accent.copy(alpha = 0.18f), shape = CircleShape) {
+                    Icon(
+                        guide.season.icon(),
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier
+                            .padding(7.dp)
+                            .size(16.dp)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        guide.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (hasAnyRecord) guide.subtitle
+                        else "지금 확인하고 기록해두면, 다음부터 알려드릴 수 있어요",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                rows.forEach { row ->
+                    SeasonalCareRowItem(
+                        row = row,
+                        today = today,
+                        onClick = {
+                            if (row.settingId != null) onRecord(row.settingId) else onAddItem()
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    "올해는 넘어가기",
+                    modifier = Modifier
+                        .clickable(onClick = onSkip)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonalCareRowItem(
+    row: SeasonalCareRow,
+    today: LocalDate,
+    onClick: () -> Unit
+) {
+    // 관리 목록에 없는 항목이면 기록할 곳 자체가 없다 — 먼저 항목을 켜야 한다.
+    val enabled = row.settingId != null
+    val actionLabel = if (enabled) "기록" else "추가"
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    row.itemName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${row.reason} · ${
+                        if (enabled) lastCareLabel(row.lastServiceDate, today)
+                        else "관리 목록에 없어요"
+                    }",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            ) {
+                Text(
+                    actionLabel,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+private fun Season.icon(): ImageVector = when (this) {
+    Season.SPRING -> Icons.Default.LocalFlorist
+    Season.MONSOON -> Icons.Default.Umbrella
+    Season.SUMMER -> Icons.Default.WbSunny
+    Season.PRE_WINTER, Season.WINTER -> Icons.Default.AcUnit
 }
 
 @Composable
