@@ -18,5 +18,13 @@ data class MaintenanceUiModel(
      * 즉시 초과로 보이는데, 푸시 알림은 이런 항목을 걸러야 한다
      * (항목만 켜둔 사용자에게 초과 알림을 쏟아내면 안 된다).
      */
-    val hasHistory: Boolean = true
+    val hasHistory: Boolean = true,
+    /**
+     * 남은 거리(km)·남은 일수. 주기가 없는 쪽은 null, 음수면 이미 지난 것.
+     *
+     * [remainingText] 는 사람이 읽는 문장이라 계산에 쓸 수 없어서 숫자로도 함께 내보낸다
+     * (리포트의 정비 시기 예측이 월평균 주행거리와 나눠 쓴다).
+     */
+    val remainingKm: Int? = null,
+    val remainingDays: Long? = null
 )

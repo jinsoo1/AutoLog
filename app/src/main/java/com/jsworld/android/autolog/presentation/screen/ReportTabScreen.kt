@@ -67,6 +67,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CareRecord
+import com.jsworld.android.autolog.domain.model.MaintenancePrediction
+import com.jsworld.android.autolog.domain.model.buildMaintenancePredictions
+import com.jsworld.android.autolog.domain.model.estimateDrivingPace
+import com.jsworld.android.autolog.domain.model.predictedDateLabel
+import com.jsworld.android.autolog.domain.model.predictionBasisLabel
 import com.jsworld.android.autolog.domain.model.buildCareSessions
 import com.jsworld.android.autolog.domain.model.ExpenseInsight
 import com.jsworld.android.autolog.domain.model.FuelRecord
@@ -89,6 +94,8 @@ import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -105,6 +112,9 @@ private const val ENTRY_COLLAPSE_MIN = 8
 fun ReportTabScreen(
     car: Car?,
     onSwitchCar: () -> Unit,
+    /** 예측 빈 상태의 안내 버튼 — 홈(주행거리 업데이트)·정비 탭(첫 기록)으로 보낸다 */
+    onOpenHomeTab: () -> Unit = {},
+    onOpenMaintenanceTab: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel()
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -157,6 +167,15 @@ fun ReportTabScreen(
         val urgentAll by viewModel.urgentState(car.id).collectAsState()
         val urgentItems = remember(urgentAll) { urgentAll.filter { it.hasHistory } }
         val lastCosts by viewModel.lastCostsState(car.id).collectAsState()
+
+        // 정비 시기 예측 — 월평균 주행거리(리포트가 이미 계산) x 남은 거리.
+        val overview by viewModel.overviewState(car.id).collectAsState()
+        val today = remember { LocalDate.now() }
+        val pace = remember(loaded) { estimateDrivingPace(loaded, YearMonth.now()) }
+        val predictions = remember(overview, pace) {
+            buildMaintenancePredictions(overview, pace, today)
+        }
+        val anyHistory = remember(overview) { overview.any { it.hasHistory } }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -258,6 +277,59 @@ fun ReportTabScreen(
                         totalMileage = car.mileage,
                         secondLine = secondLine
                     )
+                }
+
+                // 정비 시기 예측 — 이번 달을 보고 있을 때만(과거 달의 '예측'은 형용모순).
+                if (isLatestMonth) {
+                    when {
+                        predictions.isNotEmpty() -> {
+                            item { SectionLabel("정비 시기 예측") }
+                            item {
+                                PredictionCard(
+                                    predictions = predictions,
+                                    overview = overview,
+                                    paceCaption = pace?.let {
+                                        "최근 ${it.monthsUsed}개월 월평균 " +
+                                            NumberFormat.getIntegerInstance().format(it.monthlyKm) +
+                                            "km로 달렸을 때예요."
+                                    } ?: "기간 주기만으로 계산했어요 — 주행거리를 " +
+                                        "업데이트하면 거리 기준도 예상할 수 있어요.",
+                                    today = today
+                                )
+                            }
+                        }
+
+                        // 기록이 하나도 없으면 계산 근거 자체가 없다 — 첫 기록으로 보낸다.
+                        !anyHistory && overview.isNotEmpty() -> {
+                            item { SectionLabel("정비 시기 예측") }
+                            item {
+                                PredictionGuideCard(
+                                    title = "첫 정비 기록을 남기면 시작돼요",
+                                    body = "언제 무엇을 했는지 하나라도 알아야 다음 시기를 " +
+                                        "계산할 수 있어요. 기록이 없는 항목은 0km·오늘 기준이 " +
+                                        "되어버려서, 예측에서 빼두었습니다.",
+                                    actionLabel = "정비 탭에서 기록하기",
+                                    onAction = onOpenMaintenanceTab
+                                )
+                            }
+                        }
+
+                        // 기록은 있는데 페이스를 모른다 — 주행거리 업데이트로 보낸다.
+                        pace == null && anyHistory -> {
+                            item { SectionLabel("정비 시기 예측") }
+                            item {
+                                PredictionGuideCard(
+                                    title = "아직 예상 시기를 계산할 수 없어요",
+                                    body = "월평균 주행거리를 알아야 계산할 수 있는데, " +
+                                        "최근 두 달 주행거리 기록이 없어요. 홈에서 " +
+                                        "주행거리를 업데이트하면 알려드릴게요.",
+                                    actionLabel = "주행거리 업데이트",
+                                    onAction = onOpenHomeTab
+                                )
+                            }
+                        }
+                        // 그 외(항목 자체가 없음 등)에는 섹션을 아예 그리지 않는다.
+                    }
                 }
 
                 // 다가오는 지출 — 이번 달을 보고 있을 때만. 과거 달에선 어색하다.
@@ -665,6 +737,138 @@ private fun CategoryLegendRow(label: String, value: Long, total: Long, color: Co
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * 정비 시기 예측 — 최근 주행 페이스에 남은 거리를 나눠 "언제쯤"으로 바꾼다.
+ * 예측은 근사라서 날짜 해상도를 초·중순·말로 낮추고, 근거(거리/기간)를 줄마다 밝힌다.
+ */
+@Composable
+private fun PredictionCard(
+    predictions: List<MaintenancePrediction>,
+    overview: List<MaintenanceUiModel>,
+    paceCaption: String,
+    today: LocalDate
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                paceCaption,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+
+            val byId = overview.associateBy { it.settingId }
+            predictions.forEach { prediction ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            prediction.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            predictionBasisLabel(prediction, byId[prediction.settingId]),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        predictedDateLabel(prediction.date, today),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(vertical = 6.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            )
+            Text(
+                "주행거리를 자주 업데이트할수록 예상이 정확해져요.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** 예측을 계산할 수 없을 때 — 사유와 다음 행동을 함께 준다(빈 화면을 사과하지 않는다) */
+@Composable
+private fun PredictionGuideCard(
+    title: String,
+    body: String,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.TrendingUp,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(18.dp),
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        body,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .clickable(onClick = onAction)
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    actionLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

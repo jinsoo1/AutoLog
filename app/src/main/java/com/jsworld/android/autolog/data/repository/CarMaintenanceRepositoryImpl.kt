@@ -102,6 +102,12 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
             val baseLastMileage = lastMileage ?: 0
             val baseDateForCalc = lastDate ?: today
 
+            // 예측·정렬에 쓰라고 숫자로도 남긴다(아래 kmPart/dayPart 는 표시 문장을 만든다).
+            val remainingKmValue = intervalKm?.let { (baseLastMileage + it) - carMileage }
+            val remainingDaysValue = intervalMonths?.let {
+                ChronoUnit.DAYS.between(today, baseDateForCalc.plusMonths(it.toLong()))
+            }
+
             val kmPart: Pair<MaintenanceStatus, String>? =
                 if (intervalKm != null) {
                     val dueMileage = baseLastMileage + intervalKm
@@ -181,7 +187,9 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 status = finalStatus,
                 remainingText = remainingText,
                 progressRatio = listOfNotNull(kmRatio, dayRatio).maxOrNull(),
-                hasHistory = !hasNoHistory
+                hasHistory = !hasNoHistory,
+                remainingKm = remainingKmValue,
+                remainingDays = remainingDaysValue
             )
         }
     }

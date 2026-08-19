@@ -62,6 +62,18 @@ class ReportViewModel @Inject constructor(
 
     private val careMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
 
+    /**
+     * 정비 시기 예측용 — 정상 항목까지 포함한 전체 상태.
+     * (urgentState 는 임박·초과만 와서 "아직 여유 있는 항목이 언제쯤 올지"를 못 만든다)
+     */
+    fun overviewState(carId: Long): StateFlow<List<MaintenanceUiModel>> =
+        overviewMap.getOrPut(carId) {
+            carMaintenanceRepository.observeMaintenanceOverview(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val overviewMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()
+
     /** 다가오는 지출 카드용 — 임박·초과 항목 */
     fun urgentState(carId: Long): StateFlow<List<MaintenanceUiModel>> =
         urgentMap.getOrPut(carId) {

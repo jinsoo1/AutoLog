@@ -192,7 +192,9 @@ fun MainTabScreen(
 
                 MainTab.REPORT -> ReportTabScreen(
                     car = selectedCar,
-                    onSwitchCar = { showSwitcher = true }
+                    onSwitchCar = { showSwitcher = true },
+                    onOpenHomeTab = { tab = MainTab.HOME },
+                    onOpenMaintenanceTab = { tab = MainTab.MAINTENANCE }
                 )
 
                 MainTab.SETTINGS -> SettingsScreen(
