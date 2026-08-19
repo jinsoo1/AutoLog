@@ -50,6 +50,13 @@ interface UserPrefsRepository {
     suspend fun setMaintenanceAlertRemindDays(days: Int)
 
     /**
+     * 월간 리포트 알림 권한을 이미 물었는지 — **딱 한 번만 묻는다.**
+     * 거부당한 뒤 또 물으면 시스템이 아예 무시하고, 사용자도 성가셔한다.
+     */
+    fun observeMonthlyReportPermissionAsked(): Flow<Boolean>
+    suspend fun setMonthlyReportPermissionAsked()
+
+    /**
      * 날짜 일정 알림 — **기본 켜짐**. 일정을 직접 등록한 것 자체가 "알려달라"는
      * 신호라, 등록해두고 알림이 없으면 기능의 의미가 사라진다.
      */

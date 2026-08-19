@@ -151,6 +151,16 @@ class UserPrefsRepositoryImpl @Inject constructor(
      * 항목별 마지막 알림 상태 — "maintenance_alert_state_<settingId>" = "STATUS|millis".
      * 항목 수가 수십 개 수준이라 DataStore 로 충분하다(테이블 추가·마이그레이션 회피).
      */
+    private val monthlyReportPermissionAskedKey =
+        booleanPreferencesKey("monthly_report_permission_asked")
+
+    override fun observeMonthlyReportPermissionAsked(): Flow<Boolean> =
+        dataStore.data.map { it[monthlyReportPermissionAskedKey] ?: false }
+
+    override suspend fun setMonthlyReportPermissionAsked() {
+        dataStore.edit { it[monthlyReportPermissionAskedKey] = true }
+    }
+
     private val scheduleAlertEnabledKey = booleanPreferencesKey("schedule_alert_enabled")
 
     override fun observeScheduleAlertEnabled(): Flow<Boolean> =

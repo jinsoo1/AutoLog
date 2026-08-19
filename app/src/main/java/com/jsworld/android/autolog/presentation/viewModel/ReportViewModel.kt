@@ -2,6 +2,7 @@ package com.jsworld.android.autolog.presentation.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
@@ -13,10 +14,12 @@ import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -26,8 +29,23 @@ class ReportViewModel @Inject constructor(
     private val fuelRecordRepository: FuelRecordRepository,
     private val maintenanceHistoryRepository: MaintenanceHistoryRepository,
     private val carMaintenanceRepository: CarMaintenanceRepository,
-    private val careRepository: CareRepository
+    private val careRepository: CareRepository,
+    private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
+
+    /**
+     * 월간 리포트 알림 권한을 물어야 하는가 — 리포트를 실제로 볼 만한 사용자에게만.
+     * (기본 켜짐인데 권한이 없으면 알림이 조용히 실패한다)
+     */
+    suspend fun shouldAskReportNotificationPermission(): Boolean {
+        val enabled = userPrefsRepository.observeMonthlyReportNotificationEnabled().first()
+        val asked = userPrefsRepository.observeMonthlyReportPermissionAsked().first()
+        return enabled && !asked
+    }
+
+    fun markReportNotificationPermissionAsked() {
+        viewModelScope.launch { userPrefsRepository.setMonthlyReportPermissionAsked() }
+    }
 
     // null = 로딩 중, emptyList = 기록 없음 — 빈 상태 화면이 로딩 중에 깜빡이지 않게 구분한다.
     private val expensesMap = mutableMapOf<Long, StateFlow<List<MonthlyExpense>?>>()

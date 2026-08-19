@@ -1,5 +1,10 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +52,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -63,6 +70,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
@@ -136,6 +144,30 @@ fun ReportTabScreen(
         val expenses by viewModel.expensesState(car.id).collectAsState()
 
         val loaded = expenses ?: return@Column // 로딩 중 — 빈 상태 깜빡임 방지
+
+        // 월간 리포트 알림은 기본 켜짐이지만 권한이 없으면 조용히 실패한다.
+        // 설치 직후가 아니라 **리포트를 실제로 볼 만해진 지금** 묻는다 —
+        // 보여줄 데이터가 있는 사용자에게만, 딱 한 번.
+        val context = LocalContext.current
+        val reportPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { /* 거부해도 리포트 화면은 그대로 — 알림만 안 갈 뿐이다 */ }
+        )
+        LaunchedEffect(loaded.isEmpty()) {
+            if (loaded.isEmpty()) return@LaunchedEffect
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) return@LaunchedEffect
+            if (!viewModel.shouldAskReportNotificationPermission()) return@LaunchedEffect
+
+            // 결과와 무관하게 물었다고 기록한다 — 두 번 묻지 않는다.
+            viewModel.markReportNotificationPermissionAsked()
+            reportPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         if (loaded.isEmpty()) {
             ReportEmptyMessage(
                 "아직 리포트에 담을 기록이 없어요",
