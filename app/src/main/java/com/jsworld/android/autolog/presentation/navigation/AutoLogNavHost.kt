@@ -34,6 +34,7 @@ import com.jsworld.android.autolog.presentation.screen.AddMaintenanceTypeScreen
 import com.jsworld.android.autolog.presentation.screen.CarDetailScreen
 import com.jsworld.android.autolog.presentation.screen.CarListScreen
 import com.jsworld.android.autolog.presentation.screen.CareDetailScreen
+import com.jsworld.android.autolog.presentation.screen.CarScheduleScreen
 import com.jsworld.android.autolog.presentation.screen.CareItemsScreen
 import com.jsworld.android.autolog.presentation.screen.CarMaintenanceItemPickerScreen
 import com.jsworld.android.autolog.presentation.screen.EditCarScreen
@@ -196,8 +197,22 @@ fun AutoLogNavHost(
                 onOpenCareDetail = { carId ->
                     navController.navigate(Routes.careDetail(carId)) { launchSingleTop = true }
                 },
+                onOpenSchedule = { carId ->
+                    navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
+                },
                 openReportRequested = openReportRequested,
                 onConsumeOpenReport = onConsumeOpenReport
+            )
+        }
+
+        // 날짜 일정 — 정비 기록이 없어도 동작하는 화면
+        composable(
+            route = Routes.CAR_SCHEDULE,
+            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+        ) { entry ->
+            CarScheduleScreen(
+                carId = entry.arguments!!.getLong("carId"),
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -252,6 +267,12 @@ fun AutoLogNavHost(
                 onBackClick = { navController.popBackStack() },
                 onNoticeClick = { navController.navigate(Routes.NOTICE) },
                 onExcelExportClick = { navController.navigate(EXCEL_EXPORT) },
+                onScheduleClick = {
+                    val carId = carContextViewModel.selectedCar.value?.id
+                    if (carId != null) {
+                        navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
+                    }
+                },
                 viewModel = hiltViewModel()
             )
         }

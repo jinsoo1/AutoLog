@@ -82,6 +82,8 @@ fun MainTabScreen(
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
     onOpenCareDetail: (Long) -> Unit,
+    /** 설정 > 날짜 일정 */
+    onOpenSchedule: (Long) -> Unit,
     /** 월간 리포트 알림 탭 → 리포트 탭 열기 요청. 소비하면 반드시 알린다 */
     openReportRequested: Boolean = false,
     onConsumeOpenReport: () -> Unit = {}
@@ -201,6 +203,7 @@ fun MainTabScreen(
                     onBackClick = {},
                     onNoticeClick = onNoticeClick,
                     onExcelExportClick = onExcelExportClick,
+                    onScheduleClick = { selectedCar?.id?.let(onOpenSchedule) },
                     showBack = false
                 )
             }

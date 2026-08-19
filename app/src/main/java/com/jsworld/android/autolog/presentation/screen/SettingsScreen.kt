@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
@@ -93,6 +94,8 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     onNoticeClick: () -> Unit,
     onExcelExportClick: () -> Unit,
+    /** 날짜 일정(정기검사·보험·자동차세) 화면 열기 */
+    onScheduleClick: () -> Unit = {},
     showBack: Boolean = true,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -441,6 +444,15 @@ fun SettingsScreen(
                         title = "공지사항",
                         subtitle = "업데이트 및 안내사항 확인",
                         onClick = onNoticeClick
+                    )
+                }
+
+                item {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.CalendarMonth,
+                        title = "날짜 일정",
+                        subtitle = "정기검사 · 보험 만기 · 자동차세",
+                        onClick = onScheduleClick
                     )
                 }
 

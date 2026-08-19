@@ -44,6 +44,10 @@ object Routes {
     const val CARE_ITEMS = "care_items/{carId}"
     fun careItems(carId: Long) = "care_items/$carId"
 
+    /** 날짜 일정(정기검사·보험·자동차세) — 설정에서 진입 */
+    const val CAR_SCHEDULE = "car_schedule/{carId}"
+    fun carSchedule(carId: Long) = "car_schedule/$carId"
+
     /** 항목 주기 수정 — 항목 상세에서 진입 */
     const val EDIT_MAINTENANCE_SETTING = "edit_maintenance_setting"
 
