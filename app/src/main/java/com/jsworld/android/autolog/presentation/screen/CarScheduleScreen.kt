@@ -322,7 +322,7 @@ private fun ScheduleHeroCard(nearest: CarSchedule?, today: LocalDate) {
                     }
                     Text(
                         listOfNotNull(
-                            nearest.dueDate.toDisplayDateOrNull() ?: nearest.dueDate,
+                            nearest.dueDate.toScheduleDateOrNull(today) ?: nearest.dueDate,
                             nearest.memo?.takeIf { it.isNotBlank() }
                         ).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
@@ -379,7 +379,7 @@ private fun ScheduleRow(
             )
             Text(
                 listOfNotNull(
-                    schedule.dueDate.toDisplayDateOrNull() ?: schedule.dueDate,
+                    schedule.dueDate.toScheduleDateOrNull(today) ?: schedule.dueDate,
                     schedule.repeatMonths?.let { repeatLabel(it) },
                     schedule.memo?.takeIf { it.isNotBlank() }
                 ).joinToString(" · "),
@@ -526,7 +526,7 @@ private fun ScheduleEditSheet(
             Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
-                value = dueDate.toDisplayDateOrNull() ?: dueDate,
+                value = dueDate.toScheduleDateOrNull(today) ?: dueDate,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("날짜") },
@@ -623,6 +623,20 @@ private fun ScheduleEditSheet(
         }
     }
 }
+
+/**
+ * 일정용 날짜 표시 — **연도를 뺄 수 없다.**
+ *
+ * 앱 공통 포맷(toDisplayDateOrNull)은 "7월 1일"처럼 연도를 생략하는데,
+ * 그건 최근 기록용이다. 정기검사는 2~4년 뒤가 흔해서 연도가 빠지면
+ * 지난 날짜처럼 보인다(실기기에서 실제로 그렇게 보였다).
+ * 올해면 "7월 1일", 다른 해면 "2030년 7월 1일".
+ */
+private fun String.toScheduleDateOrNull(today: LocalDate): String? = runCatching {
+    val date = LocalDate.parse(this)
+    if (date.year == today.year) "${date.monthValue}월 ${date.dayOfMonth}일"
+    else "${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일"
+}.getOrNull()
 
 private fun ScheduleType.presetTitle(): String = when (this) {
     ScheduleType.INSPECTION -> "정기검사"
