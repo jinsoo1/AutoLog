@@ -127,6 +127,30 @@ fun SettingsScreen(
     var notificationBlock by remember {
         mutableStateOf(AutoLogNotificationHelper.NotificationBlock.NONE)
     }
+    // 기본 켜짐인 알림(일정·리포트)은 권한이 없으면 "켜져 있는데 안 오는" 상태가 된다.
+    // 스위치는 사용자의 의사(ON)를 그대로 두되, 아직 보낼 수 없다는 사실을 그 자리에서 밝힌다.
+    var notificationsAllowed by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(Unit) {
+        notificationsAllowed =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        onPauseOrDispose { }
+    }
+
+    val defaultOnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            notificationsAllowed = granted
+            if (granted) AutoLogNotificationHelper.createChannels(context)
+        }
+    )
+
     // 월간 리포트는 기본 켜짐이라 여기 넣으면 권한 없는 모든 사용자에게 경고가 뜬다 —
     // 배너는 사용자가 직접 켠 기능이 막혔을 때만.
     val anyNotificationOn = alertPrefs.enabled || notificationEnabled
@@ -595,6 +619,18 @@ fun SettingsScreen(
                     )
                 }
 
+                if (scheduleAlertEnabled && !notificationsAllowed) {
+                    item {
+                        PermissionNeededRow(
+                            onClick = {
+                                defaultOnPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                )
+                            }
+                        )
+                    }
+                }
+
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.BarChart,
@@ -603,6 +639,18 @@ fun SettingsScreen(
                         checked = monthlyReportEnabled,
                         onCheckedChange = onMonthlyReportToggleChange
                     )
+                }
+
+                if (monthlyReportEnabled && !notificationsAllowed) {
+                    item {
+                        PermissionNeededRow(
+                            onClick = {
+                                defaultOnPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                )
+                            }
+                        )
+                    }
                 }
 
                 // 리포트 알림 테스트 — 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
@@ -1423,3 +1471,41 @@ private fun formatBackupDate(millis: Long): String {
 private fun Long.toBackupDateText(): String =
     java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault())
         .format(java.util.Date(this))
+
+/**
+ * "켜져 있지만 아직 못 보내요" 줄.
+ *
+ * 스위치를 강제로 꺼버리지 않는 이유: 스위치는 사용자의 의사를 담는 자리이고,
+ * 권한은 그걸 실행할 수 있느냐의 문제다. 둘을 섞으면 권한을 허용한 순간
+ * 사용자가 켠 적 없는 알림이 갑자기 살아난 것처럼 보인다.
+ */
+@Composable
+private fun PermissionNeededRow(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 68.dp, end = 20.dp, top = 2.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.NotificationsOff,
+            contentDescription = null,
+            modifier = Modifier.size(15.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "휴대폰 알림 권한이 없어 아직 보낼 수 없어요",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            "허용하기",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
