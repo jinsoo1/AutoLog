@@ -85,7 +85,9 @@ import com.jsworld.android.autolog.BuildConfig
 import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertScheduler
 import com.jsworld.android.autolog.presentation.scheduler.MonthlyReportScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
+import androidx.core.app.ActivityCompat
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
+import com.jsworld.android.autolog.core.util.findActivity
 import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.presentation.viewModel.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,7 +149,34 @@ fun SettingsScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             notificationsAllowed = granted
-            if (granted) AutoLogNotificationHelper.createChannels(context)
+            if (granted) {
+                AutoLogNotificationHelper.createChannels(context)
+                return@rememberLauncherForActivityResult
+            }
+
+            // 두 번 거부하면 시스템이 요청 창을 아예 띄우지 않는다 —
+            // 눌러도 아무 일도 안 일어난 것처럼 보이므로, 그때는 설정 화면으로 보낸다.
+            // (거부 직후 rationale 이 false 면 "다시 물어볼 수 없는 상태"다)
+            val canAskAgain = context.findActivity()?.let { activity ->
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            } ?: false
+
+            if (!canAskAgain) {
+                runCatching {
+                    context.startActivity(
+                        AutoLogNotificationHelper.notificationSettingsIntent(context)
+                    )
+                }.onFailure {
+                    Toast.makeText(
+                        context,
+                        "설정 > 앱 > 오토로그 > 알림에서 켜주세요.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     )
 
@@ -1496,7 +1525,7 @@ private fun PermissionNeededRow(onClick: () -> Unit) {
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            "휴대폰 알림 권한이 없어 아직 보낼 수 없어요",
+            "휴대폰에서 알림이 꺼져 있어요",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
