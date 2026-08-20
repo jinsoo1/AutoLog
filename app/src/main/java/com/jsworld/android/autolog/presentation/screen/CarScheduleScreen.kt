@@ -266,6 +266,7 @@ fun CarScheduleScreen(
             today = today,
             onDismiss = { showAddSheet = false },
             onDelete = null,
+            onSaveCarYear = { year -> viewModel.saveCarYear(currentCarId, year) },
             onSave = { type, title, dueDate, repeatMonths, memo ->
                 viewModel.add(
                     carId = currentCarId,
@@ -541,6 +542,8 @@ private fun ScheduleEditSheet(
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)?,
     onDone: (() -> Unit)? = null,
+    /** 여기서 받은 연식을 차량에도 저장한다. 연식이 이미 있으면 호출되지 않는다 */
+    onSaveCarYear: (String) -> Unit = {},
     onSave: (
         type: ScheduleType, title: String, dueDate: String,
         repeatMonths: Int?, memo: String?
@@ -552,6 +555,10 @@ private fun ScheduleEditSheet(
     var repeatMonths by rememberSaveable { mutableStateOf(existing?.repeatMonths) }
     var memo by rememberSaveable { mutableStateOf(existing?.memo ?: "") }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    // 연식이 없는 차는 정기검사 날짜를 계산할 수 없다. 예전엔 날짜 칸이 빈 채로
+    // 저장도 막혀 이유를 알 수 없었는데, 이제 그 자리에서 연식을 묻는다.
+    var yearInput by rememberSaveable { mutableStateOf("") }
+    val needsYear = existing == null && carYear.isNullOrBlank()
     // 프리셋을 고르면 제목·날짜·주기를 채워준다. 이미 손댄 값은 덮지 않는다.
     var touched by rememberSaveable { mutableStateOf(existing != null) }
 
@@ -638,11 +645,41 @@ private fun ScheduleEditSheet(
                 }
             )
             if (type == ScheduleType.INSPECTION && existing == null) {
-                Text(
-                    "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (needsYear) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = yearInput,
+                        onValueChange = { input ->
+                            yearInput = input.filter(Char::isDigit).take(4)
+                            // 네 자리가 채워지는 순간 날짜를 계산해 넣는다.
+                            // 오타(1980 미만·내년 초과)면 null 이라 날짜를 건드리지 않는다.
+                            suggestInspectionDate(yearInput, today)?.let { dueDate = it.toString() }
+                        },
+                        label = { Text("연식") },
+                        placeholder = { Text("2021") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        when {
+                            yearInput.length < 4 ->
+                                "연식을 알려주시면 검사 시기를 계산해드려요 (직접 골라도 돼요)"
+                            suggestInspectionDate(yearInput, today) == null ->
+                                "연식을 다시 확인해주세요"
+                            else ->
+                                "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요."
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
 
@@ -685,6 +722,10 @@ private fun ScheduleEditSheet(
 
             Button(
                 onClick = {
+                    // 여기서 받은 연식은 차량에도 남긴다 — 다음부터는 묻지 않아도 된다.
+                    if (needsYear && suggestInspectionDate(yearInput, today) != null) {
+                        onSaveCarYear(yearInput)
+                    }
                     onSave(type, title.trim(), dueDate, repeatMonths, memo)
                 },
                 enabled = canSave,

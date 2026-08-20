@@ -46,6 +46,19 @@ class CarScheduleViewModel @Inject constructor(
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
 
+    /**
+     * 정기검사 계산에 쓸 연식을 일정 시트에서 받아 **차량에도 저장한다.**
+     * 연식은 차량 추가에서 선택 입력이라 비어 있는 차가 흔한데,
+     * 그때 물어야 할 이유가 눈앞에 있는 자리가 여기다(한 번 물어 두 군데가 찬다).
+     */
+    fun saveCarYear(carId: Long, year: String) {
+        viewModelScope.launch {
+            val car = carRepository.getAllCars().first().firstOrNull { it.id == carId } ?: return@launch
+            if (car.year == year) return@launch
+            carRepository.updateCar(car.copy(year = year))
+        }
+    }
+
     /** 정기검사 제안에 쓸 연식 */
     fun carYear(carId: Long): Flow<String?> =
         carRepository.getAllCars().map { cars -> cars.firstOrNull { it.id == carId }?.year }
