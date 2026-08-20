@@ -209,6 +209,7 @@ fun MainTabScreen(
                     onNoticeClick = onNoticeClick,
                     onExcelExportClick = onExcelExportClick,
                     onScheduleClick = { selectedCar?.id?.let(onOpenSchedule) },
+                    carName = selectedCar?.name,
                     showBack = false
                 )
             }

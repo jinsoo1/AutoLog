@@ -88,8 +88,9 @@ fun CarSwitcherSheet(
     cars: List<Car>,
     selectedCarId: Long?,
     onSelect: (Car) -> Unit,
-    onAddCar: () -> Unit,
-    onManageCars: () -> Unit,
+    /** null 이면 줄 자체를 그리지 않는다 — 차량 관리로 갈 수 없는 화면에서 쓴다 */
+    onAddCar: (() -> Unit)? = null,
+    onManageCars: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -126,18 +127,23 @@ fun CarSwitcherSheet(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            SheetActionRow(
-                icon = Icons.Default.Add,
-                label = "차량 추가",
-                onClick = onAddCar
-            )
-            SheetActionRow(
-                icon = Icons.Default.DirectionsCar,
-                label = "차량 관리",
-                onClick = onManageCars
-            )
+            if (onAddCar != null || onManageCars != null) {
+                Spacer(Modifier.height(10.dp))
+            }
+            if (onAddCar != null) {
+                SheetActionRow(
+                    icon = Icons.Default.Add,
+                    label = "차량 추가",
+                    onClick = onAddCar
+                )
+            }
+            if (onManageCars != null) {
+                SheetActionRow(
+                    icon = Icons.Default.DirectionsCar,
+                    label = "차량 관리",
+                    onClick = onManageCars
+                )
+            }
         }
     }
 }

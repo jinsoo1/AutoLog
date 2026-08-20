@@ -278,6 +278,7 @@ fun AutoLogNavHost(
                         navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
                     }
                 },
+                carName = carContextViewModel.selectedCar.collectAsState().value?.name,
                 viewModel = hiltViewModel()
             )
         }

@@ -2,6 +2,7 @@ package com.jsworld.android.autolog.presentation.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.model.ScheduleType
 import com.jsworld.android.autolog.domain.repository.CarRepository
@@ -23,6 +24,19 @@ class CarScheduleViewModel @Inject constructor(
     private val carRepository: CarRepository,
     private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
+
+    /** 화면 상단에 "어느 차의 일정인지" 밝히고, 2대 이상이면 전환도 하게 한다 */
+    val cars: StateFlow<List<Car>> =
+        carRepository.getAllCars()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * 여기서 바꾼 차량은 앱 전체의 '지금 보는 차'가 된다.
+     * 이 화면만 다른 차를 보고 있으면 뒤로 나갔을 때 홈과 어긋난다.
+     */
+    fun selectCar(carId: Long) {
+        viewModelScope.launch { userPrefsRepository.setSelectedCarId(carId) }
+    }
 
     private val map = mutableMapOf<Long, StateFlow<List<CarSchedule>>>()
 

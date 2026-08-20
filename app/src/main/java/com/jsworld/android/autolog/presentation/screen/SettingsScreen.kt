@@ -98,6 +98,8 @@ fun SettingsScreen(
     onExcelExportClick: () -> Unit,
     /** 날짜 일정(정기검사·보험·자동차세) 화면 열기 */
     onScheduleClick: () -> Unit = {},
+    /** 설정 탭에는 차량 칩이 없어서, 어느 차 일정으로 들어가는지 여기서 밝힌다 */
+    carName: String? = null,
     showBack: Boolean = true,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -507,7 +509,10 @@ fun SettingsScreen(
                     SettingsMenuItem(
                         icon = Icons.Outlined.CalendarMonth,
                         title = "날짜 일정",
-                        subtitle = "정기검사 · 보험 만기 · 자동차세",
+                        subtitle = listOfNotNull(
+                            carName?.takeIf { it.isNotBlank() },
+                            "정기검사 · 보험 만기 · 자동차세"
+                        ).joinToString(" · "),
                         onClick = onScheduleClick
                     )
                 }

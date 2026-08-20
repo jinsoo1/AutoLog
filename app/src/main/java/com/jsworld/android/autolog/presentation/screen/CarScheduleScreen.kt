@@ -50,6 +50,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.domain.model.CarSchedule
+import com.jsworld.android.autolog.presentation.component.CarSwitcherSheet
 import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.domain.model.REPEAT_INSPECTION
 import com.jsworld.android.autolog.domain.model.REPEAT_INSURANCE
@@ -102,8 +104,16 @@ fun CarScheduleScreen(
     onBack: () -> Unit,
     viewModel: CarScheduleViewModel = hiltViewModel()
 ) {
-    val schedules by viewModel.schedulesState(carId).collectAsState()
-    val carYear by viewModel.carYear(carId).collectAsState(initial = null)
+    // 이 화면은 설정·알림에서도 열려서 차량 컨텍스트가 없는 채로 들어온다.
+    // 그래서 어느 차인지 화면이 직접 밝히고, 여러 대면 여기서 바꾸게 한다.
+    var currentCarId by rememberSaveable(carId) { mutableStateOf(carId) }
+
+    val cars by viewModel.cars.collectAsState()
+    val car = remember(cars, currentCarId) { cars.firstOrNull { it.id == currentCarId } }
+    var showCarSwitcher by rememberSaveable { mutableStateOf(false) }
+
+    val schedules by viewModel.schedulesState(currentCarId).collectAsState()
+    val carYear by viewModel.carYear(currentCarId).collectAsState(initial = null)
 
     val today = remember { LocalDate.now() }
     val sorted = remember(schedules, today) { sortSchedules(schedules, today) }
@@ -125,7 +135,38 @@ fun CarScheduleScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("날짜 일정", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Column {
+                        Text(
+                            "날짜 일정",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // 정기검사·자동차세는 차마다 이름이 같고 날짜만 다르다 —
+                        // 차 이름이 없으면 어느 차 일정인지 구분할 단서가 없다.
+                        val switchable = cars.size > 1
+                        Row(
+                            modifier = if (switchable) {
+                                Modifier.clickable { showCarSwitcher = true }
+                            } else Modifier,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                car?.name ?: "",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (switchable) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (switchable) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (switchable) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "차량 전환",
+                                    modifier = Modifier.size(17.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -227,7 +268,7 @@ fun CarScheduleScreen(
             onDelete = null,
             onSave = { type, title, dueDate, repeatMonths, memo ->
                 viewModel.add(
-                    carId = carId,
+                    carId = currentCarId,
                     type = type,
                     title = title,
                     dueDate = dueDate,
@@ -255,6 +296,20 @@ fun CarScheduleScreen(
                     onDone = { showAddSheet = false }
                 )
             }
+        )
+    }
+
+    if (showCarSwitcher) {
+        // 차량 추가·관리로 갈 경로가 없는 화면이라 그 줄은 띄우지 않는다.
+        CarSwitcherSheet(
+            cars = cars,
+            selectedCarId = currentCarId,
+            onSelect = { selected ->
+                currentCarId = selected.id
+                viewModel.selectCar(selected.id)
+                showCarSwitcher = false
+            },
+            onDismiss = { showCarSwitcher = false }
         )
     }
 
