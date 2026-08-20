@@ -38,6 +38,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +79,7 @@ import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.HomeViewModel
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.time.LocalDate
 
@@ -100,8 +105,12 @@ fun HomeScreen(
     onSeeAllRecords: () -> Unit,
     onSeeAllFuel: () -> Unit,
     onOpenReport: () -> Unit,
+    /** '올해는 넘어가기'의 실행 취소를 띄울 자리 */
+    snackbarHostState: SnackbarHostState,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val scope = rememberCoroutineScope()
+
     Column(Modifier.fillMaxSize()) {
 
         // 상단 바 — 차량 전환 / 차량 정보 수정 / 공지
@@ -172,7 +181,7 @@ fun HomeScreen(
         // 각 줄의 버튼이 곧 첫 기록을 남기는 입구가 된다.
         val today = LocalDate.now()
         val seasonalKey = remember(today.monthValue) { seasonKey(today) }
-        val dismissedSeasonKey by viewModel.seasonalCareDismissedKey.collectAsState()
+        val dismissedSeasonKey by viewModel.seasonalCareDismissedKeyState(car.id).collectAsState()
         val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
         val dueSchedules = remember(schedules, today) {
             upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
@@ -245,7 +254,20 @@ fun HomeScreen(
                         today = today,
                         onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
                         onAddItem = { onAddMaintenanceItem(car.id) },
-                        onSkip = { viewModel.dismissSeasonalCare(seasonalKey) }
+                        onSkip = {
+                            viewModel.dismissSeasonalCare(car.id, seasonalKey)
+                            scope.launch {
+                                // 잘못 눌렀는데 되돌릴 길이 없으면 최대 3개월을 기다려야 한다.
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "이번 ${seasonalGuide.season.label()}은 넘길게요",
+                                    actionLabel = "실행 취소",
+                                    duration = SnackbarDuration.Short
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    viewModel.undoDismissSeasonalCare(car.id)
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -685,6 +707,14 @@ private fun SeasonalCareRowItem(
             }
         }
     }
+}
+
+/** 스낵바 문구용 — "이번 여름은 넘길게요" */
+private fun Season.label(): String = when (this) {
+    Season.SPRING -> "봄"
+    Season.MONSOON -> "장마"
+    Season.SUMMER -> "여름"
+    Season.PRE_WINTER, Season.WINTER -> "겨울"
 }
 
 private fun Season.icon(): ImageVector = when (this) {

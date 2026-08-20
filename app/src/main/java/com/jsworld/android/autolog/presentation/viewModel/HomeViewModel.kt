@@ -33,15 +33,24 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * 계절별 관리 카드를 '올해는 넘어가기'로 닫은 계절 키.
+     * 계절별 관리 카드를 '올해는 넘어가기'로 닫은 계절 키. **차량별**이다.
      * 카드는 계절이 바뀌면 저절로 돌아온다 — 영구 스위치가 아니다.
      */
-    val seasonalCareDismissedKey: StateFlow<String> =
-        userPrefsRepository.observeSeasonalCareDismissedKey()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    fun seasonalCareDismissedKeyState(carId: Long): StateFlow<String> =
+        seasonalDismissedMap.getOrPut(carId) {
+            userPrefsRepository.observeSeasonalCareDismissedKey(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+        }
 
-    fun dismissSeasonalCare(key: String) {
-        viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(key) }
+    private val seasonalDismissedMap = mutableMapOf<Long, StateFlow<String>>()
+
+    fun dismissSeasonalCare(carId: Long, key: String) {
+        viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(carId, key) }
+    }
+
+    /** 실행 취소 — 잘못 눌렀을 때 되돌릴 길이 없으면 최대 3개월을 기다려야 한다 */
+    fun undoDismissSeasonalCare(carId: Long) {
+        viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(carId, "") }
     }
 
     /** '이번 달 지출' 카드용 세차 기록 — 세차는 별도 테이블이라 따로 가져온다 */

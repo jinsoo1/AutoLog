@@ -177,7 +177,8 @@ fun MainTabScreen(
                     onOpenItemDetail = onOpenItemDetail,
                     onSeeAllRecords = { tab = MainTab.MAINTENANCE },
                     onSeeAllFuel = { tab = MainTab.FUEL },
-                    onOpenReport = { tab = MainTab.REPORT }
+                    onOpenReport = { tab = MainTab.REPORT },
+                    snackbarHostState = snackbarHostState
                 )
 
                 MainTab.MAINTENANCE -> MaintenanceTabScreen(

@@ -126,11 +126,16 @@ class SeasonalCareTest {
         assertTrue(shouldNotifySeason(key, notifiedKey = "SUMMER-2026", dismissedKey = ""))
     }
 
-    /** 화면에서 치운 것을 알림으로 다시 들이밀지 않는다 */
+    /**
+     * 화면에서 치운 것을 알림으로 다시 들이밀지 않는다.
+     * 넘기기는 차량별이라 호출부가 "모든 차에서 넘겼는가"를 계산해 넘긴다.
+     */
     @Test
     fun `카드를 넘긴 계절은 알림도 보내지 않는다`() {
         val key = seasonKey(LocalDate.of(2026, 10, 1))
         assertFalse(shouldNotifySeason(key, notifiedKey = "", dismissedKey = key))
+        // 아직 안 넘긴 차가 한 대라도 있으면(= dismissedKey 가 비어 옴) 알림은 간다
+        assertTrue(shouldNotifySeason(key, notifiedKey = "", dismissedKey = ""))
     }
 
     @Test

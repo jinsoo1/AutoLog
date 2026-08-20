@@ -11,6 +11,7 @@ import com.jsworld.android.autolog.domain.model.seasonKey
 import com.jsworld.android.autolog.domain.model.seasonalGuide
 import com.jsworld.android.autolog.domain.model.seasonalNotificationBody
 import com.jsworld.android.autolog.domain.model.shouldNotifySeason
+import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import com.jsworld.android.autolog.presentation.activity.MainActivity
 import jakarta.inject.Inject
@@ -28,7 +29,8 @@ import java.time.LocalDate
  */
 @Singleton
 class SeasonalCareNotifier @Inject constructor(
-    private val userPrefsRepository: UserPrefsRepository
+    private val userPrefsRepository: UserPrefsRepository,
+    private val carRepository: CarRepository
 ) {
 
     /** @return 계절 알림이 켜져 있는지 — 내일 체인을 이어야 하는지 판단에 쓴다 */
@@ -45,9 +47,15 @@ class SeasonalCareNotifier @Inject constructor(
         if (!forceTest) {
             val notified = runCatching { userPrefsRepository.getSeasonalCareNotifiedKey() }
                 .getOrDefault("")
-            val dismissed = runCatching {
-                userPrefsRepository.observeSeasonalCareDismissedKey().first()
-            }.getOrDefault("")
+            // 넘기기는 차량별이라, **모든 차에서 넘겼을 때만** 알림도 접는다.
+            // 한 대라도 아직 확인할 차가 남아 있으면 알림은 여전히 쓸모가 있다.
+            val cars = runCatching { carRepository.getAllCars().first() }.getOrDefault(emptyList())
+            val allDismissed = cars.isNotEmpty() && cars.all { car ->
+                runCatching {
+                    userPrefsRepository.observeSeasonalCareDismissedKey(car.id).first()
+                }.getOrDefault("") == currentKey
+            }
+            val dismissed = if (allDismissed) currentKey else ""
             if (!shouldNotifySeason(currentKey, notified, dismissed)) return true
         }
 

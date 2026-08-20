@@ -67,9 +67,13 @@ interface UserPrefsRepository {
      * 계절별 관리 카드를 '올해는 넘어가기'로 닫은 계절 키(SeasonalCare.seasonKey).
      * 없으면 빈 문자열. 계절이 바뀌면 키가 달라져 카드가 저절로 돌아온다 —
      * 영구히 끄는 스위치가 아니라 **이번 계절만** 넘기는 장치다.
+     *
+     * ⚠️ **차량별**이다. 카드의 각 줄이 그 차의 기록("마지막 2년 전")을 달고 있어서,
+     * 한 차에서 넘겼다고 다른 차까지 숨기면 확인해야 할 차를 못 보게 된다.
+     * 빈 문자열을 넣으면 넘긴 것이 취소된다(실행 취소).
      */
-    fun observeSeasonalCareDismissedKey(): Flow<String>
-    suspend fun setSeasonalCareDismissedKey(key: String)
+    fun observeSeasonalCareDismissedKey(carId: Long): Flow<String>
+    suspend fun setSeasonalCareDismissedKey(carId: Long, key: String)
 
     /**
      * 계절별 관리 알림 — **기본 켜짐**. 계절마다 1회뿐이라 성가시지 않고,

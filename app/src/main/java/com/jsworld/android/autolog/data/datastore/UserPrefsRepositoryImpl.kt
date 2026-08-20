@@ -66,13 +66,16 @@ class UserPrefsRepositoryImpl @Inject constructor(
     /**
      * 계절별 관리 카드 — '올해는 넘어가기'
      */
-    private val seasonalCareDismissedKey = stringPreferencesKey("seasonal_care_dismissed_key")
+    // 차량별. 옛 전역 키("seasonal_care_dismissed_key")는 더 이상 읽지 않는다 —
+    // 그 값이 남아 있어도 무시되므로, 전역으로 넘겼던 사용자는 카드가 한 번 돌아온다.
+    private fun seasonalCareDismissedKey(carId: Long) =
+        stringPreferencesKey("seasonal_care_dismissed_key_$carId")
 
-    override fun observeSeasonalCareDismissedKey(): Flow<String> =
-        dataStore.data.map { it[seasonalCareDismissedKey] ?: "" }
+    override fun observeSeasonalCareDismissedKey(carId: Long): Flow<String> =
+        dataStore.data.map { it[seasonalCareDismissedKey(carId)] ?: "" }
 
-    override suspend fun setSeasonalCareDismissedKey(key: String) {
-        dataStore.edit { it[seasonalCareDismissedKey] = key }
+    override suspend fun setSeasonalCareDismissedKey(carId: Long, key: String) {
+        dataStore.edit { it[seasonalCareDismissedKey(carId)] = key }
     }
 
     /**
