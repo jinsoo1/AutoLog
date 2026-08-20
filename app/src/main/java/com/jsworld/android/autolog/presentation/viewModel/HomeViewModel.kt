@@ -6,7 +6,9 @@ import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.CareRecord
+import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CarScheduleRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
@@ -25,6 +27,7 @@ class HomeViewModel @Inject constructor(
     private val historyRepository: MaintenanceHistoryRepository,
     private val fuelRecordRepository: FuelRecordRepository,
     private val careRepository: CareRepository,
+    private val scheduleRepository: CarScheduleRepository,
     private val userPrefsRepository: UserPrefsRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
@@ -49,6 +52,15 @@ class HomeViewModel @Inject constructor(
         }
 
     private val careRecordsMap = mutableMapOf<Long, StateFlow<List<CareRecord>>>()
+
+    /** 정기검사·보험·자동차세 — 임박한 것만 홈에 꺼낸다 */
+    fun schedulesState(carId: Long): StateFlow<List<CarSchedule>> =
+        schedulesMap.getOrPut(carId) {
+            scheduleRepository.observeByCar(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val schedulesMap = mutableMapOf<Long, StateFlow<List<CarSchedule>>>()
 
     // 차량을 전환해도 이미 만든 Flow 를 재사용한다(CarDetailViewModel 과 같은 방식).
     private val overviewMap = mutableMapOf<Long, StateFlow<List<MaintenanceUiModel>>>()

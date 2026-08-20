@@ -100,6 +100,34 @@ fun nextDueDateAfterDone(schedule: CarSchedule, today: LocalDate): LocalDate? {
 fun sortSchedules(schedules: List<CarSchedule>, today: LocalDate): List<CarSchedule> =
     schedules.sortedBy { it.remainingDays(today) ?: Long.MAX_VALUE }
 
+/**
+ * 홈에 꺼내 보일 창(일). **행동해야 할 때**만 뜨게 한다 —
+ * 늘 떠 있으면 배경이 되고, 배경이 되면 안 보인다.
+ */
+const val SCHEDULE_HOME_DAYS = 30L
+
+/**
+ * 리포트에 꺼내 보일 창(일). 홈보다 넓다 — 리포트는 지금 할 일이 아니라
+ * **돈 계획**을 보는 자리라, 다음 달에 나갈 것까지 보여야 쓸모가 있다.
+ */
+const val SCHEDULE_REPORT_DAYS = 60L
+
+/**
+ * 곧 도래하는 일정(가까운 순). **이미 지난 것도 포함**한다 —
+ * 정기검사는 지나도 사라지지 않고, 지났다는 사실이 가장 중요한 정보다.
+ */
+fun upcomingSchedules(
+    schedules: List<CarSchedule>,
+    today: LocalDate,
+    withinDays: Long
+): List<CarSchedule> = sortSchedules(
+    schedules.filter { schedule ->
+        val remaining = schedule.remainingDays(today)
+        remaining != null && remaining <= withinDays
+    },
+    today
+)
+
 /** "D-86" / "D-DAY" / "D+3" */
 fun dDayLabel(remainingDays: Long): String = when {
     remainingDays > 0 -> "D-$remainingDays"

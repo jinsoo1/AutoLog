@@ -59,14 +59,19 @@ import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
+import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
+import com.jsworld.android.autolog.domain.model.SCHEDULE_HOME_DAYS
 import com.jsworld.android.autolog.domain.model.Season
 import com.jsworld.android.autolog.domain.model.SeasonalCareGuide
 import com.jsworld.android.autolog.domain.model.SeasonalCareRow
 import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
+import com.jsworld.android.autolog.domain.model.dDayLabel
+import com.jsworld.android.autolog.domain.model.formatScheduleDate
 import com.jsworld.android.autolog.domain.model.lastCareLabel
 import com.jsworld.android.autolog.domain.model.seasonKey
 import com.jsworld.android.autolog.domain.model.seasonalGuide
+import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.HomeViewModel
@@ -88,6 +93,8 @@ fun HomeScreen(
     onEditCar: (Long) -> Unit,
     /** 계절 카드에서 아직 켜지 않은 항목을 눌렀을 때 — 항목 추가 화면으로 */
     onAddMaintenanceItem: (Long) -> Unit,
+    /** 정기검사·보험 만기 등 날짜 일정 화면 */
+    onOpenSchedule: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onOpenItemDetail: (Long) -> Unit,
     onSeeAllRecords: () -> Unit,
@@ -156,6 +163,10 @@ fun HomeScreen(
                 careRecords.filter { it.performedAt?.startsWith(prefix) == true }.sumOf { it.cost ?: 0 }
         }
 
+        // 날짜 일정 — 놓치면 과태료인 것들이라 설정 탭에 묻어두지 않는다.
+        // 다만 **임박했을 때만** 꺼낸다. 늘 떠 있으면 배경이 되고, 배경은 안 보인다.
+        val schedules by viewModel.schedulesState(car.id).collectAsState()
+
         // 계절별 관리 — 주행거리로 안 잡히는 것들(배터리는 추워지면, 와이퍼는 장마 전에).
         // 기록이 없어도 카드를 숨기지 않는다. "무엇을 봐야 하나"가 이 카드의 값이고,
         // 각 줄의 버튼이 곧 첫 기록을 남기는 입구가 된다.
@@ -163,6 +174,9 @@ fun HomeScreen(
         val seasonalKey = remember(today.monthValue) { seasonKey(today) }
         val dismissedSeasonKey by viewModel.seasonalCareDismissedKey.collectAsState()
         val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
+        val dueSchedules = remember(schedules, today) {
+            upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
+        }
         val seasonalRows = remember(seasonalGuide, overview, records) {
             val lastDates = records
                 .mapNotNull { rec ->
@@ -207,6 +221,16 @@ fun HomeScreen(
                     UrgentCard(
                         item = item,
                         onClick = { onAddMaintenance(car.id, item.settingId) }
+                    )
+                }
+            }
+
+            if (dueSchedules.isNotEmpty()) {
+                item {
+                    UpcomingScheduleCard(
+                        schedules = dueSchedules,
+                        today = today,
+                        onClick = { onOpenSchedule(car.id) }
                     )
                 }
             }
@@ -433,6 +457,91 @@ private fun UrgentCard(
                 contentDescription = null,
                 tint = accent
             )
+        }
+    }
+}
+
+/**
+ * 다가오는 날짜 일정 — 정기검사·보험 만기·자동차세.
+ *
+ * 주행거리와 무관하게 날짜로만 오는 것들이라 정비 상태 어디에도 안 잡힌다.
+ * 놓치면 과태료로 이어지므로, 지났으면 임박 카드와 같은 빨강을 쓴다.
+ */
+@Composable
+private fun UpcomingScheduleCard(
+    schedules: List<CarSchedule>,
+    today: LocalDate,
+    onClick: () -> Unit
+) {
+    val overdue = schedules.any { (it.remainingDays(today) ?: 0L) < 0L }
+    val accent =
+        if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.10f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 13.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = accent, shape = CircleShape) {
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(15.dp)
+                    )
+                }
+                Spacer(Modifier.width(11.dp))
+                Text(
+                    "다가오는 일정",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = accent,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = accent
+                )
+            }
+
+            schedules.forEach { schedule ->
+                val remaining = schedule.remainingDays(today) ?: return@forEach
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            schedule.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            formatScheduleDate(schedule.dueDate, today),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        dDayLabel(remaining),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (remaining < 0L) MaterialTheme.colorScheme.error else accent
+                    )
+                }
+            }
         }
     }
 }

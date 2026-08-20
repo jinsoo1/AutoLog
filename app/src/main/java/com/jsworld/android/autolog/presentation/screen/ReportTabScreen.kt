@@ -84,7 +84,12 @@ import com.jsworld.android.autolog.domain.model.buildCareSessions
 import com.jsworld.android.autolog.domain.model.ExpenseInsight
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
+import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
+import com.jsworld.android.autolog.domain.model.SCHEDULE_REPORT_DAYS
+import com.jsworld.android.autolog.domain.model.dDayLabel
+import com.jsworld.android.autolog.domain.model.formatScheduleDate
+import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.NarrativeTone
 import com.jsworld.android.autolog.domain.model.ReportNarrative
@@ -123,6 +128,8 @@ fun ReportTabScreen(
     /** 예측 빈 상태의 안내 버튼 — 홈(주행거리 업데이트)·정비 탭(첫 기록)으로 보낸다 */
     onOpenHomeTab: () -> Unit = {},
     onOpenMaintenanceTab: () -> Unit = {},
+    /** '곧 있을 일'에서 날짜 일정 화면으로 */
+    onOpenSchedule: (Long) -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel()
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -200,10 +207,17 @@ fun ReportTabScreen(
         val urgentItems = remember(urgentAll) { urgentAll.filter { it.hasHistory } }
         val lastCosts by viewModel.lastCostsState(car.id).collectAsState()
 
+        // 날짜 일정도 '곧 챙길 것'이다. 홈보다 창을 넓게 잡는다 —
+        // 리포트는 지금 할 일이 아니라 다음 달까지의 돈 계획을 보는 자리다.
+        val allSchedules by viewModel.schedulesState(car.id).collectAsState()
+
         // 정비 시기 예측 — 월평균 주행거리(리포트가 이미 계산) x 남은 거리.
         val overview by viewModel.overviewState(car.id).collectAsState()
         val today = remember { LocalDate.now() }
         val pace = remember(loaded) { estimateDrivingPace(loaded, YearMonth.now()) }
+        val dueSchedules = remember(allSchedules, today) {
+            upcomingSchedules(allSchedules, today, SCHEDULE_REPORT_DAYS)
+        }
         val predictions = remember(overview, pace) {
             buildMaintenancePredictions(overview, pace, today)
         }
@@ -364,10 +378,26 @@ fun ReportTabScreen(
                     }
                 }
 
-                // 다가오는 지출 — 이번 달을 보고 있을 때만. 과거 달에선 어색하다.
-                if (isLatestMonth && urgentItems.isNotEmpty()) {
-                    item { SectionLabel("다가오는 지출") }
-                    item { UpcomingCard(urgentItems, lastCosts) }
+                // 곧 있을 일 — 이번 달을 보고 있을 때만. 과거 달에선 어색하다.
+                // 정비 항목(금액 예상 있음)과 날짜 일정(금액 없음)을 한 카드에 모은다.
+                // 사용자에게는 '다음에 챙길 것'이 한 덩어리라, 출처로 나누면 두 번 봐야 한다.
+                if (isLatestMonth && (urgentItems.isNotEmpty() || dueSchedules.isNotEmpty())) {
+                    item {
+                        SectionLabel(
+                            title = "곧 있을 일",
+                            actionLabel = if (dueSchedules.isNotEmpty()) "일정 관리" else null,
+                            onAction = { onOpenSchedule(car.id) }
+                        )
+                    }
+                    item {
+                        UpcomingCard(
+                            items = urgentItems,
+                            lastCosts = lastCosts,
+                            schedules = dueSchedules,
+                            today = today,
+                            onScheduleClick = { onOpenSchedule(car.id) }
+                        )
+                    }
                 }
 
                 if (monthFuel.isNotEmpty()) {
@@ -913,7 +943,10 @@ private fun PredictionGuideCard(
 @Composable
 private fun UpcomingCard(
     items: List<MaintenanceUiModel>,
-    lastCosts: Map<Long, Int?>
+    lastCosts: Map<Long, Int?>,
+    schedules: List<CarSchedule>,
+    today: LocalDate,
+    onScheduleClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -923,7 +956,10 @@ private fun UpcomingCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                "교체 시기가 다가온 항목의 지난 교체 비용 기준 예상이에요.",
+                // 금액은 정비 항목에만 붙는다. 자동차세·보험료는 앱이 모르는 값이라
+                // 평균을 지어내지 않고 날짜만 말한다.
+                if (schedules.isEmpty()) "교체 시기가 다가온 항목의 지난 교체 비용 기준 예상이에요."
+                else "곧 챙길 것들이에요. 금액은 지난 교체 비용 기준 예상이라 실제와 달라요.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -970,6 +1006,46 @@ private fun UpcomingCard(
                 }
             }
 
+            schedules.forEach { schedule ->
+                val remaining = schedule.remainingDays(today) ?: return@forEach
+                val overdue = remaining < 0L
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onScheduleClick)
+                        .padding(vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(
+                                if (overdue) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.primary,
+                                CircleShape
+                            )
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            schedule.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "${formatScheduleDate(schedule.dueDate, today)} · ${dDayLabel(remaining)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        "날짜 일정",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             val known = items.mapNotNull { lastCosts[it.settingId] }
             if (known.isNotEmpty()) {
                 androidx.compose.material3.HorizontalDivider(
@@ -978,7 +1054,9 @@ private fun UpcomingCard(
                 )
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "예상 지출 합계",
+                        // 일정(자동차세·보험료)은 금액을 모르니 합계에 못 넣는다.
+                        // 같이 놓인 줄이 있는데 그냥 "합계"라고 하면 포함된 줄 안다.
+                        if (schedules.isEmpty()) "예상 지출 합계" else "정비 예상 지출",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)

@@ -172,6 +172,7 @@ fun MainTabScreen(
                     onNoticeClick = onNoticeClick,
                     onEditCar = onEditCar,
                     onAddMaintenanceItem = onAddMaintenanceItem,
+                    onOpenSchedule = onOpenSchedule,
                     onAddMaintenance = onAddMaintenance,
                     onOpenItemDetail = onOpenItemDetail,
                     onSeeAllRecords = { tab = MainTab.MAINTENANCE },
@@ -199,7 +200,8 @@ fun MainTabScreen(
                     car = selectedCar,
                     onSwitchCar = { showSwitcher = true },
                     onOpenHomeTab = { tab = MainTab.HOME },
-                    onOpenMaintenanceTab = { tab = MainTab.MAINTENANCE }
+                    onOpenMaintenanceTab = { tab = MainTab.MAINTENANCE },
+                    onOpenSchedule = onOpenSchedule
                 )
 
                 MainTab.SETTINGS -> SettingsScreen(

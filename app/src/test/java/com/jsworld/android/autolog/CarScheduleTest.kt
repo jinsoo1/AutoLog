@@ -8,8 +8,10 @@ import com.jsworld.android.autolog.domain.model.nextDueDateAfterDone
 import com.jsworld.android.autolog.domain.model.sortSchedules
 import com.jsworld.android.autolog.domain.model.suggestInspectionDate
 import com.jsworld.android.autolog.domain.model.suggestTaxDate
+import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -106,5 +108,41 @@ class CarScheduleTest {
         assertEquals("D-14", dDayLabel(14))
         assertEquals("D-DAY", dDayLabel(0))
         assertEquals("D+3", dDayLabel(-3))
+    }
+
+    /* ── 홈·리포트에 꺼낼 일정 ── */
+
+    @Test
+    fun `창 안의 일정만 가까운 순으로 꺼낸다`() {
+        val list = listOf(
+            schedule("2026-12-16", id = 1L),  // D-120
+            schedule("2026-09-01", id = 2L),  // D-14
+            schedule("2026-08-25", id = 3L)   // D-7
+        )
+
+        val within30 = upcomingSchedules(list, today, withinDays = 30L)
+        assertEquals(listOf(3L, 2L), within30.map { it.id })
+    }
+
+    /** 정기검사는 지나도 사라지지 않는다 — 지났다는 사실이 가장 중요한 정보다 */
+    @Test
+    fun `이미 지난 일정도 꺼낸다`() {
+        val list = listOf(schedule("2026-08-01", id = 9L))  // D+17
+        val result = upcomingSchedules(list, today, withinDays = 30L)
+        assertEquals(listOf(9L), result.map { it.id })
+        assertTrue(result.first().remainingDays(today)!! < 0L)
+    }
+
+    @Test
+    fun `리포트 창이 홈보다 넓어 다음 달 것까지 잡는다`() {
+        val list = listOf(schedule("2026-10-05", id = 5L))  // D-48
+        assertTrue(upcomingSchedules(list, today, withinDays = 30L).isEmpty())
+        assertEquals(listOf(5L), upcomingSchedules(list, today, withinDays = 60L).map { it.id })
+    }
+
+    @Test
+    fun `날짜가 깨진 일정은 빠진다`() {
+        val list = listOf(schedule("몰라요", id = 7L))
+        assertTrue(upcomingSchedules(list, today, withinDays = 60L).isEmpty())
     }
 }

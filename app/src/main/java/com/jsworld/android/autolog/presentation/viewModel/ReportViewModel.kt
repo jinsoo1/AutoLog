@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
+import com.jsworld.android.autolog.domain.model.CarSchedule
 import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.SettingLastCost
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
+import com.jsworld.android.autolog.domain.repository.CarScheduleRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.ExpenseReportRepository
 import com.jsworld.android.autolog.domain.repository.FuelRecordRepository
@@ -30,6 +32,7 @@ class ReportViewModel @Inject constructor(
     private val maintenanceHistoryRepository: MaintenanceHistoryRepository,
     private val carMaintenanceRepository: CarMaintenanceRepository,
     private val careRepository: CareRepository,
+    private val scheduleRepository: CarScheduleRepository,
     private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
 
@@ -98,6 +101,15 @@ class ReportViewModel @Inject constructor(
             carMaintenanceRepository.observeMaintenanceStatusList(carId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
+
+    /** 정기검사·보험·자동차세 — '곧 있을 일' 카드에 정비 항목과 함께 오른다 */
+    fun schedulesState(carId: Long): StateFlow<List<CarSchedule>> =
+        schedulesMap.getOrPut(carId) {
+            scheduleRepository.observeByCar(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    private val schedulesMap = mutableMapOf<Long, StateFlow<List<CarSchedule>>>()
 
     /** 항목별 마지막 교체 비용 — "다음도 이 정도" 예상용 */
     fun lastCostsState(carId: Long): StateFlow<Map<Long, Int?>> =
