@@ -10,6 +10,7 @@ import com.jsworld.android.autolog.presentation.state.RestorePreviewUiState
 import com.jsworld.android.autolog.data.repository.BackupRepository
 import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
+import com.jsworld.android.autolog.presentation.worker.SeasonalCareNotifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -25,8 +26,21 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     application: Application,
     private val userPrefsRepository: UserPrefsRepository,
-    private val backupRepository: BackupRepository
+    private val backupRepository: BackupRepository,
+    private val seasonalCareNotifier: SeasonalCareNotifier
 ) : AndroidViewModel(application) {
+
+    /** 디버그 전용 — 계절 알림은 계절마다 1회뿐이라 기다려서는 확인할 수 없다 */
+    fun sendSeasonalTestNotification() {
+        viewModelScope.launch {
+            runCatching {
+                seasonalCareNotifier.checkAndNotify(
+                    context = getApplication(),
+                    forceTest = true
+                )
+            }
+        }
+    }
 
     val appVersion: String = run {
         val context = getApplication<Application>()
@@ -53,6 +67,13 @@ class SettingsViewModel @Inject constructor(
 
     fun setScheduleAlertEnabled(enabled: Boolean) {
         viewModelScope.launch { userPrefsRepository.setScheduleAlertEnabled(enabled) }
+    }
+
+    val seasonalCareAlertEnabled: Flow<Boolean> =
+        userPrefsRepository.observeSeasonalCareAlertEnabled()
+
+    fun setSeasonalCareAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setSeasonalCareAlertEnabled(enabled) }
     }
 
     val monthlyReportNotificationEnabled: Flow<Boolean> =

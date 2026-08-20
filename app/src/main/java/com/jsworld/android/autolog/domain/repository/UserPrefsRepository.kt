@@ -71,6 +71,17 @@ interface UserPrefsRepository {
     fun observeSeasonalCareDismissedKey(): Flow<String>
     suspend fun setSeasonalCareDismissedKey(key: String)
 
+    /**
+     * 계절별 관리 알림 — **기본 켜짐**. 계절마다 1회뿐이라 성가시지 않고,
+     * 이 알림의 존재 이유가 "볼 생각을 못 한 것"을 알리는 것이라 꺼두면 의미가 없다.
+     */
+    fun observeSeasonalCareAlertEnabled(): Flow<Boolean>
+    suspend fun setSeasonalCareAlertEnabled(enabled: Boolean)
+
+    /** 마지막으로 계절 알림을 보낸 계절 키. 계절마다 한 번만 보내려고 쓴다 */
+    suspend fun getSeasonalCareNotifiedKey(): String
+    suspend fun setSeasonalCareNotifiedKey(key: String)
+
     /** scheduleId → 마지막으로 알린 단계(ScheduleAlertStage.name). 전이 감지용 */
     suspend fun getScheduleAlertStages(): Map<Long, String>
     suspend fun setScheduleAlertStage(scheduleId: Long, stage: String)

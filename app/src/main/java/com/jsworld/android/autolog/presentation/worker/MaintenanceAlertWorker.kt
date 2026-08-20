@@ -45,7 +45,9 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     private val carMaintenanceRepository: CarMaintenanceRepository,
     private val userPrefsRepository: UserPrefsRepository,
     /** 날짜 일정 알림 — 같은 하루 1회 검사에 얹는다(체인을 늘리지 않는다) */
-    private val scheduleAlertNotifier: ScheduleAlertNotifier
+    private val scheduleAlertNotifier: ScheduleAlertNotifier,
+    /** 계절별 관리 알림 — 계절마다 1회. 역시 같은 체인에 얹는다 */
+    private val seasonalCareNotifier: SeasonalCareNotifier
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -71,11 +73,16 @@ class MaintenanceAlertWorker @AssistedInject constructor(
             .onFailure { android.util.Log.e(TAG, "schedule alert failed", it) }
             .getOrDefault(false)
 
-        // ⚠️ 내일 예약은 **두 알림 중 하나라도 살아 있으면** 건다.
+        // ⚠️ 계절 알림도 정비 알림 스위치와 별개다 — 같은 이유로 먼저 돈다.
+        val seasonalOn = runCatching { seasonalCareNotifier.checkAndNotify(applicationContext) }
+            .onFailure { android.util.Log.e(TAG, "seasonal alert failed", it) }
+            .getOrDefault(false)
+
+        // ⚠️ 내일 예약은 **셋 중 하나라도 살아 있으면** 건다.
         // prefs.enabled 만 보고 예약하면, 정비 알림을 꺼두고 일정만 쓰는 사용자의
         // 체인이 오늘 한 번 돌고 끊긴다(1.2.2 의 체인 끊김과 같은 종류).
         // 테스트 실행은 일일 체인을 건드리지 않는다.
-        if (!forceTest && (prefs.enabled || hasSchedules)) {
+        if (!forceTest && (prefs.enabled || hasSchedules || seasonalOn)) {
             MaintenanceAlertScheduler.scheduleNextFromWorker(applicationContext, prefs.hour)
         }
 

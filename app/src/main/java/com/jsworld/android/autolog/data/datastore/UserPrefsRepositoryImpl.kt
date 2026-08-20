@@ -76,6 +76,28 @@ class UserPrefsRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 계절별 관리 알림
+     */
+    private val seasonalCareAlertEnabledKey =
+        booleanPreferencesKey("seasonal_care_alert_enabled")
+
+    override fun observeSeasonalCareAlertEnabled(): Flow<Boolean> =
+        dataStore.data.map { it[seasonalCareAlertEnabledKey] ?: true }
+
+    override suspend fun setSeasonalCareAlertEnabled(enabled: Boolean) {
+        dataStore.edit { it[seasonalCareAlertEnabledKey] = enabled }
+    }
+
+    private val seasonalCareNotifiedKey = stringPreferencesKey("seasonal_care_notified_key")
+
+    override suspend fun getSeasonalCareNotifiedKey(): String =
+        dataStore.data.first()[seasonalCareNotifiedKey] ?: ""
+
+    override suspend fun setSeasonalCareNotifiedKey(key: String) {
+        dataStore.edit { it[seasonalCareNotifiedKey] = key }
+    }
+
+    /**
      * 탭 화면의 현재 차량
      */
     private val selectedCarIdKey = longPreferencesKey("selected_car_id")

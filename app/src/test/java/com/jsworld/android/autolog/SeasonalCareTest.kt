@@ -8,8 +8,11 @@ import com.jsworld.android.autolog.domain.model.lastCareLabel
 import com.jsworld.android.autolog.domain.model.seasonKey
 import com.jsworld.android.autolog.domain.model.seasonOf
 import com.jsworld.android.autolog.domain.model.seasonalGuide
+import com.jsworld.android.autolog.domain.model.seasonalNotificationBody
+import com.jsworld.android.autolog.domain.model.shouldNotifySeason
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -110,4 +113,32 @@ class SeasonalCareTest {
         status = com.jsworld.android.autolog.domain.model.MaintenanceStatus.NORMAL,
         remainingText = ""
     )
+
+    /* ── 계절 알림 ── */
+
+    @Test
+    fun `계절 알림은 계절마다 한 번만`() {
+        val key = seasonKey(LocalDate.of(2026, 10, 1))
+        assertTrue(shouldNotifySeason(key, notifiedKey = "", dismissedKey = ""))
+        // 이미 보냈으면 그만
+        assertFalse(shouldNotifySeason(key, notifiedKey = key, dismissedKey = ""))
+        // 지난 계절에 보낸 것은 이번 계절을 막지 않는다
+        assertTrue(shouldNotifySeason(key, notifiedKey = "SUMMER-2026", dismissedKey = ""))
+    }
+
+    /** 화면에서 치운 것을 알림으로 다시 들이밀지 않는다 */
+    @Test
+    fun `카드를 넘긴 계절은 알림도 보내지 않는다`() {
+        val key = seasonKey(LocalDate.of(2026, 10, 1))
+        assertFalse(shouldNotifySeason(key, notifiedKey = "", dismissedKey = key))
+    }
+
+    @Test
+    fun `알림 본문은 항목 이름만 담는다`() {
+        val guide = seasonalGuide(LocalDate.of(2026, 10, 1))
+        val body = seasonalNotificationBody(guide)
+        assertEquals(guide.tips.joinToString(" · ") { it.itemName }, body)
+        // "마지막 언제"는 차량마다 달라서 알림에 넣지 않는다
+        assertFalse(body.contains("마지막"))
+    }
 }

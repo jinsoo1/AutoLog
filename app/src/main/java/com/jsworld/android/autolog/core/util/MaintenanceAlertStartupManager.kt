@@ -13,10 +13,10 @@ import kotlinx.coroutines.flow.first
  * 기기 재부팅·강제 종료·앱 업데이트로 WorkManager 예약이 사라졌을 수 있어서다.
  * KEEP 정책이라 살아 있는 예약이 있으면 건드리지 않는다.
  *
- * ⚠️ 이 체인은 정비 알림만의 것이 아니다 — **날짜 일정 알림도 같은 워커에 얹혀 있다.**
- * 정비 알림은 기본 꺼짐이고 일정 알림은 기본 켜짐이라, 정비 알림 기준으로만
+ * ⚠️ 이 체인은 정비 알림만의 것이 아니다 — **날짜 일정·계절별 관리 알림도 같은 워커에 얹혀 있다.**
+ * 정비 알림은 기본 꺼짐이고 나머지 둘은 기본 켜짐이라, 정비 알림 기준으로만
  * 예약하면 일정을 등록해도 알림이 영영 오지 않는다(설정은 켜져 있는데 조용한 상태).
- * 그래서 둘 중 **하나라도** 켜져 있으면 예약한다.
+ * 그래서 셋 중 **하나라도** 켜져 있으면 예약한다.
  */
 @Singleton
 class MaintenanceAlertStartupManager @Inject constructor(
@@ -32,7 +32,13 @@ class MaintenanceAlertStartupManager @Inject constructor(
         val hasSchedules = scheduleAlertOn &&
             runCatching { scheduleRepository.getAll().isNotEmpty() }.getOrDefault(false)
 
-        if (prefs.enabled || hasSchedules) {
+        // 계절 알림은 등록할 데이터가 없어도 동작한다 — 콘텐츠 자체가 값이라
+        // 스위치가 켜져 있으면 그것만으로 체인을 유지할 이유가 된다.
+        val seasonalOn = runCatching {
+            userPrefsRepository.observeSeasonalCareAlertEnabled().first()
+        }.getOrDefault(true)
+
+        if (prefs.enabled || hasSchedules || seasonalOn) {
             AutoLogNotificationHelper.createChannels(context)
             MaintenanceAlertScheduler.scheduleNext(context, prefs.hour)
         }

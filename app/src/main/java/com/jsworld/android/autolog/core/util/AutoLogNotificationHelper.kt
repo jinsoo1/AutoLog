@@ -19,6 +19,7 @@ object AutoLogNotificationHelper {
 
     const val MONTHLY_REPORT_CHANNEL_ID = "monthly_report_channel"
     const val SCHEDULE_CHANNEL_ID = "schedule_channel"
+    const val SEASONAL_CHANNEL_ID = "seasonal_channel"
 
     fun createChannels(context: Context) {
         val weekly = NotificationChannel(
@@ -61,9 +62,18 @@ object AutoLogNotificationHelper {
             description = "정기검사·보험 만기·자동차세 날짜가 다가오면 알려줍니다."
         }
 
+        val seasonal = NotificationChannel(
+            SEASONAL_CHANNEL_ID,
+            "계절별 관리 알림",
+            // 읽는 콘텐츠라 소리로 재촉하지 않는다. 계절마다 1회뿐이기도 하다.
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "계절이 바뀔 때 확인하면 좋은 항목을 알려줍니다."
+        }
+
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannels(
-            listOf(weekly, maintSoon, maintOverdue, monthlyReport, schedule)
+            listOf(weekly, maintSoon, maintOverdue, monthlyReport, schedule, seasonal)
         )
     }
 

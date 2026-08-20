@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Campaign
@@ -121,6 +122,9 @@ fun SettingsScreen(
         .collectAsStateWithLifecycle(initialValue = true)
 
     val scheduleAlertEnabled by viewModel.scheduleAlertEnabled
+        .collectAsStateWithLifecycle(initialValue = true)
+
+    val seasonalCareAlertEnabled by viewModel.seasonalCareAlertEnabled
         .collectAsStateWithLifecycle(initialValue = true)
 
     var showAlertHourDialog by remember { mutableStateOf(false) }
@@ -660,6 +664,54 @@ fun SettingsScreen(
                                 defaultOnPermissionLauncher.launch(
                                     Manifest.permission.POST_NOTIFICATIONS
                                 )
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    SettingsSwitchMenuItem(
+                        icon = Icons.Outlined.WbSunny,
+                        title = "계절별 관리 알림",
+                        subtitle = "계절이 바뀔 때 확인할 항목을 한 번 알려드립니다",
+                        checked = seasonalCareAlertEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked) AutoLogNotificationHelper.createChannels(context)
+                            viewModel.setSeasonalCareAlertEnabled(checked)
+                        }
+                    )
+                }
+
+                if (seasonalCareAlertEnabled && !notificationsAllowed) {
+                    item {
+                        PermissionNeededRow(
+                            onClick = {
+                                defaultOnPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                )
+                            }
+                        )
+                    }
+                }
+
+                // 계절 알림 테스트 — 계절마다 1회뿐이라 기다려서는 확인할 수 없다.
+                // 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
+                if (BuildConfig.DEBUG && seasonalCareAlertEnabled) {
+                    item {
+                        SettingsMenuItem(
+                            icon = Icons.Outlined.BugReport,
+                            title = "계절 알림 테스트 (디버그 전용)",
+                            subtitle = "지금 계절 카드 내용으로 알림을 보내봅니다",
+                            indented = true,
+                            onClick = {
+                                AutoLogNotificationHelper.createChannels(context)
+                                // forceTest — '이번 계절에 보냈나' 기록을 건드리지 않는다.
+                                viewModel.sendSeasonalTestNotification()
+                                Toast.makeText(
+                                    context,
+                                    "알림을 보냈어요. 상단바를 내려보세요.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         )
                     }

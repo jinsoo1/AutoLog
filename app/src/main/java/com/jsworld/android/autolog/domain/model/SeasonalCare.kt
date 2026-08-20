@@ -159,6 +159,22 @@ fun buildSeasonalCareRows(
     }
 }
 
+/**
+ * 이번 계절 알림을 보낼지 — **계절마다 딱 한 번**.
+ *
+ * 카드를 '올해는 넘어가기'로 넘긴 계절은 알림도 보내지 않는다. 화면에서 치운 것을
+ * 알림으로 다시 들이미는 건 사용자의 의사를 뒤집는 일이다.
+ */
+fun shouldNotifySeason(
+    currentKey: String,
+    notifiedKey: String,
+    dismissedKey: String
+): Boolean = currentKey != notifiedKey && currentKey != dismissedKey
+
+/** 알림 본문 — 항목 이름만. "마지막 언제"는 차량마다 달라서 알림에 넣지 않는다 */
+fun seasonalNotificationBody(guide: SeasonalCareGuide): String =
+    guide.tips.joinToString(" · ") { it.itemName }
+
 /** "마지막 2년 전" / "마지막 3개월 전" / "아직 기록 없음" */
 fun lastCareLabel(last: LocalDate?, today: LocalDate): String {
     if (last == null) return "아직 기록 없음"
