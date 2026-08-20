@@ -73,6 +73,14 @@ object Routes {
     fun maintenanceStarter(carId: Long, first: Boolean) =
         "maintenance_starter/$carId?first=$first"
 
+    /**
+     * 차량 등록 직후 날짜 일정 제안. 정비 항목 추천 다음에 온다 —
+     * 기록이 0건이어도 값을 주는 유일한 기능이라 온보딩 축으로 쓴다.
+     */
+    const val SCHEDULE_STARTER = "schedule_starter/{carId}?first={first}"
+    fun scheduleStarter(carId: Long, first: Boolean) =
+        "schedule_starter/$carId?first=$first"
+
     const val SETTINGS = "settings"
     const val NOTICE = "notice"
 

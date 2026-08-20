@@ -43,6 +43,7 @@ import com.jsworld.android.autolog.presentation.screen.ExcelExportScreen
 import com.jsworld.android.autolog.presentation.screen.FuelRecordEditScreen
 import com.jsworld.android.autolog.presentation.screen.MainTabScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceStarterScreen
+import com.jsworld.android.autolog.presentation.screen.ScheduleStarterScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceHistoryEditScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceItemDetailScreen
 import com.jsworld.android.autolog.presentation.screen.NoticeScreen
@@ -445,13 +446,32 @@ fun AutoLogNavHost(
                 carId = carId,
                 viewModel = hiltViewModel(),
                 onDone = {
-                    if (isFirstCar) {
-                        // 첫 차량: 등록 화면이 스택에서 빠져 뒤가 없다 → 메인 루트로
-                        navController.navigateToMainRoot()
-                    } else {
-                        // n번째: 차량 추가를 시작했던 화면(메인/차량 관리)으로 복귀
-                        navController.popBackStack()
+                    // 정비 항목 다음은 날짜 일정 — 기록이 0건인 지금이 유일하게
+                    // 바로 값을 줄 수 있는 기능이다. 추천 화면은 스택에서 걷어낸다.
+                    navController.navigate(Routes.scheduleStarter(carId, first = isFirstCar)) {
+                        popUpTo(Routes.MAINTENANCE_STARTER) { inclusive = true }
+                        launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.SCHEDULE_STARTER,
+            arguments = listOf(
+                navArgument("carId") { type = NavType.LongType },
+                navArgument("first") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { entry ->
+            val isFirstCar = entry.arguments?.getBoolean("first") ?: false
+            ScheduleStarterScreen(
+                carId = entry.arguments!!.getLong("carId"),
+                onDone = {
+                    if (isFirstCar) navController.navigateToMainRoot()
+                    else navController.popBackStack()
                 }
             )
         }

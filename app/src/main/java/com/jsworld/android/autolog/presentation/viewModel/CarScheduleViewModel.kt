@@ -101,6 +101,47 @@ class CarScheduleViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 온보딩에서 고른 일정을 한 번에 등록한다.
+     * 개별 [add] 를 반복하면 "첫 일정인가" 판정이 매번 흔들려서 따로 둔다.
+     */
+    fun addAll(
+        carId: Long,
+        drafts: List<ScheduleDraft>,
+        onNeedsAlertSetup: () -> Unit = {},
+        onDone: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            if (drafts.isEmpty()) {
+                onDone()
+                return@launch
+            }
+
+            val wasEmpty = runCatching { scheduleRepository.getAll().isEmpty() }
+                .getOrDefault(true)
+
+            drafts.forEach { draft ->
+                scheduleRepository.add(
+                    CarSchedule(
+                        id = 0,
+                        carId = carId,
+                        type = draft.type,
+                        title = draft.title,
+                        dueDate = draft.dueDate,
+                        repeatMonths = draft.repeatMonths,
+                        memo = null
+                    )
+                )
+            }
+
+            val alertOn = runCatching { userPrefsRepository.observeScheduleAlertEnabled().first() }
+                .getOrDefault(true)
+            if (wasEmpty && alertOn) onNeedsAlertSetup()
+
+            onDone()
+        }
+    }
+
     fun update(schedule: CarSchedule, onDone: () -> Unit = {}) {
         viewModelScope.launch {
             scheduleRepository.update(schedule)
@@ -120,3 +161,11 @@ class CarScheduleViewModel @Inject constructor(
         viewModelScope.launch { onResult(scheduleRepository.markDone(id)) }
     }
 }
+
+/** 온보딩에서 등록할 일정 한 건 */
+data class ScheduleDraft(
+    val type: ScheduleType,
+    val title: String,
+    val dueDate: String,
+    val repeatMonths: Int?
+)

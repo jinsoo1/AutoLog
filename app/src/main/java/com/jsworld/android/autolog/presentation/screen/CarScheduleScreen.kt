@@ -764,14 +764,14 @@ private fun ScheduleEditSheet(
     }
 }
 
-private fun ScheduleType.presetTitle(): String = when (this) {
+internal fun ScheduleType.presetTitle(): String = when (this) {
     ScheduleType.INSPECTION -> "정기검사"
     ScheduleType.INSURANCE -> "보험 만기"
     ScheduleType.TAX -> "자동차세"
     ScheduleType.CUSTOM -> "직접 입력"
 }
 
-private fun ScheduleType.presetRepeat(): Int? = when (this) {
+internal fun ScheduleType.presetRepeat(): Int? = when (this) {
     ScheduleType.INSPECTION -> REPEAT_INSPECTION
     ScheduleType.INSURANCE -> REPEAT_INSURANCE
     ScheduleType.TAX -> REPEAT_TAX
