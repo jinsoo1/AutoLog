@@ -4,6 +4,9 @@ import com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.Season
 import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
+import com.jsworld.android.autolog.domain.model.isSeasonalCardVisible
+import com.jsworld.android.autolog.domain.model.parseSnoozeDate
+import com.jsworld.android.autolog.domain.model.seasonalSnoozeDate
 import com.jsworld.android.autolog.domain.model.lastCareLabel
 import com.jsworld.android.autolog.domain.model.seasonKey
 import com.jsworld.android.autolog.domain.model.seasonOf
@@ -44,7 +47,16 @@ class SeasonalCareTest {
     fun `장마 카드는 장마가 오기 전에 뜬다`() {
         assertEquals(Season.MONSOON, seasonOf(5))
         assertEquals(Season.MONSOON, seasonOf(6))
-        assertEquals(Season.PRE_WINTER, seasonOf(10))
+        assertEquals(Season.SUMMER, seasonOf(7))
+    }
+
+    /** 늦더위가 10월까지 간다 — 9·10월도 냉매·공기압이 그대로 유효한 구간이다 */
+    @Test
+    fun `여름 창은 10월까지다`() {
+        assertEquals(Season.SUMMER, seasonOf(9))
+        assertEquals(Season.SUMMER, seasonOf(10))
+        assertEquals(Season.PRE_WINTER, seasonOf(11))
+        assertEquals(Season.WINTER, seasonOf(12))
     }
 
     /** 12월에 넘긴 카드가 1월에 다시 뜨면 넘긴 게 아니다 */
@@ -65,7 +77,7 @@ class SeasonalCareTest {
 
     @Test
     fun `관리 목록에 없는 항목도 줄은 남는다`() {
-        val guide = seasonalGuide(LocalDate.of(2026, 10, 1))
+        val guide = seasonalGuide(LocalDate.of(2026, 11, 1))
         val rows = buildSeasonalCareRows(
             guide = guide,
             items = listOf(uiModel(1L, "배터리")),
@@ -83,7 +95,7 @@ class SeasonalCareTest {
     @Test
     fun `기록이 없으면 마지막 날짜도 없다`() {
         val rows = buildSeasonalCareRows(
-            guide = seasonalGuide(LocalDate.of(2026, 10, 1)),
+            guide = seasonalGuide(LocalDate.of(2026, 11, 1)),
             items = listOf(uiModel(1L, "배터리")),
             lastServiceDates = emptyMap()
         )
@@ -103,7 +115,7 @@ class SeasonalCareTest {
         Season.SPRING -> 3
         Season.MONSOON -> 5
         Season.SUMMER -> 7
-        Season.PRE_WINTER -> 9
+        Season.PRE_WINTER -> 11
         Season.WINTER -> 12
     }
 
@@ -118,7 +130,7 @@ class SeasonalCareTest {
 
     @Test
     fun `계절 알림은 계절마다 한 번만`() {
-        val key = seasonKey(LocalDate.of(2026, 10, 1))
+        val key = seasonKey(LocalDate.of(2026, 11, 1))
         assertTrue(shouldNotifySeason(key, notifiedKey = "", dismissedKey = ""))
         // 이미 보냈으면 그만
         assertFalse(shouldNotifySeason(key, notifiedKey = key, dismissedKey = ""))
@@ -132,7 +144,7 @@ class SeasonalCareTest {
      */
     @Test
     fun `카드를 넘긴 계절은 알림도 보내지 않는다`() {
-        val key = seasonKey(LocalDate.of(2026, 10, 1))
+        val key = seasonKey(LocalDate.of(2026, 11, 1))
         assertFalse(shouldNotifySeason(key, notifiedKey = "", dismissedKey = key))
         // 아직 안 넘긴 차가 한 대라도 있으면(= dismissedKey 가 비어 옴) 알림은 간다
         assertTrue(shouldNotifySeason(key, notifiedKey = "", dismissedKey = ""))
@@ -140,10 +152,89 @@ class SeasonalCareTest {
 
     @Test
     fun `알림 본문은 항목 이름만 담는다`() {
-        val guide = seasonalGuide(LocalDate.of(2026, 10, 1))
+        val guide = seasonalGuide(LocalDate.of(2026, 11, 1))
         val body = seasonalNotificationBody(guide)
         assertEquals(guide.tips.joinToString(" · ") { it.itemName }, body)
         // "마지막 언제"는 차량마다 달라서 알림에 넣지 않는다
         assertFalse(body.contains("마지막"))
+    }
+
+    /* ── 카드 접기 (X → 다음 달 / 내년) ── */
+
+    @Test
+    fun `접지 않았으면 보인다`() {
+        val today = LocalDate.of(2026, 8, 20)
+        val key = seasonKey(today)
+        assertTrue(isSeasonalCardVisible(today, key, dismissedKey = "", snoozeUntil = null))
+    }
+
+    @Test
+    fun `내년에 다시 를 고르면 이번 계절은 끝난다`() {
+        val today = LocalDate.of(2026, 8, 20)
+        val key = seasonKey(today)
+        assertFalse(isSeasonalCardVisible(today, key, dismissedKey = key, snoozeUntil = null))
+
+        // 계절이 바뀌면 키가 달라져 저절로 돌아온다
+        val preWinter = LocalDate.of(2026, 11, 1)
+        assertTrue(
+            isSeasonalCardVisible(
+                preWinter, seasonKey(preWinter), dismissedKey = key, snoozeUntil = null
+            )
+        )
+    }
+
+    @Test
+    fun `다음 달에 다시 는 그 날짜까지만 숨긴다`() {
+        val today = LocalDate.of(2026, 8, 20)
+        val until = seasonalSnoozeDate(today)
+        assertEquals(LocalDate.of(2026, 9, 20), until)
+
+        val key = seasonKey(today)
+        assertFalse(isSeasonalCardVisible(today, key, dismissedKey = "", snoozeUntil = until))
+        // 하루 전날까지 숨고
+        assertFalse(
+            isSeasonalCardVisible(until.minusDays(1), seasonKey(until.minusDays(1)), "", until)
+        )
+        // 그날이 오면 보인다
+        assertTrue(isSeasonalCardVisible(until, seasonKey(until), "", until))
+    }
+
+    /**
+     * 한 달씩 미루다 계절 창을 넘어가면 그때는 **다음 계절 안내**가 뜬다.
+     * 이번 계절 내용은 저절로 내년으로 밀린다 — 계절 키에 연도가 붙어 있어서다.
+     */
+    @Test
+    fun `한 달씩 미루다 계절이 넘어가면 다음 계절 안내가 된다`() {
+        // 10월(여름 창의 끝)에 미루면 11월 20일 — 그때는 겨울 전 창이다
+        val october = LocalDate.of(2026, 10, 20)
+        val until = seasonalSnoozeDate(october)
+        assertEquals(Season.SUMMER, seasonOf(october.monthValue))
+        assertEquals(Season.PRE_WINTER, seasonOf(until.monthValue))
+
+        // 그날 카드는 보이고, 내용은 여름이 아니라 겨울 전 안내다
+        assertTrue(isSeasonalCardVisible(until, seasonKey(until), "", until))
+        assertEquals(Season.PRE_WINTER, seasonalGuide(until).season)
+
+        // 여름 안내는 내년 여름에 돌아온다
+        val nextSummer = LocalDate.of(2027, 7, 10)
+        assertEquals(Season.SUMMER, seasonalGuide(nextSummer).season)
+        assertTrue(seasonKey(october) != seasonKey(nextSummer))
+    }
+
+    /** 창 안에서 미루면 같은 계절 안내가 다시 온다 — 다이얼로그가 이걸로 문구를 가린다 */
+    @Test
+    fun `창 안에서 미루면 같은 계절이 다시 온다`() {
+        val august = LocalDate.of(2026, 8, 20)
+        val until = seasonalSnoozeDate(august)   // 9월 20일 — 아직 여름 창
+        assertEquals(Season.SUMMER, seasonOf(until.monthValue))
+        assertEquals(seasonKey(august), seasonKey(until))
+    }
+
+    @Test
+    fun `미룬 날짜가 깨져 있으면 없는 것으로 본다`() {
+        assertNull(parseSnoozeDate(null))
+        assertNull(parseSnoozeDate(""))
+        assertNull(parseSnoozeDate("몰라요"))
+        assertEquals(LocalDate.of(2026, 9, 20), parseSnoozeDate("2026-09-20"))
     }
 }

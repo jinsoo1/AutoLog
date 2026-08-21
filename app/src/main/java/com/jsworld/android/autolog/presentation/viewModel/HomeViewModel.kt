@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -44,13 +45,33 @@ class HomeViewModel @Inject constructor(
 
     private val seasonalDismissedMap = mutableMapOf<Long, StateFlow<String>>()
 
+    /** '다음 달에 다시' 로 미룬 날짜(yyyy-MM-dd). 차량별 */
+    fun seasonalCareSnoozeUntilState(carId: Long): StateFlow<String> =
+        seasonalSnoozeMap.getOrPut(carId) {
+            userPrefsRepository.observeSeasonalCareSnoozeUntil(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+        }
+
+    private val seasonalSnoozeMap = mutableMapOf<Long, StateFlow<String>>()
+
+    /** '내년에 다시' — 이번 계절은 끝. 계절이 바뀌면 저절로 돌아온다 */
     fun dismissSeasonalCare(carId: Long, key: String) {
         viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(carId, key) }
     }
 
+    /** '다음 달에 다시' — 한 달만 미룬다 */
+    fun snoozeSeasonalCare(carId: Long, until: LocalDate) {
+        viewModelScope.launch {
+            userPrefsRepository.setSeasonalCareSnoozeUntil(carId, until.toString())
+        }
+    }
+
     /** 실행 취소 — 잘못 눌렀을 때 되돌릴 길이 없으면 최대 3개월을 기다려야 한다 */
-    fun undoDismissSeasonalCare(carId: Long) {
-        viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(carId, "") }
+    fun undoSeasonalCareSkip(carId: Long) {
+        viewModelScope.launch {
+            userPrefsRepository.setSeasonalCareDismissedKey(carId, "")
+            userPrefsRepository.setSeasonalCareSnoozeUntil(carId, "")
+        }
     }
 
     /** '이번 달 지출' 카드용 세차 기록 — 세차는 별도 테이블이라 따로 가져온다 */

@@ -78,6 +78,16 @@ class UserPrefsRepositoryImpl @Inject constructor(
         dataStore.edit { it[seasonalCareDismissedKey(carId)] = key }
     }
 
+    private fun seasonalCareSnoozeKey(carId: Long) =
+        stringPreferencesKey("seasonal_care_snooze_until_$carId")
+
+    override fun observeSeasonalCareSnoozeUntil(carId: Long): Flow<String> =
+        dataStore.data.map { it[seasonalCareSnoozeKey(carId)] ?: "" }
+
+    override suspend fun setSeasonalCareSnoozeUntil(carId: Long, date: String) {
+        dataStore.edit { it[seasonalCareSnoozeKey(carId)] = date }
+    }
+
     /**
      * 계절별 관리 알림
      */

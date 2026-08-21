@@ -76,6 +76,14 @@ interface UserPrefsRepository {
     suspend fun setSeasonalCareDismissedKey(carId: Long, key: String)
 
     /**
+     * 계절 카드를 '다음 달에 다시'로 미룬 날짜(yyyy-MM-dd). 없으면 빈 문자열.
+     * 한 달씩 미루다 계절이 넘어가면 그때는 다음 계절 안내가 뜬다 — 이번 계절
+     * 내용은 저절로 내년으로 밀린다. 역시 **차량별**이다.
+     */
+    fun observeSeasonalCareSnoozeUntil(carId: Long): Flow<String>
+    suspend fun setSeasonalCareSnoozeUntil(carId: Long, date: String)
+
+    /**
      * 계절별 관리 알림 — **기본 켜짐**. 계절마다 1회뿐이라 성가시지 않고,
      * 이 알림의 존재 이유가 "볼 생각을 못 한 것"을 알리는 것이라 꺼두면 의미가 없다.
      */

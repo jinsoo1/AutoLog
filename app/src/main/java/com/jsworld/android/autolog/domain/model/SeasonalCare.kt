@@ -28,10 +28,13 @@ enum class Season {
     /** 5~6월 — 장마 오기 전 */
     MONSOON,
 
-    /** 7~8월 — 한여름 */
+    /**
+     * 7~10월 — 더위. 요즘은 늦더위가 10월까지 이어져서, 9~10월도 여전히
+     * 에어컨을 켜고 노면이 뜨겁다(냉매·공기압이 그대로 유효한 구간).
+     */
     SUMMER,
 
-    /** 9~11월 — 추워지기 전 */
+    /** 11월 — 추워지기 전 */
     PRE_WINTER,
 
     /** 12~2월 — 한겨울 */
@@ -55,8 +58,8 @@ data class SeasonalCareGuide(
 fun seasonOf(month: Int): Season = when (month) {
     3, 4 -> Season.SPRING
     5, 6 -> Season.MONSOON
-    7, 8 -> Season.SUMMER
-    9, 10, 11 -> Season.PRE_WINTER
+    7, 8, 9, 10 -> Season.SUMMER
+    11 -> Season.PRE_WINTER
     else -> Season.WINTER
 }
 
@@ -93,7 +96,8 @@ private val GUIDES = mapOf(
     ),
     Season.SUMMER to SeasonalCareGuide(
         season = Season.SUMMER,
-        title = "한여름에 확인할 3가지",
+        // 창이 10월까지라 "한여름"으로 못 부른다 — 10월에 읽어도 맞는 말이어야 한다.
+        title = "여름철에 확인할 3가지",
         subtitle = "더위에 약한 것부터 봐요",
         tips = listOf(
             SeasonalTip("냉각수(부동액)", "과열은 여름에 나요"),
@@ -127,6 +131,36 @@ fun seasonKey(today: LocalDate): String {
     val year = if (season == Season.WINTER && today.monthValue <= 2) today.year - 1 else today.year
     return "${season.name}-$year"
 }
+
+/**
+ * '다음 달에 다시'를 눌렀을 때 다시 보여줄 날짜.
+ *
+ * 한 달씩 미루다 계절 창을 넘어가면 그때는 **다음 계절 안내**가 뜬다.
+ * 이번 계절 내용은 자동으로 내년으로 밀린다 — 계절 키에 연도가 붙어 있어서다.
+ */
+fun seasonalSnoozeDate(today: LocalDate): LocalDate = today.plusMonths(1)
+
+/**
+ * 카드를 지금 보여줄지.
+ *
+ * 두 가지로 접을 수 있다 — **한 달만**(스누즈) 과 **이번 계절은 끝**(내년에 다시).
+ * 둘 다 차량별이다. 카드의 각 줄이 그 차의 기록을 달고 있어서, 한 차에서 접었다고
+ * 다른 차까지 숨기면 정작 확인해야 할 차를 못 본다.
+ */
+fun isSeasonalCardVisible(
+    today: LocalDate,
+    currentKey: String,
+    dismissedKey: String,
+    snoozeUntil: LocalDate?
+): Boolean {
+    if (currentKey == dismissedKey) return false
+    if (snoozeUntil != null && today.isBefore(snoozeUntil)) return false
+    return true
+}
+
+/** "2026-09-20" → LocalDate. 값이 없거나 깨졌으면 null */
+fun parseSnoozeDate(raw: String?): LocalDate? =
+    raw?.takeIf { it.isNotBlank() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
 /**
  * 카드에 그릴 한 줄.

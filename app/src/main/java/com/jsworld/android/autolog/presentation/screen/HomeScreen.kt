@@ -24,14 +24,18 @@ import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Umbrella
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +47,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -72,9 +78,13 @@ import com.jsworld.android.autolog.domain.model.SeasonalCareRow
 import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
 import com.jsworld.android.autolog.domain.model.dDayLabel
 import com.jsworld.android.autolog.domain.model.formatScheduleDate
+import com.jsworld.android.autolog.domain.model.isSeasonalCardVisible
 import com.jsworld.android.autolog.domain.model.lastCareLabel
+import com.jsworld.android.autolog.domain.model.parseSnoozeDate
 import com.jsworld.android.autolog.domain.model.seasonKey
+import com.jsworld.android.autolog.domain.model.seasonOf
 import com.jsworld.android.autolog.domain.model.seasonalGuide
+import com.jsworld.android.autolog.domain.model.seasonalSnoozeDate
 import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
@@ -182,6 +192,9 @@ fun HomeScreen(
         val today = LocalDate.now()
         val seasonalKey = remember(today.monthValue) { seasonKey(today) }
         val dismissedSeasonKey by viewModel.seasonalCareDismissedKeyState(car.id).collectAsState()
+        val snoozeUntilRaw by viewModel.seasonalCareSnoozeUntilState(car.id).collectAsState()
+        val snoozeUntil = remember(snoozeUntilRaw) { parseSnoozeDate(snoozeUntilRaw) }
+        var showSeasonalSkipDialog by rememberSaveable(car.id) { mutableStateOf(false) }
         val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
         val dueSchedules = remember(schedules, today) {
             upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
@@ -246,7 +259,7 @@ fun HomeScreen(
 
             // 임박·초과 카드 아래에 둔다. 계절 카드는 읽는 콘텐츠라,
             // 지금 당장 해야 할 항목보다 위에 오면 급한 것을 밀어낸다.
-            if (dismissedSeasonKey != seasonalKey) {
+            if (isSeasonalCardVisible(today, seasonalKey, dismissedSeasonKey, snoozeUntil)) {
                 item {
                     SeasonalCareCard(
                         guide = seasonalGuide,
@@ -254,20 +267,7 @@ fun HomeScreen(
                         today = today,
                         onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
                         onAddItem = { onAddMaintenanceItem(car.id) },
-                        onSkip = {
-                            viewModel.dismissSeasonalCare(car.id, seasonalKey)
-                            scope.launch {
-                                // 잘못 눌렀는데 되돌릴 길이 없으면 최대 3개월을 기다려야 한다.
-                                val result = snackbarHostState.showSnackbar(
-                                    message = "이번 ${seasonalGuide.season.label()}은 넘길게요",
-                                    actionLabel = "실행 취소",
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    viewModel.undoDismissSeasonalCare(car.id)
-                                }
-                            }
-                        }
+                        onSkip = { showSeasonalSkipDialog = true }
                     )
                 }
             }
@@ -336,6 +336,24 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        if (showSeasonalSkipDialog) {
+            SeasonalSkipDialog(
+                season = seasonalGuide.season,
+                today = today,
+                onDismiss = { showSeasonalSkipDialog = false },
+                onSnooze = { until ->
+                    showSeasonalSkipDialog = false
+                    viewModel.snoozeSeasonalCare(car.id, until)
+                    scope.launch { showSeasonalUndo(snackbarHostState, viewModel, car.id, "${until.monthValue}월 ${until.dayOfMonth}일에 다시 보여드려요") }
+                },
+                onSkipYear = {
+                    showSeasonalSkipDialog = false
+                    viewModel.dismissSeasonalCare(car.id, seasonalKey)
+                    scope.launch { showSeasonalUndo(snackbarHostState, viewModel, car.id, "내년 ${seasonalGuide.season.label()}에 다시 보여드려요") }
+                }
+            )
         }
 
         if (showMileageDialog) {
@@ -619,6 +637,16 @@ private fun SeasonalCareCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                // 접기는 X 로. "올해는 넘어가기"는 한 번에 3개월을 없애는 무거운 선택인데
+                // 문구만 보고는 그 무게를 알 수 없어서, 눌렀을 때 무엇을 고르는지 묻는다.
+                IconButton(onClick = onSkip, modifier = Modifier.size(30.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "이 안내 접기",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(Modifier.height(10.dp))
@@ -635,21 +663,162 @@ private fun SeasonalCareCard(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    "올해는 넘어가기",
-                    modifier = Modifier
-                        .clickable(onClick = onSkip)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
+}
+
+/**
+ * 접기 선택 — **한 달만** 미룰지, **이번 계절은 끝**낼지.
+ *
+ * 한 달씩 미루다 계절 창을 넘어가면 그때는 다음 계절 안내가 뜨고, 이번 계절 내용은
+ * 저절로 내년으로 밀린다. 그래서 "다음 달" 이 실제로 어느 계절이 되는지도 밝힌다.
+ */
+@Composable
+private fun SeasonalSkipDialog(
+    season: Season,
+    today: LocalDate,
+    onDismiss: () -> Unit,
+    onSnooze: (LocalDate) -> Unit,
+    onSkipYear: () -> Unit
+) {
+    val snoozeDate = remember(today) { seasonalSnoozeDate(today) }
+    val snoozeSeason = remember(snoozeDate) { seasonOf(snoozeDate.monthValue) }
+    val accent = MaterialTheme.colorScheme.tertiary
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        // 카드와 같은 계절 아이콘·포인트색을 쓴다 — 어느 카드를 접는지가 한눈에 보인다.
+        icon = {
+            Surface(color = accent.copy(alpha = 0.16f), shape = CircleShape) {
+                Icon(
+                    season.icon(),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .size(22.dp)
+                )
+            }
+        },
+        title = {
+            Text(
+                "이번 ${season.label()} 안내를 접을까요?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkipOptionRow(
+                    icon = Icons.Default.Snooze,
+                    title = "다음 달에 다시",
+                    // 미룬 날짜가 다른 계절이면 그때는 그 계절 안내가 뜬다 — 미리 밝힌다.
+                    subtitle = buildString {
+                        append("${snoozeDate.monthValue}월 ${snoozeDate.dayOfMonth}일에 다시 보여드려요")
+                        if (snoozeSeason != season) {
+                            append("\n그때는 ${snoozeSeason.label()} 안내로 바뀌어요")
+                        }
+                    },
+                    emphasized = true,
+                    onClick = { onSnooze(snoozeDate) }
+                )
+                SkipOptionRow(
+                    icon = Icons.Default.EventBusy,
+                    title = "내년에 다시",
+                    subtitle = "이번 ${season.label()}은 넘기고\n내년 같은 때에 알려드려요",
+                    emphasized = false,
+                    onClick = onSkipYear
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+/**
+ * 선택지 한 줄. 권하는 쪽(다음 달)만 포인트색 테두리를 주고 나머지는 조용히 둔다 —
+ * 둘 다 강조하면 어느 쪽이 가벼운 선택인지 알 수 없다.
+ */
+@Composable
+private fun SkipOptionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    emphasized: Boolean,
+    onClick: () -> Unit
+) {
+    val accent = MaterialTheme.colorScheme.primary
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = if (emphasized) accent.copy(alpha = 0.07f)
+        else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = if (emphasized) 1.5.dp else 1.dp,
+            color = if (emphasized) accent.copy(alpha = 0.45f)
+            else MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (emphasized) accent else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (emphasized) accent else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = MaterialTheme.typography.labelSmall.fontSize * 1.45
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = if (emphasized) accent
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+/** 접기 직후 안내 + 실행 취소. '내년에 다시'는 3개월을 없애는 선택이라 되돌릴 길을 남긴다 */
+private suspend fun showSeasonalUndo(
+    snackbarHostState: SnackbarHostState,
+    viewModel: HomeViewModel,
+    carId: Long,
+    message: String
+) {
+    val result = snackbarHostState.showSnackbar(
+        message = message,
+        actionLabel = "실행 취소",
+        duration = SnackbarDuration.Short
+    )
+    if (result == SnackbarResult.ActionPerformed) viewModel.undoSeasonalCareSkip(carId)
 }
 
 @Composable
