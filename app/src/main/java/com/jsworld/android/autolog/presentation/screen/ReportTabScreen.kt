@@ -175,7 +175,37 @@ fun ReportTabScreen(
             reportPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        // ⚠️ 기록이 0건이어도 **날짜 일정은 보여야 한다.** 지출 기록이 없다고 여기서
+        // 바로 return 하면, 차를 막 등록해 일정만 있는 사용자는 리포트에서 아무것도
+        // 못 본다 — 정작 그 사람에게 유일하게 보여줄 게 일정인데.
+        val today = remember { LocalDate.now() }
+        val allSchedules by viewModel.schedulesState(car.id).collectAsState()
+        val dueSchedules = remember(allSchedules, today) {
+            upcomingSchedules(allSchedules, today, SCHEDULE_REPORT_DAYS)
+        }
+
         if (loaded.isEmpty()) {
+            if (dueSchedules.isNotEmpty()) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SectionLabel(
+                        title = "곧 있을 일",
+                        actionLabel = "일정 관리",
+                        onAction = { onOpenSchedule(car.id) }
+                    )
+                    UpcomingCard(
+                        items = emptyList(),
+                        lastCosts = emptyMap(),
+                        schedules = dueSchedules,
+                        today = today,
+                        onScheduleClick = { onOpenSchedule(car.id) }
+                    )
+                }
+            }
             ReportEmptyMessage(
                 "아직 리포트에 담을 기록이 없어요",
                 "주유·정비 기록을 남기면 지출 리포트가 채워져요."
@@ -207,17 +237,9 @@ fun ReportTabScreen(
         val urgentItems = remember(urgentAll) { urgentAll.filter { it.hasHistory } }
         val lastCosts by viewModel.lastCostsState(car.id).collectAsState()
 
-        // 날짜 일정도 '곧 챙길 것'이다. 홈보다 창을 넓게 잡는다 —
-        // 리포트는 지금 할 일이 아니라 다음 달까지의 돈 계획을 보는 자리다.
-        val allSchedules by viewModel.schedulesState(car.id).collectAsState()
-
         // 정비 시기 예측 — 월평균 주행거리(리포트가 이미 계산) x 남은 거리.
         val overview by viewModel.overviewState(car.id).collectAsState()
-        val today = remember { LocalDate.now() }
         val pace = remember(loaded) { estimateDrivingPace(loaded, YearMonth.now()) }
-        val dueSchedules = remember(allSchedules, today) {
-            upcomingSchedules(allSchedules, today, SCHEDULE_REPORT_DAYS)
-        }
         val predictions = remember(overview, pace) {
             buildMaintenancePredictions(overview, pace, today)
         }
