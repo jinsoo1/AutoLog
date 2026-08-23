@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.LocalCarWash
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.outlined.Info
@@ -155,6 +156,13 @@ fun MaintenanceTabScreen(
                     careRecords = careRecords,
                     onClick = { onOpenCareDetail(car.id) }
                 )
+                Spacer(Modifier.height(10.dp))
+            } else {
+                // ⚠️ 카드가 없으면 세차 화면으로 갈 길이 아예 없다 — 카드는 세차 항목이
+                // 켜져 있어야 뜨는데, 그 항목을 켜는 화면이 카드 너머에 있다(닭과 달걀).
+                // 새 차량은 여기서 막혀 세차 기록을 남길 방법이 없었다.
+                // 카드 대신 한 줄만 둔다 — 세차를 안 쓰는 사람에게 부담이 없을 만큼 작게.
+                CareStartRow(onClick = { onOpenCareDetail(car.id) })
                 Spacer(Modifier.height(10.dp))
             }
 
@@ -388,6 +396,50 @@ private fun EmptyMessage(title: String, body: String) {
  * 세차·관리 허브 진입 카드 — 단순 링크가 아니라 "세차한 지 N일"을 담는다.
  * 세차 계열 항목이 켜져 있거나 기록이 있을 때만 나타난다.
  */
+/** 세차 기록이 하나도 없을 때의 입구. 카드가 아니라 한 줄이라 탭을 어지럽히지 않는다 */
+@Composable
+private fun CareStartRow(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.LocalCarWash,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "세차·관리 기록하기",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "세차 주기와 코팅·광택까지 여기서 관리해요",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @Composable
 private fun CareEntryCard(
     careRecords: List<CareRecord>,
