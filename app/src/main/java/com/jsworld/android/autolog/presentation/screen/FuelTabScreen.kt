@@ -52,6 +52,9 @@ import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.FuelRecord
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
+import com.jsworld.android.autolog.presentation.component.StatCard
+import com.jsworld.android.autolog.presentation.component.TabTopBar
+import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
 import com.jsworld.android.autolog.presentation.component.MonthlyFuelCostChart
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.FuelViewModel
@@ -106,15 +109,7 @@ fun FuelTabScreen(
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CarSwitcherChip(car = car, onClick = onSwitchCar)
-            }
+            TabTopBar(leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) })
 
             if (car == null) {
                 FuelEmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
@@ -155,6 +150,15 @@ fun FuelTabScreen(
                     .mapValues { (_, list) -> list.sumOf { it.amount ?: 0 } }
             }
 
+            // 카드 캡션용 — 금액만 있으면 "많이 쓴 건지"를 알 수 없다.
+            // 몇 번 넣어서 나온 금액인지가 함께 있어야 읽힌다.
+            val thisMonthCountByUnit = remember(records, thisMonth) {
+                records
+                    .filter { it.filledAt.startsWith(thisMonth) }
+                    .groupingBy { it.unit }
+                    .eachCount()
+            }
+
             var filter by rememberSaveable(car.id) { mutableStateOf<FuelUnit?>(null) }
             val activeFilter = filter?.takeIf { it in unitsInRecords }
             val shown = remember(records, activeFilter) {
@@ -167,7 +171,9 @@ fun FuelTabScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp, top = TabContentTopPadding, bottom = 96.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
@@ -175,11 +181,14 @@ fun FuelTabScreen(
                         // 주유비와 충전비는 단위가 달라 합쳐 평균낼 수 없으므로 나란히 보여준다.
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             displayUnits.forEach { unit ->
-                                FuelStatCard(
+                                StatCard(
                                     label = "이번 달 ${unit.costLabel}",
                                     value = (thisMonthByUnit[unit] ?: 0).formatThousands(),
                                     unit = "원",
-                                    accent = unit.accentColor(),
+                                    caption = (thisMonthCountByUnit[unit] ?: 0).let {
+                                        if (it > 0) "${it}회" else "아직 없어요"
+                                    },
+                                    accentDot = unit.accentColor(),
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -189,16 +198,21 @@ fun FuelTabScreen(
                         val onlyUnit = displayUnits.first()
                         val averageUnitPrice = remember(records) { records.averageUnitPrice() }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            FuelStatCard(
+                            StatCard(
                                 label = "이번 달 ${onlyUnit.costLabel}",
                                 value = (thisMonthByUnit[onlyUnit] ?: 0).formatThousands(),
                                 unit = "원",
+                                caption = (thisMonthCountByUnit[onlyUnit] ?: 0).let {
+                                    if (it > 0) "${it}회" else "아직 없어요"
+                                },
                                 modifier = Modifier.weight(1f)
                             )
-                            FuelStatCard(
+                            StatCard(
                                 label = "평균 단가",
                                 value = averageUnitPrice?.formatThousands() ?: "-",
                                 unit = "원/${onlyUnit.symbol}",
+                                // 이번 달이 아니라 **전체 기록** 평균이다 — 그 사실을 밝힌다.
+                                caption = "기록 ${records.size}회 기준",
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -377,57 +391,6 @@ private fun FuelKindSheet(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FuelStatCard(
-    label: String,
-    value: String,
-    unit: String,
-    modifier: Modifier = Modifier,
-    accent: Color? = null
-) {
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (accent != null) {
-                    Surface(color = accent, shape = CircleShape) {
-                        Spacer(Modifier.size(7.dp))
-                    }
-                    Spacer(Modifier.width(5.dp))
-                }
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1
-                )
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    unit,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
         }
     }

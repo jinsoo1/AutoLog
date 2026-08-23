@@ -104,6 +104,8 @@ import com.jsworld.android.autolog.domain.model.earthLapsText
 import com.jsworld.android.autolog.domain.model.personalRecordText
 import com.jsworld.android.autolog.domain.model.topSpendItems
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
+import com.jsworld.android.autolog.presentation.component.TabTopBar
+import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.ReportViewModel
 import java.text.NumberFormat
@@ -133,15 +135,7 @@ fun ReportTabScreen(
     viewModel: ReportViewModel = hiltViewModel()
 ) {
     Column(Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CarSwitcherChip(car = car, onClick = onSwitchCar)
-        }
+        TabTopBar(leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) })
 
         if (car == null) {
             ReportEmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
@@ -247,7 +241,9 @@ fun ReportTabScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp, top = TabContentTopPadding, bottom = 24.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {

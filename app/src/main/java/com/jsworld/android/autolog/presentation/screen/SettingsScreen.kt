@@ -87,6 +87,8 @@ import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertSchedu
 import com.jsworld.android.autolog.presentation.scheduler.MonthlyReportScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import androidx.core.app.ActivityCompat
+import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
+import com.jsworld.android.autolog.presentation.component.TabTopBar
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
 import com.jsworld.android.autolog.core.util.findActivity
 import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
@@ -460,28 +462,37 @@ fun SettingsScreen(
             if (showBack) ScaffoldDefaults.contentWindowInsets
             else ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "설정",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    // 탭으로 열렸을 때는 돌아갈 곳이 없으므로 뒤로가기를 숨긴다.
-                    if (showBack) {
-                        IconButton(
-                            onClick = onBackClick
-                        ) {
+            // 탭으로 열렸을 때는 다른 탭과 **같은 높이의 헤더**를 쓴다.
+            // M3 TopAppBar 는 64dp 라 45~58dp 인 다른 탭과 어긋났다.
+            if (showBack) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "설정",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "뒤로가기"
                             )
                         }
                     }
-                }
-            )
+                )
+            } else {
+                TabTopBar(
+                    leading = {
+                        Text(
+                            text = "설정",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+            }
         }
     ) { padding ->
         Box(
@@ -492,7 +503,7 @@ fun SettingsScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = 8.dp,
+                    top = TabContentTopPadding,
                     bottom = 72.dp
                 )
             ) {

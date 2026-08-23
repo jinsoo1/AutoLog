@@ -66,6 +66,8 @@ import com.jsworld.android.autolog.domain.model.buildCareOverview
 import com.jsworld.android.autolog.domain.model.careCounts
 import com.jsworld.android.autolog.domain.model.upkeepLines
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
+import com.jsworld.android.autolog.presentation.component.TabTopBar
+import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
 import com.jsworld.android.autolog.presentation.viewModel.MaintenanceTabViewModel
 import java.time.LocalDate
 
@@ -107,39 +109,34 @@ fun MaintenanceTabScreen(
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CarSwitcherChip(car = car, onClick = onSwitchCar)
-                Spacer(Modifier.weight(1f))
-                if (car != null) {
-                    // 아이콘만 있으면 무슨 버튼인지 알 수 없다. 라벨을 함께 보여준다.
-                    Row(
-                        modifier = Modifier
-                            .clickable { onManageItems(car.id) }
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Tune,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            "항목 관리",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+            TabTopBar(
+                leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) },
+                actions = {
+                    if (car != null) {
+                        // 아이콘만 있으면 무슨 버튼인지 알 수 없다. 라벨을 함께 보여준다.
+                        Row(
+                            modifier = Modifier
+                                .clickable { onManageItems(car.id) }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "항목 관리",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
-            }
+            )
 
             if (car == null) {
                 EmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
@@ -252,7 +249,9 @@ fun MaintenanceTabScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp, top = TabContentTopPadding, bottom = 96.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 grouped.forEach { (month, monthRecords) ->

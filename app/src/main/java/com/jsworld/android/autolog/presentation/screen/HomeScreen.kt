@@ -87,6 +87,9 @@ import com.jsworld.android.autolog.domain.model.seasonalGuide
 import com.jsworld.android.autolog.domain.model.seasonalSnoozeDate
 import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
+import com.jsworld.android.autolog.presentation.component.StatCard
+import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
+import com.jsworld.android.autolog.presentation.component.TabTopBar
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.HomeViewModel
 import kotlinx.coroutines.launch
@@ -124,24 +127,19 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize()) {
 
         // 상단 바 — 차량 전환 / 차량 정보 수정 / 공지
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CarSwitcherChip(car = car, onClick = onSwitchCar)
-            Spacer(Modifier.weight(1f))
-            if (car != null) {
-                IconButton(onClick = { onEditCar(car.id) }) {
-                    Icon(Icons.Default.Edit, contentDescription = "차량 정보 수정")
+        TabTopBar(
+            leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) },
+            actions = {
+                if (car != null) {
+                    IconButton(onClick = { onEditCar(car.id) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "차량 정보 수정")
+                    }
+                }
+                IconButton(onClick = onNoticeClick) {
+                    Icon(Icons.Default.Campaign, contentDescription = "공지사항")
                 }
             }
-            IconButton(onClick = onNoticeClick) {
-                Icon(Icons.Default.Campaign, contentDescription = "공지사항")
-            }
-        }
+        )
 
         if (car == null) {
             HomeEmptyView()
@@ -212,7 +210,9 @@ fun HomeScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp, top = TabContentTopPadding, bottom = 24.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -387,60 +387,6 @@ private fun HomeEmptyView() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    unit: String,
-    caption: String?,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
-) {
-    Card(
-        modifier = if (onClick != null) modifier.clickable(onClick = onClick) else modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    unit,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            if (caption != null) {
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    caption,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
     }
 }
