@@ -75,6 +75,7 @@ import com.jsworld.android.autolog.domain.model.SCHEDULE_HOME_DAYS
 import com.jsworld.android.autolog.domain.model.Season
 import com.jsworld.android.autolog.domain.model.SeasonalCareGuide
 import com.jsworld.android.autolog.domain.model.SeasonalCareRow
+import com.jsworld.android.autolog.domain.model.SeasonalRowState
 import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
 import com.jsworld.android.autolog.domain.model.dDayLabel
 import com.jsworld.android.autolog.domain.model.formatScheduleDate
@@ -83,12 +84,13 @@ import com.jsworld.android.autolog.domain.model.lastCareLabel
 import com.jsworld.android.autolog.domain.model.parseSnoozeDate
 import com.jsworld.android.autolog.domain.model.seasonKey
 import com.jsworld.android.autolog.domain.model.seasonOf
+import com.jsworld.android.autolog.domain.model.seasonalDoneCount
 import com.jsworld.android.autolog.domain.model.seasonalGuide
 import com.jsworld.android.autolog.domain.model.seasonalSnoozeDate
 import com.jsworld.android.autolog.domain.model.upcomingSchedules
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
-import com.jsworld.android.autolog.presentation.component.StatCard
 import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
+import com.jsworld.android.autolog.presentation.component.StatCard
 import com.jsworld.android.autolog.presentation.component.TabTopBar
 import com.jsworld.android.autolog.presentation.model.FuelAmountCalc
 import com.jsworld.android.autolog.presentation.viewModel.HomeViewModel
@@ -197,7 +199,7 @@ fun HomeScreen(
         val dueSchedules = remember(schedules, today) {
             upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
         }
-        val seasonalRows = remember(seasonalGuide, overview, records) {
+        val seasonalRows = remember(seasonalGuide, overview, records, today) {
             val lastDates = records
                 .mapNotNull { rec ->
                     rec.serviceDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -205,7 +207,7 @@ fun HomeScreen(
                 }
                 .groupBy({ it.first }, { it.second })
                 .mapValues { (_, dates) -> dates.max() }
-            buildSeasonalCareRows(seasonalGuide, overview, lastDates)
+            buildSeasonalCareRows(seasonalGuide, overview, lastDates, today)
         }
 
         LazyColumn(
@@ -550,6 +552,8 @@ private fun SeasonalCareCard(
     val accent = MaterialTheme.colorScheme.tertiary
     // 세 항목 모두 기록이 없으면 안내 문구를 바꾼다 — 빈 화면을 사과하는 대신 다음 행동을 준다.
     val hasAnyRecord = rows.any { it.lastServiceDate != null }
+    val doneCount = seasonalDoneCount(rows)
+    val allDone = doneCount == rows.size && rows.isNotEmpty()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -577,10 +581,18 @@ private fun SeasonalCareCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (hasAnyRecord) guide.subtitle
-                        else "지금 확인하고 기록해두면, 다음부터 알려드릴 수 있어요",
+                        // 이번 계절에 이미 처리한 줄이 있으면 그걸 먼저 말한다 —
+                        // 다 해둔 사람에게 "확인하세요"만 반복하면 카드가 잔소리가 된다.
+                        when {
+                            allDone -> "이번 ${guide.season.label()} ${rows.size}가지를 다 기록했어요"
+                            doneCount > 0 -> "${rows.size}가지 중 ${doneCount}가지 기록했어요"
+                            hasAnyRecord -> guide.subtitle
+                            else -> "지금 확인하고 기록해두면, 다음부터 알려드릴 수 있어요"
+                        },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (allDone) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (allDone) FontWeight.Bold else FontWeight.Normal
                     )
                 }
                 // 접기는 X 로. "올해는 넘어가기"는 한 번에 3개월을 없애는 무거운 선택인데
@@ -773,14 +785,14 @@ private fun SeasonalCareRowItem(
     today: LocalDate,
     onClick: () -> Unit
 ) {
-    // 관리 목록에 없는 항목이면 기록할 곳 자체가 없다 — 먼저 항목을 켜야 한다.
-    val enabled = row.settingId != null
-    val actionLabel = if (enabled) "기록" else "추가"
+    val done = row.state == SeasonalRowState.DONE
+    val overdue = row.status == MaintenanceStatus.OVERDUE
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            // 끝난 줄은 누를 이유가 없다 — 기록 화면으로 또 보내면 방금 한 일을 다시 시킨다.
+            .then(if (done) Modifier else Modifier.clickable(onClick = onClick)),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface
     ) {
@@ -788,39 +800,84 @@ private fun SeasonalCareRowItem(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (done) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(8.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     row.itemName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (done) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "${row.reason} · ${
-                        if (enabled) lastCareLabel(row.lastServiceDate, today)
-                        else "관리 목록에 없어요"
-                    }",
+                    row.detailText(today),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // 주기를 넘긴 항목은 색으로도 구분한다 — 계절 안내와 별개로 급한 일이다.
+                    color = if (overdue) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (overdue) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-            ) {
-                Text(
-                    actionLabel,
+            when (row.state) {
+                SeasonalRowState.DONE -> Text(
+                    // '확인함'은 앱이 점검했다는 뜻으로 읽힌다. 앱이 아는 건 기록뿐이다.
+                    "기록함",
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
+
+                else -> {
+                    val accent =
+                        if (overdue) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary
+                    Surface(shape = CircleShape, color = accent.copy(alpha = 0.10f)) {
+                        Text(
+                            if (row.state == SeasonalRowState.NOT_MANAGED) "추가" else "기록",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accent
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * 줄의 부제. **상태에 따라 할 말이 다르다** —
+ * 이번 계절에 이미 남긴 기록이 있으면 그 사실을 알리고, 주기를 넘겼으면 그게 먼저다.
+ *
+ * ⚠️ 앱이 아는 건 **기록뿐**이다. 8월 7일에 냉각수를 갈았다는 기록이 있어도 지금
+ * 새고 있는지, 정비가 제대로 됐는지는 알 수 없다. 그래서 "안 해도 돼요" 같은
+ * **판정 문장을 쓰지 않는다** — 기록이 있다는 사실만 말하고 판단은 사용자에게 남긴다.
+ */
+private fun SeasonalCareRow.detailText(today: LocalDate): String = when (state) {
+    SeasonalRowState.NOT_MANAGED -> "$reason · 관리 목록에 없어요"
+    SeasonalRowState.DONE -> {
+        val date = lastServiceDate?.let { "${it.monthValue}월 ${it.dayOfMonth}일에" } ?: "이번 계절에"
+        "$reason · $date 기록했어요"
+    }
+    SeasonalRowState.TODO -> when (status) {
+        MaintenanceStatus.OVERDUE -> "$reason · 교체 시기가 지났어요"
+        MaintenanceStatus.SOON -> "$reason · 교체 시기가 다가왔어요"
+        else -> "$reason · ${lastCareLabel(lastServiceDate, today)}"
     }
 }
 

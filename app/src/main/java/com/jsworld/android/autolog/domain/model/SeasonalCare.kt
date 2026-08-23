@@ -123,6 +123,24 @@ fun seasonalGuide(today: LocalDate): SeasonalCareGuide =
     GUIDES.getValue(seasonOf(today.monthValue))
 
 /**
+ * 지금 계절 창이 시작된 날. "이번 계절에 이미 했는가"를 판정하는 기준선이다.
+ * 겨울은 해를 넘기므로 1~2월이면 작년 12월 1일이 시작이다.
+ */
+fun seasonWindowStart(today: LocalDate): LocalDate {
+    val season = seasonOf(today.monthValue)
+    val startMonth = when (season) {
+        Season.SPRING -> 3
+        Season.MONSOON -> 5
+        Season.SUMMER -> 7
+        Season.PRE_WINTER -> 11
+        Season.WINTER -> 12
+    }
+    val year =
+        if (season == Season.WINTER && today.monthValue <= 2) today.year - 1 else today.year
+    return LocalDate.of(year, startMonth, 1)
+}
+
+/**
  * '올해는 넘어가기'의 단위. 겨울은 해를 넘기므로(12월·1월이 같은 겨울)
  * 1~2월은 **작년 키**를 쓴다 — 12월에 넘긴 카드가 1월에 다시 뜨면 넘긴 게 아니다.
  */
@@ -169,29 +187,62 @@ fun parseSnoozeDate(raw: String?): LocalDate? =
  * 이때도 줄을 지우지 않는다 — "무엇을 봐야 하나"가 이 카드의 값이고,
  * 관리 스타일을 '가볍게'로 고른 사람은 대부분의 계절 항목이 꺼져 있다.
  */
+/**
+ * 줄의 상태. 카드가 이걸 안 보고 늘 '기록'만 띄우면, **이번 달에 갈아놓은 항목까지
+ * 기록하라고 시킨다.** 방금 한 일을 시키는 안내는 안내가 아니라 소음이다.
+ */
+enum class SeasonalRowState {
+    /** 관리 목록에 없다 — 기록할 곳 자체가 없으니 항목부터 켜야 한다 */
+    NOT_MANAGED,
+
+    /** 이번 계절 안에 기록이 있다 — 할 일이 끝났다 */
+    DONE,
+
+    /** 아직 안 봤다 */
+    TODO
+}
+
 data class SeasonalCareRow(
     val itemName: String,
     val reason: String,
     val settingId: Long?,
-    val lastServiceDate: LocalDate?
+    val lastServiceDate: LocalDate?,
+    val state: SeasonalRowState,
+    /** 주기 상태. 주기가 없거나 관리 목록에 없으면 null */
+    val status: MaintenanceStatus? = null
 )
 
 fun buildSeasonalCareRows(
     guide: SeasonalCareGuide,
     items: List<MaintenanceUiModel>,
-    lastServiceDates: Map<Long, LocalDate>
+    lastServiceDates: Map<Long, LocalDate>,
+    today: LocalDate
 ): List<SeasonalCareRow> {
     val byName = items.associateBy { it.name }
+    val windowStart = seasonWindowStart(today)
+
     return guide.tips.map { tip ->
         val setting = byName[tip.itemName]
+        val last = setting?.settingId?.let { lastServiceDates[it] }
         SeasonalCareRow(
             itemName = tip.itemName,
             reason = tip.reason,
             settingId = setting?.settingId,
-            lastServiceDate = setting?.settingId?.let { lastServiceDates[it] }
+            lastServiceDate = last,
+            state = when {
+                setting == null -> SeasonalRowState.NOT_MANAGED
+                // 이번 계절 창 안에 기록이 있으면 이미 본 것이다.
+                last != null && !last.isBefore(windowStart) -> SeasonalRowState.DONE
+                else -> SeasonalRowState.TODO
+            },
+            status = setting?.takeIf { it.hasHistory }?.status
         )
     }
 }
+
+/** 세 줄 중 몇 줄을 이번 계절에 확인했는지 */
+fun seasonalDoneCount(rows: List<SeasonalCareRow>): Int =
+    rows.count { it.state == SeasonalRowState.DONE }
 
 /**
  * 이번 계절 알림을 보낼지 — **계절마다 딱 한 번**.

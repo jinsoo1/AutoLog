@@ -4,7 +4,10 @@ import com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.Season
 import com.jsworld.android.autolog.domain.model.buildSeasonalCareRows
+import com.jsworld.android.autolog.domain.model.SeasonalRowState
 import com.jsworld.android.autolog.domain.model.isSeasonalCardVisible
+import com.jsworld.android.autolog.domain.model.seasonWindowStart
+import com.jsworld.android.autolog.domain.model.seasonalDoneCount
 import com.jsworld.android.autolog.domain.model.parseSnoozeDate
 import com.jsworld.android.autolog.domain.model.seasonalSnoozeDate
 import com.jsworld.android.autolog.domain.model.lastCareLabel
@@ -77,11 +80,13 @@ class SeasonalCareTest {
 
     @Test
     fun `관리 목록에 없는 항목도 줄은 남는다`() {
-        val guide = seasonalGuide(LocalDate.of(2026, 11, 1))
+        val today = LocalDate.of(2026, 11, 20)
+        val guide = seasonalGuide(today)
         val rows = buildSeasonalCareRows(
             guide = guide,
             items = listOf(uiModel(1L, "배터리")),
-            lastServiceDates = mapOf(1L to LocalDate.of(2024, 10, 1))
+            lastServiceDates = mapOf(1L to LocalDate.of(2024, 10, 1)),
+            today = today
         )
 
         assertEquals(guide.tips.size, rows.size)
@@ -94,12 +99,68 @@ class SeasonalCareTest {
 
     @Test
     fun `기록이 없으면 마지막 날짜도 없다`() {
+        val today = LocalDate.of(2026, 11, 20)
         val rows = buildSeasonalCareRows(
-            guide = seasonalGuide(LocalDate.of(2026, 11, 1)),
+            guide = seasonalGuide(today),
             items = listOf(uiModel(1L, "배터리")),
-            lastServiceDates = emptyMap()
+            lastServiceDates = emptyMap(),
+            today = today
         )
         assertNull(rows.first { it.itemName == "배터리" }.lastServiceDate)
+        assertEquals(SeasonalRowState.TODO, rows.first { it.itemName == "배터리" }.state)
+    }
+
+    /* ── 줄 상태 (이번 계절에 이미 했는가) ── */
+
+    @Test
+    fun `계절 창 시작일`() {
+        assertEquals(LocalDate.of(2026, 7, 1), seasonWindowStart(LocalDate.of(2026, 8, 20)))
+        assertEquals(LocalDate.of(2026, 7, 1), seasonWindowStart(LocalDate.of(2026, 10, 31)))
+        assertEquals(LocalDate.of(2026, 11, 1), seasonWindowStart(LocalDate.of(2026, 11, 5)))
+        // 겨울은 해를 넘긴다 — 1월에 열어도 시작은 작년 12월 1일
+        assertEquals(LocalDate.of(2025, 12, 1), seasonWindowStart(LocalDate.of(2026, 1, 15)))
+    }
+
+    /** 이번 달에 갈아놓은 항목까지 "기록하세요"라고 시키면 안 된다 */
+    @Test
+    fun `이번 계절에 기록이 있으면 확인함으로 잡힌다`() {
+        val today = LocalDate.of(2026, 8, 20)   // 여름 창: 7월 1일 시작
+        val rows = buildSeasonalCareRows(
+            guide = seasonalGuide(today),
+            items = listOf(uiModel(1L, "냉각수(부동액)")),
+            lastServiceDates = mapOf(1L to LocalDate.of(2026, 8, 7)),
+            today = today
+        )
+        val coolant = rows.first { it.itemName == "냉각수(부동액)" }
+        assertEquals(SeasonalRowState.DONE, coolant.state)
+        assertEquals(1, seasonalDoneCount(rows))
+    }
+
+    @Test
+    fun `계절 창 이전 기록은 확인함이 아니다`() {
+        val today = LocalDate.of(2026, 8, 20)
+        val rows = buildSeasonalCareRows(
+            guide = seasonalGuide(today),
+            items = listOf(uiModel(1L, "냉각수(부동액)")),
+            // 6월 30일 — 여름 창(7월 1일)보다 하루 전
+            lastServiceDates = mapOf(1L to LocalDate.of(2026, 6, 30)),
+            today = today
+        )
+        assertEquals(SeasonalRowState.TODO, rows.first { it.itemName == "냉각수(부동액)" }.state)
+        assertEquals(0, seasonalDoneCount(rows))
+    }
+
+    @Test
+    fun `관리 목록에 없으면 확인함이 될 수 없다`() {
+        val today = LocalDate.of(2026, 8, 20)
+        val rows = buildSeasonalCareRows(
+            guide = seasonalGuide(today),
+            items = emptyList(),
+            lastServiceDates = emptyMap(),
+            today = today
+        )
+        assertTrue(rows.all { it.state == SeasonalRowState.NOT_MANAGED })
+        assertEquals(0, seasonalDoneCount(rows))
     }
 
     @Test
