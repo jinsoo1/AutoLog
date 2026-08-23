@@ -56,7 +56,7 @@ object AutoLogNotificationHelper {
 
         val schedule = NotificationChannel(
             SCHEDULE_CHANNEL_ID,
-            "날짜 일정 알림",
+            "검사·보험·세금 알림",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "정기검사·보험 만기·자동차세 날짜가 다가오면 알려줍니다."

@@ -137,7 +137,7 @@ fun CarScheduleScreen(
                 title = {
                     Column {
                         Text(
-                            "날짜 일정",
+                            "검사·보험·세금",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )

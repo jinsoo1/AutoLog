@@ -523,10 +523,12 @@ fun SettingsScreen(
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.CalendarMonth,
-                        title = "날짜 일정",
+                        // '날짜 일정'은 날짜와 일정이 같은 말이라 무엇인지 알 수 없었다.
+                        // 담긴 것을 그대로 이름으로 쓴다.
+                        title = "검사·보험·세금",
                         subtitle = listOfNotNull(
                             carName?.takeIf { it.isNotBlank() },
-                            "정기검사 · 보험 만기 · 자동차세"
+                            "만기일을 2주 전부터 알려드려요"
                         ).joinToString(" · "),
                         onClick = onScheduleClick
                     )
@@ -658,7 +660,7 @@ fun SettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.CalendarMonth,
-                        title = "날짜 일정 알림",
+                        title = "검사·보험·세금 알림",
                         subtitle = "정기검사·보험 만기 2주 전부터 알려드립니다",
                         checked = scheduleAlertEnabled,
                         onCheckedChange = { checked ->
