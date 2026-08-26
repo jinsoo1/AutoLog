@@ -239,7 +239,9 @@ fun HomeScreen(
                 }
             }
 
-            if (urgent.isNotEmpty()) {
+            if (urgent.isEmpty()) {
+                item { AllGoodCard() }
+            } else {
                 items(items = urgent, key = { it.settingId }) { item ->
                     UrgentCard(
                         item = item,
@@ -258,9 +260,8 @@ fun HomeScreen(
                 }
             }
 
-            // 급한 것(임박·초과, 임박 일정) 아래, '상태 좋아요' 위에 둔다.
-            // 계절 카드는 읽는 콘텐츠라 급한 항목을 밀어내면 안 되지만,
-            // '상태 좋아요'는 안심 문구일 뿐이라 읽을거리보다 앞설 이유가 없다.
+            // 임박·초과 카드 아래에 둔다. 계절 카드는 읽는 콘텐츠라,
+            // 지금 당장 해야 할 항목보다 위에 오면 급한 것을 밀어낸다.
             if (isSeasonalCardVisible(today, seasonalKey, dismissedSeasonKey, snoozeUntil)) {
                 item {
                     SeasonalCareCard(
@@ -272,10 +273,6 @@ fun HomeScreen(
                         onSkip = { showSeasonalSkipDialog = true }
                     )
                 }
-            }
-
-            if (urgent.isEmpty()) {
-                item { AllGoodCard() }
             }
 
             if (next.isNotEmpty()) {
