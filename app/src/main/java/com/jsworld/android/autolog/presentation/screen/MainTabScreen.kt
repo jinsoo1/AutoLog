@@ -73,8 +73,8 @@ fun MainTabScreen(
     onManageCars: () -> Unit,
     onEditCar: (Long) -> Unit,
     onManageItems: (Long) -> Unit,
-    /** 계절 카드 — 아직 켜지 않은 항목 추가 */
-    onAddMaintenanceItem: (Long) -> Unit,
+    /** 계절 카드 — 아직 켜지 않은 항목 추가. focusItem 을 주면 선택 화면이 그 항목을 강조한다 */
+    onAddMaintenanceItem: (carId: Long, focusItem: String?) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onOpenItemDetail: (Long) -> Unit,
     onEditHistory: (Long) -> Unit,
@@ -86,6 +86,8 @@ fun MainTabScreen(
     onOpenCareDetail: (Long) -> Unit,
     /** 설정 > 날짜 일정 */
     onOpenSchedule: (Long) -> Unit,
+    /** 정비 탭 > 증상별 점검 가이드 */
+    onOpenSymptomGuide: () -> Unit,
     /** 월간 리포트 알림 탭 → 리포트 탭 열기 요청. 소비하면 반드시 알린다 */
     openReportRequested: Boolean = false,
     onConsumeOpenReport: () -> Unit = {}
@@ -187,7 +189,8 @@ fun MainTabScreen(
                     onManageItems = onManageItems,
                     onAddMaintenance = onAddMaintenance,
                     onEditHistory = onEditHistory,
-                    onOpenCareDetail = onOpenCareDetail
+                    onOpenCareDetail = onOpenCareDetail,
+                    onOpenSymptomGuide = onOpenSymptomGuide
                 )
 
                 MainTab.FUEL -> FuelTabScreen(

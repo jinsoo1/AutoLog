@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.LocalCarWash
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Troubleshoot
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -86,6 +87,7 @@ fun MaintenanceTabScreen(
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
     onEditHistory: (Long) -> Unit,
     onOpenCareDetail: (Long) -> Unit,
+    onOpenSymptomGuide: () -> Unit,
     viewModel: MaintenanceTabViewModel = hiltViewModel()
 ) {
     Scaffold(
@@ -165,6 +167,11 @@ fun MaintenanceTabScreen(
                 CareStartRow(onClick = { onOpenCareDetail(car.id) })
                 Spacer(Modifier.height(10.dp))
             }
+
+            // 증상별 점검 가이드 입구 — 세차 입구와 같은 한 줄 메뉴형.
+            // 기록·차량 데이터와 무관한 정적 콘텐츠라 조건 없이 항상 보인다.
+            SymptomGuideStartRow(onClick = onOpenSymptomGuide)
+            Spacer(Modifier.height(10.dp))
 
             var filter by rememberSaveable(car.id) { mutableStateOf<String?>(null) }
 
@@ -427,6 +434,50 @@ private fun CareStartRow(onClick: () -> Unit) {
                 )
                 Text(
                     "세차 주기와 코팅·광택까지 여기서 관리해요",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** 증상별 점검 가이드 입구 — 차에서 느낀 증상으로 점검 방향을 찾는 보조 기능 */
+@Composable
+private fun SymptomGuideStartRow(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Troubleshoot,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "증상별 점검 가이드",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "차에서 느껴지는 증상을 고르면 어디를 점검할지 안내해드려요",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

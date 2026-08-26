@@ -112,7 +112,8 @@ fun HomeScreen(
     onNoticeClick: () -> Unit,
     onEditCar: (Long) -> Unit,
     /** 계절 카드에서 아직 켜지 않은 항목을 눌렀을 때 — 항목 추가 화면으로 */
-    onAddMaintenanceItem: (Long) -> Unit,
+    /** 계절 카드의 '추가' — 항목 선택 화면을 열고 그 항목으로 포커스를 보낸다 */
+    onAddMaintenanceItem: (carId: Long, focusItem: String?) -> Unit,
     /** 정기검사·보험 만기 등 날짜 일정 화면 */
     onOpenSchedule: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
@@ -238,9 +239,7 @@ fun HomeScreen(
                 }
             }
 
-            if (urgent.isEmpty()) {
-                item { AllGoodCard() }
-            } else {
+            if (urgent.isNotEmpty()) {
                 items(items = urgent, key = { it.settingId }) { item ->
                     UrgentCard(
                         item = item,
@@ -259,8 +258,9 @@ fun HomeScreen(
                 }
             }
 
-            // 임박·초과 카드 아래에 둔다. 계절 카드는 읽는 콘텐츠라,
-            // 지금 당장 해야 할 항목보다 위에 오면 급한 것을 밀어낸다.
+            // 급한 것(임박·초과, 임박 일정) 아래, '상태 좋아요' 위에 둔다.
+            // 계절 카드는 읽는 콘텐츠라 급한 항목을 밀어내면 안 되지만,
+            // '상태 좋아요'는 안심 문구일 뿐이라 읽을거리보다 앞설 이유가 없다.
             if (isSeasonalCardVisible(today, seasonalKey, dismissedSeasonKey, snoozeUntil)) {
                 item {
                     SeasonalCareCard(
@@ -268,10 +268,14 @@ fun HomeScreen(
                         rows = seasonalRows,
                         today = today,
                         onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
-                        onAddItem = { onAddMaintenanceItem(car.id) },
+                        onAddItem = { itemName -> onAddMaintenanceItem(car.id, itemName) },
                         onSkip = { showSeasonalSkipDialog = true }
                     )
                 }
+            }
+
+            if (urgent.isEmpty()) {
+                item { AllGoodCard() }
             }
 
             if (next.isNotEmpty()) {
@@ -546,7 +550,7 @@ private fun SeasonalCareCard(
     rows: List<SeasonalCareRow>,
     today: LocalDate,
     onRecord: (Long) -> Unit,
-    onAddItem: () -> Unit,
+    onAddItem: (itemName: String) -> Unit,
     onSkip: () -> Unit
 ) {
     val accent = MaterialTheme.colorScheme.tertiary
@@ -615,7 +619,8 @@ private fun SeasonalCareCard(
                         row = row,
                         today = today,
                         onClick = {
-                            if (row.settingId != null) onRecord(row.settingId) else onAddItem()
+                            if (row.settingId != null) onRecord(row.settingId)
+                            else onAddItem(row.itemName)
                         }
                     )
                 }

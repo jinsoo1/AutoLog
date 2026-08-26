@@ -36,4 +36,7 @@ val StatusNormal = Color(0xFF16A34A)
 val StatusSoon   = Color(0xFFF59E0B)
 val StatusOverdue= Color(0xFFDC2626)
 
+/** 주행위험도 3단계(운행 최소화) — Soon(2단계)과 Overdue(4단계) 사이의 주황 */
+val StatusRestrict = Color(0xFFEA580C)
+
 val Notice = Color(0xFF278C4C)

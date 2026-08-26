@@ -12,6 +12,7 @@ import com.jsworld.android.autolog.data.repository.FuelRecordRepositoryImpl
 import com.jsworld.android.autolog.data.repository.MaintenanceHistoryRepositoryImpl
 import com.jsworld.android.autolog.data.repository.MaintenanceTypeRepositoryImpl
 import com.jsworld.android.autolog.data.repository.NoticeRepositoryImpl
+import com.jsworld.android.autolog.data.repository.SymptomGuideRepositoryImpl
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
@@ -23,6 +24,7 @@ import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepositor
 import com.jsworld.android.autolog.domain.repository.MaintenanceTypeRepository
 import com.jsworld.android.autolog.domain.repository.NoticeReadRepository
 import com.jsworld.android.autolog.domain.repository.NoticeRepository
+import com.jsworld.android.autolog.domain.repository.SymptomGuideRepository
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.Binds
 import dagger.Module
@@ -80,4 +82,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCareRepository(impl: CareRepositoryImpl): CareRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSymptomGuideRepository(impl: SymptomGuideRepositoryImpl): SymptomGuideRepository
 }

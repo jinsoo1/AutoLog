@@ -48,6 +48,8 @@ import com.jsworld.android.autolog.presentation.screen.MaintenanceHistoryEditScr
 import com.jsworld.android.autolog.presentation.screen.MaintenanceItemDetailScreen
 import com.jsworld.android.autolog.presentation.screen.NoticeScreen
 import com.jsworld.android.autolog.presentation.screen.SettingsScreen
+import com.jsworld.android.autolog.presentation.screen.SymptomDetailScreen
+import com.jsworld.android.autolog.presentation.screen.SymptomGuideScreen
 import com.jsworld.android.autolog.presentation.viewModel.AddMaintenanceTypeViewModel
 import com.jsworld.android.autolog.presentation.viewModel.AddMaintenanceViewModel
 import com.jsworld.android.autolog.presentation.viewModel.CarContextViewModel
@@ -169,8 +171,8 @@ fun AutoLogNavHost(
                 onManageItems = { carId ->
                     navController.navigate(Routes.carDetail(carId)) { launchSingleTop = true }
                 },
-                onAddMaintenanceItem = { carId ->
-                    navController.navigate("${Routes.CAR_MAINTENANCE_ITEM_PICKER}/$carId") {
+                onAddMaintenanceItem = { carId, focusItem ->
+                    navController.navigate(Routes.carMaintenanceItemPicker(carId, focusItem)) {
                         launchSingleTop = true
                     }
                 },
@@ -205,6 +207,9 @@ fun AutoLogNavHost(
                 },
                 onOpenSchedule = { carId ->
                     navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
+                },
+                onOpenSymptomGuide = {
+                    navController.navigate(Routes.SYMPTOM_GUIDE) { launchSingleTop = true }
                 },
                 openReportRequested = openReportRequested,
                 onConsumeOpenReport = onConsumeOpenReport
@@ -261,6 +266,27 @@ fun AutoLogNavHost(
             )
         }
 
+        // 증상별 점검 가이드 — 차량·기록과 무관하게 동작하는 정적 콘텐츠 화면
+        composable(Routes.SYMPTOM_GUIDE) {
+            SymptomGuideScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSymptom = { symptomId ->
+                    navController.navigate(Routes.symptomDetail(symptomId)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.SYMPTOM_DETAIL,
+            arguments = listOf(navArgument("symptomId") { type = NavType.StringType })
+        ) {
+            SymptomDetailScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Routes.NOTICE) {
             NoticeScreen(
                 onBack = { navController.popBackStack() },
@@ -302,7 +328,7 @@ fun AutoLogNavHost(
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
                 onAddMaintenanceItem = { id ->
-                    navController.navigate("${Routes.CAR_MAINTENANCE_ITEM_PICKER}/$id") {
+                    navController.navigate(Routes.carMaintenanceItemPicker(id)) {
                         launchSingleTop = true
                     }
                 },
@@ -348,7 +374,7 @@ fun AutoLogNavHost(
                 preselectedSettingId = preselectedSettingId,
                 viewModel = vm,
                 onGoToItemPicker = {
-                    navController.navigate("${Routes.CAR_MAINTENANCE_ITEM_PICKER}/$carId") {
+                    navController.navigate(Routes.carMaintenanceItemPicker(carId)) {
                         launchSingleTop = true
                     }
                 },
@@ -357,14 +383,22 @@ fun AutoLogNavHost(
         }
 
         composable(
-            route = "${Routes.CAR_MAINTENANCE_ITEM_PICKER}/{carId}",
-            arguments = listOf(navArgument("carId") { type = NavType.LongType })
+            route = Routes.CAR_MAINTENANCE_ITEM_PICKER_WITH_ARGS,
+            arguments = listOf(
+                navArgument("carId") { type = NavType.LongType },
+                navArgument("focus") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { entry ->
             val carId = entry.arguments!!.getLong("carId")
             val vm: CarMaintenanceItemPickerViewModel = hiltViewModel()
 
             CarMaintenanceItemPickerScreen(
                 carId = carId,
+                focusItemName = entry.arguments?.getString("focus"),
                 viewModel = vm,
                 onBack = { navController.popBackStack() },
                 onAddCustomItem = { navController.navigate(Routes.addMaintenanceType(carId)) }

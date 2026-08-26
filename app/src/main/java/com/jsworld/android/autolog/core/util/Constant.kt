@@ -13,4 +13,6 @@ object Constant {
 
     const val AUTOLOG_NOTICE = "autolog_notice.json"
 
+    const val AUTOLOG_SYMPTOM_GUIDE = "symptom_guide.json"
+
 }

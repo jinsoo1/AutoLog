@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.navigation
 
+import android.net.Uri
+
 object Routes {
     const val SPLASH = "splash"
 
@@ -29,6 +31,16 @@ object Routes {
     fun addMaintenanceType(carId: Long) = "add_maintenance_type/$carId"
 
     const val CAR_MAINTENANCE_ITEM_PICKER = "car_maintenance_item_picker"
+
+    /**
+     * focusItem 을 주면 선택 화면이 그 항목으로 스크롤하고 잠깐 강조한다 —
+     * 계절 카드의 '추가'에서 진입할 때 항목을 직접 찾으러 다니지 않게.
+     */
+    const val CAR_MAINTENANCE_ITEM_PICKER_WITH_ARGS =
+        "car_maintenance_item_picker/{carId}?focus={focus}"
+    fun carMaintenanceItemPicker(carId: Long, focusItem: String? = null) =
+        "car_maintenance_item_picker/$carId" +
+            (focusItem?.takeIf { it.isNotBlank() }?.let { "?focus=${Uri.encode(it)}" } ?: "")
 
     const val EDIT_CAR = "edit_car"
 
@@ -80,6 +92,12 @@ object Routes {
     const val SCHEDULE_STARTER = "schedule_starter/{carId}?first={first}"
     fun scheduleStarter(carId: Long, first: Boolean) =
         "schedule_starter/$carId?first=$first"
+
+    /** 증상별 점검 가이드 — 정비 탭의 입구 한 줄에서 진입 */
+    const val SYMPTOM_GUIDE = "symptom_guide"
+
+    const val SYMPTOM_DETAIL = "symptom_detail/{symptomId}"
+    fun symptomDetail(symptomId: String) = "symptom_detail/$symptomId"
 
     const val SETTINGS = "settings"
     const val NOTICE = "notice"

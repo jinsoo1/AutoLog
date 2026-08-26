@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
@@ -71,6 +74,7 @@ import com.jsworld.android.autolog.presentation.model.PickerItemUi
 import com.jsworld.android.autolog.presentation.model.groupByCategory
 import com.jsworld.android.autolog.presentation.viewModel.CarMaintenanceItemPickerViewModel
 import com.jsworld.android.autolog.presentation.viewModel.PickerUiEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
@@ -81,6 +85,8 @@ fun CarMaintenanceItemPickerScreen(
     viewModel: CarMaintenanceItemPickerViewModel,
     onBack: () -> Unit,
     onAddCustomItem: () -> Unit,
+    /** 이 항목으로 스크롤하고 잠깐 강조한다 — 계절 카드의 '추가'에서 진입할 때 */
+    focusItemName: String? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -102,6 +108,47 @@ fun CarMaintenanceItemPickerScreen(
     val managingGroups = remember(managing) { groupByCategory(managing) }
     val restoreGroups = remember(restore) { groupByCategory(restore) }
     val addableGroups = remember(addableVisible) { groupByCategory(addableVisible) }
+
+    val listState = rememberLazyListState()
+    var highlightItemName by remember { mutableStateOf<String?>(null) }
+    var focusConsumed by rememberSaveable { mutableStateOf(false) }
+
+    // 포커스 항목으로 스크롤 후 잠깐 깜빡인다. 목록은 비동기로 오므로
+    // 그룹이 채워질 때까지(이펙트 재실행) 기다렸다가 한 번만 수행한다.
+    LaunchedEffect(managingGroups, restoreGroups, addableGroups) {
+        val focus = focusItemName ?: return@LaunchedEffect
+        if (focusConsumed) return@LaunchedEffect
+        if (managing.isEmpty() && restore.isEmpty() && addable.isEmpty()) return@LaunchedEffect
+
+        // 연료 타입 필터에 가려진 항목이면 먼저 전체 보기로 펼친다 —
+        // addableGroups 가 바뀌면서 이 이펙트가 다시 돈다.
+        if (addable.any { it.typeName == focus } && addableVisible.none { it.typeName == focus }) {
+            showAllAddable = true
+            return@LaunchedEffect
+        }
+
+        // LazyColumn 의 실제 아이템 순서: 헤더(1) + 그룹들 이 세 섹션 반복.
+        fun groupIndexIn(groups: List<CategoryGroup>, offset: Int): Int? {
+            groups.forEachIndexed { i, group ->
+                if (group.items.any { it.typeName == focus }) return offset + i
+            }
+            return null
+        }
+        val targetIndex = groupIndexIn(managingGroups, offset = 1)
+            ?: groupIndexIn(restoreGroups, offset = 2 + managingGroups.size)
+            ?: groupIndexIn(
+                addableGroups,
+                offset = 3 + managingGroups.size + restoreGroups.size
+            )
+
+        focusConsumed = true
+        if (targetIndex != null) {
+            listState.animateScrollToItem(targetIndex)
+            highlightItemName = focus
+            delay(1600)
+            highlightItemName = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { e ->
@@ -132,6 +179,7 @@ fun CarMaintenanceItemPickerScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -155,7 +203,8 @@ fun CarMaintenanceItemPickerScreen(
                 onCheckedChange = { item, checked ->
                     // checked=false → disable
                     viewModel.setChecked(carId, item.typeId, checked)
-                }
+                },
+                highlightItemName = highlightItemName
             )
 
             // 복원(비활성)
@@ -174,7 +223,8 @@ fun CarMaintenanceItemPickerScreen(
                 onCheckedChange = { item, checked ->
                     // checked=true → enable
                     viewModel.setChecked(carId, item.typeId, checked)
-                }
+                },
+                highlightItemName = highlightItemName
             )
 
             // 추가 가능
@@ -197,7 +247,8 @@ fun CarMaintenanceItemPickerScreen(
                 onCheckedChange = { item, checked ->
                     // checked=true → insert (없으면 insert)
                     viewModel.setChecked(carId, item.typeId, checked)
-                }
+                },
+                highlightItemName = highlightItemName
             )
 
             // 연료 타입과 무관해 숨긴 항목 보기/접기 토글
@@ -287,7 +338,8 @@ private fun CategoryGroupCard(
     category: MaintenanceCategory,
     items: List<PickerItemUi>,
     checkedProvider: (PickerItemUi) -> Boolean,
-    onCheckedChange: (PickerItemUi, Boolean) -> Unit
+    onCheckedChange: (PickerItemUi, Boolean) -> Unit,
+    highlightItemName: String? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -334,7 +386,8 @@ private fun CategoryGroupCard(
                 PickerRowInCard(
                     item = item,
                     checked = checkedProvider(item),
-                    onCheckedChange = { onCheckedChange(item, it) }
+                    onCheckedChange = { onCheckedChange(item, it) },
+                    highlighted = item.typeName == highlightItemName
                 )
 
                 // 마지막 항목 아래엔 divider 생략
@@ -350,9 +403,23 @@ private fun CategoryGroupCard(
 private fun PickerRowInCard(
     item: PickerItemUi,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    highlighted: Boolean = false
 ) {
     val hasCustomInterval = item.intervalKm != null || item.intervalMonths != null
+
+    // 포커스로 진입한 항목은 두 번 깜빡여 위치를 알린다
+    val highlightAlpha = remember { Animatable(0f) }
+    LaunchedEffect(highlighted) {
+        if (highlighted) {
+            repeat(2) {
+                highlightAlpha.animateTo(1f, tween(300))
+                highlightAlpha.animateTo(0f, tween(300))
+            }
+        } else {
+            highlightAlpha.snapTo(0f)
+        }
+    }
 
     // 텍스트 생성 헬퍼
     fun cycleText(km: Int?, months: Int?): String {
@@ -372,6 +439,9 @@ private fun PickerRowInCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f * highlightAlpha.value)
+            )
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -416,7 +486,8 @@ private fun LazyListScope.sectionWithCategoryGroups(
     sectionKey: String,
     groups: List<CategoryGroup>,
     checkedProvider: (PickerItemUi) -> Boolean,
-    onCheckedChange: (PickerItemUi, Boolean) -> Unit
+    onCheckedChange: (PickerItemUi, Boolean) -> Unit,
+    highlightItemName: String? = null
 ) {
     if (groups.isEmpty()) {
         item(key = "empty_$sectionKey") {
@@ -431,6 +502,8 @@ private fun LazyListScope.sectionWithCategoryGroups(
     }
 
     // 그룹(카테고리) 단위로 카드 1개씩
+    // ⚠️ 포커스 스크롤이 이 순서(헤더 1개 + 그룹 n개 × 세 섹션)로 인덱스를
+    // 계산하므로, 아이템 구조를 바꾸면 위 LaunchedEffect 의 offset 도 맞출 것.
     items(
         items = groups,
         key = { group -> "group_${sectionKey}_${group.category.name}" } // enum이면 name이 고유
@@ -439,7 +512,8 @@ private fun LazyListScope.sectionWithCategoryGroups(
             category = group.category,
             items = group.items,
             checkedProvider = checkedProvider,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            highlightItemName = highlightItemName
         )
     }
 }
