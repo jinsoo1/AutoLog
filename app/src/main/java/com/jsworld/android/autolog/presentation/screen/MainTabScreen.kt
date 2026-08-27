@@ -174,6 +174,7 @@ fun MainTabScreen(
                     onNoticeClick = onNoticeClick,
                     onEditCar = onEditCar,
                     onAddMaintenanceItem = onAddMaintenanceItem,
+                    onManageItems = onManageItems,
                     onOpenSchedule = onOpenSchedule,
                     onAddMaintenance = onAddMaintenance,
                     onOpenItemDetail = onOpenItemDetail,

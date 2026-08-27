@@ -102,6 +102,15 @@ private const val NEXT_MAINTENANCE_PREVIEW = 3
 private const val RECENT_RECORD_PREVIEW = 3
 
 /**
+ * 임박·초과 카드를 이만큼만 카드로 보여주고 나머지는 한 줄로 접는다.
+ *
+ * 주기가 비슷한 항목(엔진오일·오일필터·에어클리너)은 함께 임박하므로 상한이 없으면
+ * 홈이 전체폭 카드로 도배되고 계절 카드·다음 정비·최근 기록이 다 아래로 밀린다.
+ * 전부 급하면 아무것도 급해 보이지 않는다. 정렬이 남은 비율 순이라 접히는 쪽이 덜 급하다.
+ */
+private const val URGENT_CARD_PREVIEW = 3
+
+/**
  * 홈 탭 — "지금 이 차의 상태"를 보여준다.
  * 기록 열람은 정비 탭이 담당하고, 여기서는 요약과 임박 항목만 다룬다.
  */
@@ -111,9 +120,10 @@ fun HomeScreen(
     onSwitchCar: () -> Unit,
     onNoticeClick: () -> Unit,
     onEditCar: (Long) -> Unit,
-    /** 계절 카드에서 아직 켜지 않은 항목을 눌렀을 때 — 항목 추가 화면으로 */
     /** 계절 카드의 '추가' — 항목 선택 화면을 열고 그 항목으로 포커스를 보낸다 */
     onAddMaintenanceItem: (carId: Long, focusItem: String?) -> Unit,
+    /** 접어둔 임박 항목을 모두 보려면 — 정비 항목 관리로 */
+    onManageItems: (Long) -> Unit,
     /** 정기검사·보험 만기 등 날짜 일정 화면 */
     onOpenSchedule: (Long) -> Unit,
     onAddMaintenance: (carId: Long, settingId: Long?) -> Unit,
@@ -242,11 +252,24 @@ fun HomeScreen(
             if (urgent.isEmpty()) {
                 item { AllGoodCard() }
             } else {
-                items(items = urgent, key = { it.settingId }) { item ->
+                val shown = urgent.take(URGENT_CARD_PREVIEW)
+                items(items = shown, key = { it.settingId }) { item ->
                     UrgentCard(
                         item = item,
                         onClick = { onAddMaintenance(car.id, item.settingId) }
                     )
+                }
+                val hidden = urgent.size - shown.size
+                if (hidden > 0) {
+                    item(key = "urgent-more") {
+                        MoreUrgentRow(
+                            count = hidden,
+                            // 접힌 것 중 초과가 있으면 그 무게를 색으로 남긴다
+                            hasOverdue = urgent.drop(shown.size)
+                                .any { it.status == MaintenanceStatus.OVERDUE },
+                            onClick = { onManageItems(car.id) }
+                        )
+                    }
                 }
             }
 
@@ -445,6 +468,53 @@ private fun UrgentCard(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = accent
+            )
+        }
+    }
+}
+
+/**
+ * 카드로 다 못 보여준 임박·초과 항목을 한 줄로 접는다.
+ *
+ * 카드가 아니라 줄인 이유는 위의 임박 카드와 색으로 경쟁하지 않게 하기 위함이다.
+ * 눌러서 가는 곳은 정비 항목 관리 — 켜둔 항목 전체의 남은 주기를 볼 수 있는 화면이다.
+ */
+@Composable
+private fun MoreUrgentRow(count: Int, hasOverdue: Boolean, onClick: () -> Unit) {
+    val accent =
+        if (hasOverdue) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.tertiary
+
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.PriorityHigh,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp),
+                tint = accent
+            )
+            Spacer(Modifier.width(11.dp))
+            Text(
+                "그 외 ${count}개 더 보기",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = accent
+            )
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
