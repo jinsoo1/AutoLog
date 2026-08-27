@@ -37,11 +37,17 @@ data class Symptom(
 )
 
 /**
- * 동력 계통 구분. 연료 타입(가솔린·디젤·LPG·하이브리드·전기…)보다 굵게 묶는다 —
- * 증상이 갈리는 기준은 "엔진이 있나, 변속기가 있나, 배기가 있나"이기 때문이다.
+ * 동력 계통 구분. 증상이 갈리는 기준은 "엔진이 있나, 변속기가 있나, 배기가 있나"라
+ * 연료 타입 8종보다 굵게 묶는다. 다만 DPF·요소수(디젤)나 봄베(LPG)처럼 **한 연료에만
+ * 있는 계통**은 `ICE` 로 묶으면 가솔린 차주가 자기 얘기로 읽으므로 따로 둔다.
+ *
+ * ⚠️ `ICE` 와 `DIESEL`·`LPG` 를 함께 붙이지 말 것 — "내연기관 · 디젤"이라는 이상한
+ * 배지가 나온다. 내연기관 전반이면 `ICE`, 그 연료 전용이면 `DIESEL`/`LPG` 하나만.
  */
 enum class Powertrain(val label: String) {
     ICE("내연기관"),
+    DIESEL("디젤"),
+    LPG("LPG"),
     HYBRID("하이브리드"),
     EV("전기"),
     FCEV("수소");
@@ -51,17 +57,34 @@ enum class Powertrain(val label: String) {
     }
 }
 
-/** 전 차종 공통이면 true — 배지를 띄우지 않는다(50건 넘는 항목에 같은 배지는 소음이다). */
+/** 연료 종류와 무관하게 모든 차량에 해당하면 true */
 val Symptom.appliesToAllPowertrains: Boolean
     get() = powertrains.isEmpty() || powertrains.size == Powertrain.entries.size
 
-/** "내연기관 · 하이브리드" 같은 표시 문구. 전 차종 공통이면 null. */
+/**
+ * "내연기관 · 하이브리드" 같은 표시 문구. **모든 차량 해당이면 null.**
+ * 목록에서 쓴다 — 절반이 넘는 항목에 같은 배지를 달면 배지가 신호를 잃는다.
+ */
 fun Symptom.powertrainLabel(): String? {
     if (appliesToAllPowertrains) return null
     return Powertrain.entries
         .filter { it in powertrains }
         .joinToString(" · ") { it.label }
 }
+
+/**
+ * 상세 화면용 — 모든 차량 해당이면 "모든 차량"을 돌려주고 절대 null 이 아니다.
+ *
+ * 상세는 "내 차에 해당하나"를 판단하는 자리라 배지가 없으면 공통인지 태깅을
+ * 안 한 건지 알 수 없다. 그래서 여기서는 늘 밝힌다.
+ */
+fun Symptom.powertrainScopeLabel(): String = powertrainLabel() ?: "모든 차량"
+
+/** 배지 아래에 붙는 한 문장. 배지가 무슨 뜻인지 풀어준다. */
+fun Symptom.powertrainNote(): String =
+    powertrainLabel()?.let {
+        "이 증상은 $it 차량에 해당하는 내용이에요. 다른 차량은 해당 부품이 없거나 원인이 다를 수 있어요."
+    } ?: "이 증상은 연료 종류와 관계없이 모든 차량에서 나타날 수 있어요."
 
 data class SymptomEscalation(
     val condition: String,

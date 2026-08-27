@@ -1856,9 +1856,9 @@
       "id": "eng_diesel_cold_start",
       "category": "ENGINE_START",
       "powertrains": [
-        "ICE"
+        "DIESEL"
       ],
-      "title": "겨울 한파에 시동이 잘 안 걸려요",
+      "title": "겨울 한파에 시동이 잘 안 걸려요 (디젤)",
       "keywords": [
         "한파",
         "겨울",
@@ -2764,7 +2764,7 @@
       "id": "el_def_warning",
       "category": "ELECTRIC_WARNING",
       "powertrains": [
-        "ICE"
+        "DIESEL"
       ],
       "title": "요소수 경고등이 켜졌어요",
       "keywords": [
@@ -2808,9 +2808,9 @@
       "id": "el_fuel_water_warning",
       "category": "ELECTRIC_WARNING",
       "powertrains": [
-        "ICE"
+        "DIESEL"
       ],
-      "title": "물방울 모양 경고등이 켜졌어요",
+      "title": "물방울 모양 경고등이 켜졌어요 (디젤)",
       "keywords": [
         "물방울",
         "수분",
@@ -3628,7 +3628,7 @@
       "id": "sm_dpf_regeneration",
       "category": "SMELL_SMOKE_LEAK",
       "powertrains": [
-        "ICE"
+        "DIESEL"
       ],
       "title": "DPF 경고등이 켜지거나 매캐한 냄새와 함께 RPM이 올라가요",
       "keywords": [
@@ -3675,7 +3675,7 @@
       "id": "sm_lpg_gas_smell",
       "category": "SMELL_SMOKE_LEAK",
       "powertrains": [
-        "ICE"
+        "LPG"
       ],
       "title": "차에서 LPG 가스 냄새가 나요",
       "keywords": [

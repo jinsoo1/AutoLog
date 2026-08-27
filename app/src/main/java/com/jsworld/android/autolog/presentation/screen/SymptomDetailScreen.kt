@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jsworld.android.autolog.domain.model.Symptom
 import com.jsworld.android.autolog.domain.model.SymptomRiskLevel
 import com.jsworld.android.autolog.domain.model.powertrainLabel
+import com.jsworld.android.autolog.domain.model.powertrainNote
+import com.jsworld.android.autolog.domain.model.powertrainScopeLabel
 import com.jsworld.android.autolog.presentation.model.riskColor
 import com.jsworld.android.autolog.presentation.viewModel.SymptomDetailViewModel
 
@@ -108,11 +111,13 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                // 전 차종 공통이면 배지를 띄우지 않는다 — 붙일 때만 정보가 된다.
-                symptom.powertrainLabel()?.let { label ->
-                    Spacer(Modifier.width(8.dp))
-                    PowertrainBadge(label)
-                }
+                // 상세에서는 공통이어도 밝힌다("모든 차량") — 배지가 없으면
+                // 공통인지 태깅을 안 한 건지 사용자가 알 수 없다.
+                Spacer(Modifier.width(8.dp))
+                PowertrainBadge(
+                    label = symptom.powertrainScopeLabel(),
+                    specific = symptom.powertrainLabel() != null
+                )
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -225,11 +230,40 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
             }
         }
 
+        // 배지가 무슨 뜻인지 풀어준다. 상단 배지는 짧아서 "디젤 해당"이
+        // 어느 범위인지 애매한데, 여기서 한 문장으로 마감한다.
+        item {
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Outlined.DirectionsCar,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        symptom.powertrainNote(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         item {
             Text(
                 text = "이 가이드는 일반적인 점검 참고 정보로, 실제 고장 원인을 확정하지 않아요. " +
                     "차량 상태와 차종에 따라 원인이 다를 수 있고, 안전과 관련된 증상은 전문 정비 점검을 권장해요.",
-                modifier = Modifier.padding(top = 18.dp, start = 4.dp, end = 4.dp),
+                modifier = Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -245,27 +279,33 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
  * 증상을 숨기면 라벨이 부정확한 사람에게서 안전 증상이 사라진다)
  */
 @Composable
-private fun PowertrainBadge(label: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.large
-    ) {
+private fun PowertrainBadge(label: String, specific: Boolean) {
+    // 특정 계통만 해당하면 눈에 띄게, 모든 차량이면 차분하게 — 좁혀진 항목이
+    // 더 많은 정보를 담고 있어서다.
+    val container =
+        if (specific) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant
+    val content =
+        if (specific) MaterialTheme.colorScheme.onSecondaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(color = container, shape = MaterialTheme.shapes.large) {
         Row(
             Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Outlined.LocalGasStation,
+                if (specific) Icons.Outlined.LocalGasStation else Icons.Outlined.DirectionsCar,
                 contentDescription = null,
                 modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                tint = content
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 "$label 해당",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = content
             )
         }
     }
