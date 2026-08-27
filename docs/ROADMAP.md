@@ -302,4 +302,6 @@ RPM 선행이 정상), `eng_vibration_in_gear`, `tr_shift_shock`, `eng_hard_star
       (Play 설치본은 구글 재서명이라 로컬 릴리즈 APK로 덮을 수 없어 만든 우회 경로)
 - [ ] R8 keep을 건드렸다면 리플렉션 로드 대상(워커 · InputMerger · 프로토) 확인
 - [ ] 앱 내 공지(`autolog_notice.json`) 추가 — `next` 필드의 예고를 다음 버전에서 지킬 것
+- [ ] **Play 출시노트** 작성 (`docs/store/release_notes.md`, 500자 제한) — 앱 내 공지와 역할이 다르다.
+      공지는 이유까지 길게, 출시노트는 업데이트 목록에서 스쳐 읽는 글이라 첫 두 줄에 핵심을 둔다.
 - [ ] 버전업 커밋 → AAB 빌드 → 내부 테스트 → 프로덕션
