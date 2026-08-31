@@ -29,8 +29,8 @@ android {
         applicationId = "com.jsworld.android.autolog"
         minSdk = 29
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.4.0"
+        versionCode = 17
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
