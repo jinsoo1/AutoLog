@@ -53,6 +53,10 @@ class CarRepositoryImpl @Inject constructor(
                 updatedAt = now
             )
 
+            // 낮춰 고친 경우, 그보다 높은 이력은 오타였다는 뜻이므로 지운다.
+            // 남겨두면 리포트가 최댓값을 쓰기 때문에 되돌려도 반영되지 않는다.
+            mileageHistoryDao.deleteHistoriesAbove(carId = carId, mileage = mileage)
+
             mileageHistoryDao.insertHistory(
                 MileageHistoryEntity(
                     carId = carId,
