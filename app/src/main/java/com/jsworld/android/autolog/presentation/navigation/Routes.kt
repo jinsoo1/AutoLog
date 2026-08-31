@@ -100,6 +100,9 @@ object Routes {
     fun symptomDetail(symptomId: String) = "symptom_detail/$symptomId"
 
     const val SETTINGS = "settings"
+
+    /** 알림 설정 — 설정에서 진입. 토글이 많아 설정 화면에서 떼어냈다 */
+    const val NOTIFICATION_SETTINGS = "notification_settings"
     const val NOTICE = "notice"
 
     const val EXCEL_EXPORT = "excel_export"

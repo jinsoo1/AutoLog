@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -206,6 +209,7 @@ fun HomeScreen(
         val snoozeUntilRaw by viewModel.seasonalCareSnoozeUntilState(car.id).collectAsState()
         val snoozeUntil = remember(snoozeUntilRaw) { parseSnoozeDate(snoozeUntilRaw) }
         var showSeasonalSkipDialog by rememberSaveable(car.id) { mutableStateOf(false) }
+        val seasonalCollapsed by viewModel.seasonalCareCollapsedState(car.id).collectAsState()
         val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
         val dueSchedules = remember(schedules, today) {
             upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
@@ -249,28 +253,72 @@ fun HomeScreen(
                 }
             }
 
-            if (urgent.isEmpty()) {
-                item { AllGoodCard() }
-            } else {
-                val shown = urgent.take(URGENT_CARD_PREVIEW)
-                items(items = shown, key = { it.settingId }) { item ->
-                    UrgentCard(
-                        item = item,
-                        onClick = { onAddMaintenance(car.id, item.settingId) }
+            // 계절 카드를 정비보다 위에 둔다 — 접을 수 있으므로 자리를 많이 쓰지 않고,
+            // 접어두면 한 줄이라 급한 항목을 밀어내지 않는다.
+            if (isSeasonalCardVisible(today, seasonalKey, dismissedSeasonKey, snoozeUntil)) {
+                item(key = "seasonal") {
+                    SeasonalCareCard(
+                        guide = seasonalGuide,
+                        rows = seasonalRows,
+                        today = today,
+                        collapsed = seasonalCollapsed,
+                        onToggleCollapsed = {
+                            viewModel.setSeasonalCareCollapsed(car.id, !seasonalCollapsed)
+                        },
+                        onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
+                        onAddItem = { itemName -> onAddMaintenanceItem(car.id, itemName) },
+                        onSkip = { showSeasonalSkipDialog = true }
                     )
                 }
-                val hidden = urgent.size - shown.size
-                if (hidden > 0) {
-                    item(key = "urgent-more") {
-                        MoreUrgentRow(
-                            count = hidden,
-                            // 접힌 것 중 초과가 있으면 그 무게를 색으로 남긴다
-                            hasOverdue = urgent.drop(shown.size)
-                                .any { it.status == MaintenanceStatus.OVERDUE },
-                            onClick = { onManageItems(car.id) }
-                        )
+            }
+
+            // 정비 — 급한 항목과 다음 항목을 **한 덩어리로** 묶는다.
+            //
+            // 예전에는 '임박·초과' 카드와 '다음 정비' 섹션이 화면에서 멀리 떨어져
+            // 있었고 사이에 일정 카드·계절 카드가 끼어 있었다. 둘 다 정비 항목의
+            // 상태인데 상태로만 갈라놓은 것이라, "언제 갈아야 하나"를 알려면
+            // 화면을 두 번 훑어야 했다.
+            //
+            // 묶되 급한 줄의 색은 그대로 둔다 — 초과 빨강 / 임박 주황.
+            // 카드가 하나로 합쳐질 뿐 눈에 띔은 잃지 않는다.
+            if (urgent.isNotEmpty() || next.isNotEmpty()) {
+                item(key = "maintenance-label") { SectionLabel("정비") }
+                item(key = "maintenance-block") {
+                    val shownUrgent = urgent.take(URGENT_CARD_PREVIEW)
+                    val hidden = urgent.size - shownUrgent.size
+                    ListCard {
+                        if (urgent.isEmpty()) {
+                            AllGoodRow()
+                            if (next.isNotEmpty()) RowDivider()
+                        } else {
+                            shownUrgent.forEach { item ->
+                                UrgentRow(
+                                    item = item,
+                                    onClick = { onAddMaintenance(car.id, item.settingId) }
+                                )
+                            }
+                            if (hidden > 0) {
+                                MoreUrgentRow(
+                                    count = hidden,
+                                    // 접힌 것 중 초과가 있으면 그 무게를 색으로 남긴다
+                                    hasOverdue = urgent.drop(shownUrgent.size)
+                                        .any { it.status == MaintenanceStatus.OVERDUE },
+                                    onClick = { onManageItems(car.id) }
+                                )
+                            }
+                            if (next.isNotEmpty()) RowDivider()
+                        }
+                        next.forEachIndexed { index, item ->
+                            NextMaintenanceRow(
+                                item = item,
+                                showDivider = index != next.lastIndex,
+                                onClick = { onOpenItemDetail(item.settingId) }
+                            )
+                        }
                     }
                 }
+            } else {
+                item(key = "all-good") { AllGoodCard() }
             }
 
             if (dueSchedules.isNotEmpty()) {
@@ -280,36 +328,6 @@ fun HomeScreen(
                         today = today,
                         onClick = { onOpenSchedule(car.id) }
                     )
-                }
-            }
-
-            // 임박·초과 카드 아래에 둔다. 계절 카드는 읽는 콘텐츠라,
-            // 지금 당장 해야 할 항목보다 위에 오면 급한 것을 밀어낸다.
-            if (isSeasonalCardVisible(today, seasonalKey, dismissedSeasonKey, snoozeUntil)) {
-                item {
-                    SeasonalCareCard(
-                        guide = seasonalGuide,
-                        rows = seasonalRows,
-                        today = today,
-                        onRecord = { settingId -> onAddMaintenance(car.id, settingId) },
-                        onAddItem = { itemName -> onAddMaintenanceItem(car.id, itemName) },
-                        onSkip = { showSeasonalSkipDialog = true }
-                    )
-                }
-            }
-
-            if (next.isNotEmpty()) {
-                item { SectionLabel("다음 정비") }
-                item {
-                    ListCard {
-                        next.forEachIndexed { index, item ->
-                            NextMaintenanceRow(
-                                item = item,
-                                showDivider = index != next.lastIndex,
-                                onClick = { onOpenItemDetail(item.settingId) }
-                            )
-                        }
-                    }
                 }
             }
 
@@ -418,7 +436,7 @@ private fun HomeEmptyView() {
 }
 
 @Composable
-private fun UrgentCard(
+private fun UrgentRow(
     item: MaintenanceUiModel,
     onClick: () -> Unit
 ) {
@@ -426,16 +444,11 @@ private fun UrgentCard(
     val accent =
         if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.10f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
+    // '정비' 카드 안의 한 줄이지만 색은 카드였을 때 그대로다 —
+    // 급한 항목이 한 덩어리에 들어갔다고 눈에 덜 띄면 통합한 의미가 없다.
+    Box(Modifier.clickable(onClick = onClick)) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            modifier = Modifier.padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(color = accent, shape = CircleShape) {
@@ -485,15 +498,10 @@ private fun MoreUrgentRow(count: Int, hasOverdue: Boolean, onClick: () -> Unit) 
         if (hasOverdue) MaterialTheme.colorScheme.error
         else MaterialTheme.colorScheme.tertiary
 
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    // '정비' 카드 안의 줄이므로 테두리를 두지 않는다 — 카드 안의 테두리는 겹쳐 보인다.
+    Box(Modifier.clickable(onClick = onClick)) {
         Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            Modifier.padding(vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -616,6 +624,8 @@ private fun SeasonalCareCard(
     guide: SeasonalCareGuide,
     rows: List<SeasonalCareRow>,
     today: LocalDate,
+    collapsed: Boolean,
+    onToggleCollapsed: () -> Unit,
     onRecord: (Long) -> Unit,
     onAddItem: (itemName: String) -> Unit,
     onSkip: () -> Unit
@@ -627,7 +637,9 @@ private fun SeasonalCareCard(
     val allDone = doneCount == rows.size && rows.isNotEmpty()
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.09f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -666,8 +678,8 @@ private fun SeasonalCareCard(
                         fontWeight = if (allDone) FontWeight.Bold else FontWeight.Normal
                     )
                 }
-                // 접기는 X 로. "올해는 넘어가기"는 한 번에 3개월을 없애는 무거운 선택인데
-                // 문구만 보고는 그 무게를 알 수 없어서, 눌렀을 때 무엇을 고르는지 묻는다.
+                // 헤더에는 X(이번 계절 넘기기)만 둔다. 접기/펼치기는 카드 맨 아래 줄로 —
+                // 무게가 전혀 다른 두 동작을 나란히 두면 오탭이 난다.
                 IconButton(onClick = onSkip, modifier = Modifier.size(30.dp)) {
                     Icon(
                         Icons.Default.Close,
@@ -678,21 +690,71 @@ private fun SeasonalCareCard(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            if (!collapsed) {
+                Spacer(Modifier.height(10.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                rows.forEach { row ->
-                    SeasonalCareRowItem(
-                        row = row,
-                        today = today,
-                        onClick = {
-                            if (row.settingId != null) onRecord(row.settingId)
-                            else onAddItem(row.itemName)
-                        }
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rows.forEach { row ->
+                        SeasonalCareRowItem(
+                            row = row,
+                            today = today,
+                            onClick = {
+                                if (row.settingId != null) onRecord(row.settingId)
+                                else onAddItem(row.itemName)
+                            }
+                        )
+                    }
                 }
             }
 
+            SeasonalToggleRow(
+                collapsed = collapsed,
+                accent = accent,
+                onClick = onToggleCollapsed
+            )
+
+        }
+    }
+}
+
+/**
+ * 계절 카드 맨 아래의 접기·펼치기 줄.
+ *
+ * 헤더의 X(이번 계절 넘기기)와 무게가 전혀 달라 자리를 떼어 놓았다.
+ * 접혀 있을 때는 "무엇을 펼치는지"가 보이도록 개수를 함께 말한다.
+ */
+@Composable
+private fun SeasonalToggleRow(
+    collapsed: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    Column {
+        if (!collapsed) {
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(color = accent.copy(alpha = 0.22f))
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(top = if (collapsed) 8.dp else 4.dp, bottom = 2.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (collapsed) "자세히 보기" else "접기",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = accent
+            )
+            Spacer(Modifier.width(3.dp))
+            Icon(
+                if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                contentDescription = null,
+                modifier = Modifier.size(17.dp),
+                tint = accent
+            )
         }
     }
 }
@@ -966,6 +1028,31 @@ private fun Season.icon(): ImageVector = when (this) {
     Season.MONSOON -> Icons.Default.Umbrella
     Season.SUMMER -> Icons.Default.WbSunny
     Season.PRE_WINTER, Season.WINTER -> Icons.Default.AcUnit
+}
+
+/** 급한 항목이 없을 때 '정비' 카드의 첫 줄. 카드 버전은 정비 항목 자체가 없을 때 쓴다. */
+@Composable
+private fun AllGoodRow() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = null,
+            modifier = Modifier.size(17.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            "지금 정비가 필요한 항목이 없어요",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
 
 @Composable

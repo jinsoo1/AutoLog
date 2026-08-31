@@ -47,6 +47,7 @@ import com.jsworld.android.autolog.presentation.screen.ScheduleStarterScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceHistoryEditScreen
 import com.jsworld.android.autolog.presentation.screen.MaintenanceItemDetailScreen
 import com.jsworld.android.autolog.presentation.screen.NoticeScreen
+import com.jsworld.android.autolog.presentation.screen.NotificationSettingsScreen
 import com.jsworld.android.autolog.presentation.screen.SettingsScreen
 import com.jsworld.android.autolog.presentation.screen.SymptomDetailScreen
 import com.jsworld.android.autolog.presentation.screen.SymptomGuideScreen
@@ -211,6 +212,9 @@ fun AutoLogNavHost(
                 onOpenSymptomGuide = {
                     navController.navigate(Routes.SYMPTOM_GUIDE) { launchSingleTop = true }
                 },
+                onNotificationSettingsClick = {
+                    navController.navigate(Routes.NOTIFICATION_SETTINGS) { launchSingleTop = true }
+                },
                 openReportRequested = openReportRequested,
                 onConsumeOpenReport = onConsumeOpenReport
             )
@@ -305,8 +309,18 @@ fun AutoLogNavHost(
                         navController.navigate(Routes.carSchedule(carId)) { launchSingleTop = true }
                     }
                 },
+                onNotificationSettingsClick = {
+                    navController.navigate(Routes.NOTIFICATION_SETTINGS) { launchSingleTop = true }
+                },
                 carName = carContextViewModel.selectedCar.collectAsState().value?.name,
                 viewModel = hiltViewModel()
+            )
+        }
+
+        // 알림 설정 — 설정에서만 진입한다
+        composable(Routes.NOTIFICATION_SETTINGS) {
+            NotificationSettingsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

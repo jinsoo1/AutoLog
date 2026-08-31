@@ -7,6 +7,7 @@ import com.jsworld.android.autolog.domain.model.Symptom
 import com.jsworld.android.autolog.domain.model.SymptomCategory
 import com.jsworld.android.autolog.domain.model.filterSymptoms
 import com.jsworld.android.autolog.domain.repository.SymptomGuideRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import com.jsworld.android.autolog.presentation.state.SymptomDetailUiState
 import com.jsworld.android.autolog.presentation.state.SymptomGuideUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,8 +21,21 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SymptomGuideViewModel @Inject constructor(
-    private val repo: SymptomGuideRepository
+    private val repo: SymptomGuideRepository,
+    private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
+
+    /**
+     * 첫 진입 안내를 아직 안 봤으면 true. 목록이 뜬 뒤에 띄우기 위해
+     * 로딩과 함께 보고 화면에서 판단한다.
+     */
+    val noticeSeen: StateFlow<Boolean> =
+        userPrefsRepository.observeSymptomGuideNoticeSeen()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun markNoticeSeen() {
+        viewModelScope.launch { userPrefsRepository.setSymptomGuideNoticeSeen(true) }
+    }
 
     private val symptomsFlow = MutableStateFlow<List<Symptom>>(emptyList())
     private val loadingFlow = MutableStateFlow(true)

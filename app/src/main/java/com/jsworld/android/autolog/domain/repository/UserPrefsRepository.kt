@@ -84,6 +84,22 @@ interface UserPrefsRepository {
     suspend fun setSeasonalCareSnoozeUntil(carId: Long, date: String)
 
     /**
+     * 계절 카드를 접어뒀는지(차량별). '올해는 넘어가기'와는 다르다 —
+     * 이건 화면에서 한 줄로 줄여두는 것뿐이고 계절이 바뀌어도 유지된다.
+     */
+    fun observeSeasonalCareCollapsed(carId: Long): Flow<Boolean>
+    suspend fun setSeasonalCareCollapsed(carId: Long, collapsed: Boolean)
+
+    /**
+     * 증상별 점검 가이드의 첫 진입 안내를 봤는지.
+     *
+     * 차량과 무관한 화면이라 전역 키다. "진단하지 않는다"는 이 기능의 가장 중요한
+     * 제약이라 목록·상세 하단 고지와 별개로 처음 한 번은 정면으로 말한다.
+     */
+    fun observeSymptomGuideNoticeSeen(): Flow<Boolean>
+    suspend fun setSymptomGuideNoticeSeen(seen: Boolean)
+
+    /**
      * 계절별 관리 알림 — **기본 켜짐**. 계절마다 1회뿐이라 성가시지 않고,
      * 이 알림의 존재 이유가 "볼 생각을 못 한 것"을 알리는 것이라 꺼두면 의미가 없다.
      */

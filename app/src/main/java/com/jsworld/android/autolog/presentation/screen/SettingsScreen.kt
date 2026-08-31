@@ -101,6 +101,8 @@ fun SettingsScreen(
     onExcelExportClick: () -> Unit,
     /** 날짜 일정(정기검사·보험·자동차세) 화면 열기 */
     onScheduleClick: () -> Unit = {},
+    /** 알림 설정 화면 열기 */
+    onNotificationSettingsClick: () -> Unit = {},
     /** 설정 탭에는 차량 칩이 없어서, 어느 차 일정으로 들어가는지 여기서 밝힌다 */
     carName: String? = null,
     showBack: Boolean = true,
@@ -114,99 +116,16 @@ fun SettingsScreen(
     val restorePreview by viewModel.restorePreview
         .collectAsStateWithLifecycle()
 
+    // 복원 뒤 주간 알림 재등록 판단에만 쓴다 — 알림 UI 는 별도 화면이다.
     val notificationEnabled by viewModel.weeklyMileageNotificationEnabled
         .collectAsStateWithLifecycle(initialValue = false)
 
+    // 알림 메뉴 부제. 정비 알림이 이 앱의 핵심이라 그 상태를 앞세운다.
     val alertPrefs by viewModel.maintenanceAlertPrefs
         .collectAsStateWithLifecycle(initialValue = MaintenanceAlertPrefs())
-
-    val monthlyReportEnabled by viewModel.monthlyReportNotificationEnabled
-        .collectAsStateWithLifecycle(initialValue = true)
-
-    val scheduleAlertEnabled by viewModel.scheduleAlertEnabled
-        .collectAsStateWithLifecycle(initialValue = true)
-
-    val seasonalCareAlertEnabled by viewModel.seasonalCareAlertEnabled
-        .collectAsStateWithLifecycle(initialValue = true)
-
-    var showAlertHourDialog by remember { mutableStateOf(false) }
-    var showAlertRemindDialog by remember { mutableStateOf(false) }
-
-    // 앱에서 알림을 켰는데도 시스템이 막고 있으면 사용자는 "안 온다"고만 느낀다 —
-    // 시스템 설정에서 바꾸고 돌아올 수 있으니 화면에 돌아올 때마다 다시 확인한다.
-    var notificationBlock by remember {
-        mutableStateOf(AutoLogNotificationHelper.NotificationBlock.NONE)
-    }
-    // 기본 켜짐인 알림(일정·리포트)은 권한이 없으면 "켜져 있는데 안 오는" 상태가 된다.
-    // 스위치는 사용자의 의사(ON)를 그대로 두되, 아직 보낼 수 없다는 사실을 그 자리에서 밝힌다.
-    var notificationsAllowed by remember { mutableStateOf(true) }
-    LifecycleResumeEffect(Unit) {
-        notificationsAllowed =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true
-            }
-        onPauseOrDispose { }
-    }
-
-    val defaultOnPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted ->
-            notificationsAllowed = granted
-            if (granted) {
-                AutoLogNotificationHelper.createChannels(context)
-                return@rememberLauncherForActivityResult
-            }
-
-            // 두 번 거부하면 시스템이 요청 창을 아예 띄우지 않는다 —
-            // 눌러도 아무 일도 안 일어난 것처럼 보이므로, 그때는 설정 화면으로 보낸다.
-            // (거부 직후 rationale 이 false 면 "다시 물어볼 수 없는 상태"다)
-            val canAskAgain = context.findActivity()?.let { activity ->
-                ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
-            } ?: false
-
-            if (!canAskAgain) {
-                runCatching {
-                    context.startActivity(
-                        AutoLogNotificationHelper.notificationSettingsIntent(context)
-                    )
-                }.onFailure {
-                    Toast.makeText(
-                        context,
-                        "설정 > 앱 > 오토로그 > 알림에서 켜주세요.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
-    )
-
-    // 월간 리포트는 기본 켜짐이라 여기 넣으면 권한 없는 모든 사용자에게 경고가 뜬다 —
-    // 배너는 사용자가 직접 켠 기능이 막혔을 때만.
-    val anyNotificationOn = alertPrefs.enabled || notificationEnabled
-    LifecycleResumeEffect(anyNotificationOn) {
-        notificationBlock = if (anyNotificationOn) {
-            AutoLogNotificationHelper.checkBlocked(
-                context,
-                listOf(
-                    AutoLogNotificationHelper.MAINT_SOON_CHANNEL_ID,
-                    AutoLogNotificationHelper.MAINT_OVERDUE_CHANNEL_ID,
-                    AutoLogNotificationHelper.WEEKLY_MILEAGE_CHANNEL_ID,
-                    AutoLogNotificationHelper.MONTHLY_REPORT_CHANNEL_ID
-                )
-            )
-        } else {
-            AutoLogNotificationHelper.NotificationBlock.NONE
-        }
-        onPauseOrDispose { }
-    }
+    val notificationSummary =
+        if (alertPrefs.enabled) "정비 알림 켜짐 · 매일 ${formatAlertHour(alertPrefs.hour)}"
+        else "정비 알림이 꺼져 있어요"
 
     // 복원 대상 선택(목록) 다이얼로그 표시 여부
     var showRestorePicker by remember { mutableStateOf(false) }
@@ -225,187 +144,6 @@ fun SettingsScreen(
             pendingRestoreUri = uri
         }
 
-    val enableWeeklyNotification: () -> Unit = remember(context) {
-        {
-            AutoLogNotificationHelper.createChannels(context)
-            WeeklyMileageWorkScheduler.rescheduleNext(context)
-            viewModel.setWeeklyMileageNotificationEnabled(true)
-
-            Toast.makeText(
-                context,
-                "매주 일요일 오후 8시에 알림을 보내드릴게요.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    val disableWeeklyNotification: () -> Unit = remember(context) {
-        {
-            WeeklyMileageWorkScheduler.cancel(context)
-            viewModel.setWeeklyMileageNotificationEnabled(false)
-
-            Toast.makeText(
-                context,
-                "주간 알림이 꺼졌습니다.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-            onResult = { granted ->
-                if (granted) {
-                    enableWeeklyNotification()
-                } else {
-                    viewModel.setWeeklyMileageNotificationEnabled(false)
-
-                    Toast.makeText(
-                        context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        )
-
-    val onNotificationToggleChange: (Boolean) -> Unit = { checked ->
-        if (checked) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val granted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    enableWeeklyNotification()
-                } else {
-                    notificationPermissionLauncher.launch(
-                        Manifest.permission.POST_NOTIFICATIONS
-                    )
-                }
-            } else {
-                enableWeeklyNotification()
-            }
-        } else {
-            disableWeeklyNotification()
-        }
-    }
-
-    /**
-     * 정비 임박/초과 알림 — 마스터 스위치를 켜는 순간 채널 생성 + 일일 검사 예약.
-     * (remember 로 감싸지 않는다 — alertPrefs.hour 최신값을 잡아야 해서)
-     */
-    val enableMaintenanceAlert: () -> Unit = {
-        AutoLogNotificationHelper.createChannels(context)
-        MaintenanceAlertScheduler.reschedule(context, alertPrefs.hour)
-        viewModel.setMaintenanceAlertEnabled(true)
-        Toast.makeText(
-            context,
-            "매일 ${formatAlertHour(alertPrefs.hour)}에 정비 상태를 확인해 알려드릴게요.",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    val disableMaintenanceAlert: () -> Unit = {
-        MaintenanceAlertScheduler.cancel(context)
-        viewModel.setMaintenanceAlertEnabled(false)
-        Toast.makeText(context, "정비 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
-    }
-
-    val maintenanceAlertPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-            onResult = { granted ->
-                if (granted) {
-                    enableMaintenanceAlert()
-                } else {
-                    viewModel.setMaintenanceAlertEnabled(false)
-                    Toast.makeText(
-                        context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        )
-
-    val onMaintenanceAlertToggleChange: (Boolean) -> Unit = { checked ->
-        if (checked) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val granted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    enableMaintenanceAlert()
-                } else {
-                    maintenanceAlertPermissionLauncher.launch(
-                        Manifest.permission.POST_NOTIFICATIONS
-                    )
-                }
-            } else {
-                enableMaintenanceAlert()
-            }
-        } else {
-            disableMaintenanceAlert()
-        }
-    }
-
-    /**
-     * 월간 리포트 알림 — 기본 켜짐이라 대개는 끄는 쪽만 쓰인다.
-     * 다시 켤 때는 다른 알림처럼 권한을 확인하고 예약을 새로 건다.
-     */
-    val enableMonthlyReport: () -> Unit = {
-        AutoLogNotificationHelper.createChannels(context)
-        MonthlyReportScheduler.reschedule(context)
-        viewModel.setMonthlyReportNotificationEnabled(true)
-        Toast.makeText(context, "매월 1일에 지난달 리포트를 알려드릴게요.", Toast.LENGTH_SHORT).show()
-    }
-
-    val monthlyReportPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-            onResult = { granted ->
-                if (granted) {
-                    enableMonthlyReport()
-                } else {
-                    viewModel.setMonthlyReportNotificationEnabled(false)
-                    Toast.makeText(
-                        context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        )
-
-    val onMonthlyReportToggleChange: (Boolean) -> Unit = { checked ->
-        if (checked) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val granted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    enableMonthlyReport()
-                } else {
-                    monthlyReportPermissionLauncher.launch(
-                        Manifest.permission.POST_NOTIFICATIONS
-                    )
-                }
-            } else {
-                enableMonthlyReport()
-            }
-        } else {
-            MonthlyReportScheduler.cancel(context)
-            viewModel.setMonthlyReportNotificationEnabled(false)
-            Toast.makeText(context, "월간 리포트 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     /**
      * 백업 및 복원 완료 이벤트 처리
@@ -539,237 +277,18 @@ fun SettingsScreen(
                     SettingsSectionTitle("알림")
                 }
 
-                if (notificationBlock != AutoLogNotificationHelper.NotificationBlock.NONE) {
-                    item {
-                        NotificationBlockedCard(
-                            block = notificationBlock,
-                            onOpenSettings = {
-                                val channelId =
-                                    if (notificationBlock ==
-                                        AutoLogNotificationHelper.NotificationBlock.CHANNEL_BLOCKED
-                                    ) {
-                                        AutoLogNotificationHelper.MAINT_OVERDUE_CHANNEL_ID
-                                    } else {
-                                        null
-                                    }
-                                runCatching {
-                                    context.startActivity(
-                                        AutoLogNotificationHelper
-                                            .notificationSettingsIntent(context, channelId)
-                                    )
-                                }.onFailure {
-                                    Toast.makeText(
-                                        context,
-                                        "시스템 설정을 열 수 없어요. 설정 > 앱 > 오토로그 > 알림에서 확인해주세요.",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
-                        )
-                    }
-                }
-
+                // 알림은 화면을 따로 뒀다 — 토글 5개에 하위 항목·권한 안내·권한 런처까지
+                // 붙어 이 화면의 3분의 1(약 500줄)을 차지하고 있었다.
+                //
+                // 부제에 상태를 담는다. 정비 알림은 이 앱의 핵심 기능인데
+                // 꺼져 있는 것을 들어가 봐야 안다면 숨기는 셈이다.
                 item {
-                    SettingsSwitchMenuItem(
+                    SettingsMenuItem(
                         icon = Icons.Outlined.Notifications,
-                        title = "주간 주행거리 알림",
-                        subtitle = "매주 1회 주행거리 업데이트 여부를 알려드립니다",
-                        checked = notificationEnabled,
-                        onCheckedChange = onNotificationToggleChange
+                        title = "알림",
+                        subtitle = notificationSummary,
+                        onClick = onNotificationSettingsClick
                     )
-                }
-
-                item {
-                    SettingsSwitchMenuItem(
-                        icon = Icons.Outlined.NotificationsActive,
-                        title = "정비 알림",
-                        subtitle = "교체 시기가 다가오거나 지나면 알려드립니다",
-                        checked = alertPrefs.enabled,
-                        onCheckedChange = onMaintenanceAlertToggleChange
-                    )
-                }
-
-                if (alertPrefs.enabled) {
-                    item {
-                        SettingsSwitchMenuItem(
-                            icon = Icons.Outlined.Notifications,
-                            title = "임박 알림",
-                            subtitle = "교체 시기가 다가올 때",
-                            checked = alertPrefs.soonEnabled,
-                            indented = true,
-                            onCheckedChange = viewModel::setMaintenanceAlertSoonEnabled
-                        )
-                    }
-
-                    item {
-                        SettingsSwitchMenuItem(
-                            icon = Icons.Outlined.NotificationImportant,
-                            title = "초과 알림",
-                            subtitle = "교체 시기를 넘겼을 때",
-                            checked = alertPrefs.overdueEnabled,
-                            indented = true,
-                            onCheckedChange = viewModel::setMaintenanceAlertOverdueEnabled
-                        )
-                    }
-
-                    item {
-                        SettingsMenuItem(
-                            icon = Icons.Outlined.Schedule,
-                            title = "알림 시간",
-                            subtitle = "매일 ${formatAlertHour(alertPrefs.hour)}에 확인",
-                            indented = true,
-                            onClick = { showAlertHourDialog = true }
-                        )
-                    }
-
-                    item {
-                        SettingsMenuItem(
-                            icon = Icons.Outlined.Repeat,
-                            title = "초과 리마인드",
-                            subtitle = if (alertPrefs.remindDays == 0) {
-                                "안 함 — 초과 시 한 번만 알려드려요"
-                            } else {
-                                "초과 상태가 계속되면 ${alertPrefs.remindDays}일마다 다시 알림"
-                            },
-                            indented = true,
-                            onClick = { showAlertRemindDialog = true }
-                        )
-                    }
-
-                    // 알림 테스트 — 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
-                    if (BuildConfig.DEBUG) {
-                        item {
-                            SettingsMenuItem(
-                                icon = Icons.Outlined.BugReport,
-                                title = "알림 테스트 (디버그 전용)",
-                                subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
-                                indented = true,
-                                onClick = {
-                                    MaintenanceAlertScheduler.enqueueTest(context)
-                                    Toast.makeText(
-                                        context,
-                                        "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    SettingsSwitchMenuItem(
-                        icon = Icons.Outlined.CalendarMonth,
-                        title = "검사·보험·세금 알림",
-                        subtitle = "정기검사·보험 만기 2주 전부터 알려드립니다",
-                        checked = scheduleAlertEnabled,
-                        onCheckedChange = { checked ->
-                            if (checked) AutoLogNotificationHelper.createChannels(context)
-                            viewModel.setScheduleAlertEnabled(checked)
-                        }
-                    )
-                }
-
-                if (scheduleAlertEnabled && !notificationsAllowed) {
-                    item {
-                        PermissionNeededRow(
-                            onClick = {
-                                defaultOnPermissionLauncher.launch(
-                                    Manifest.permission.POST_NOTIFICATIONS
-                                )
-                            }
-                        )
-                    }
-                }
-
-                item {
-                    SettingsSwitchMenuItem(
-                        icon = Icons.Outlined.WbSunny,
-                        title = "계절별 관리 알림",
-                        subtitle = "계절이 바뀔 때 확인할 항목을 한 번 알려드립니다",
-                        checked = seasonalCareAlertEnabled,
-                        onCheckedChange = { checked ->
-                            if (checked) AutoLogNotificationHelper.createChannels(context)
-                            viewModel.setSeasonalCareAlertEnabled(checked)
-                        }
-                    )
-                }
-
-                if (seasonalCareAlertEnabled && !notificationsAllowed) {
-                    item {
-                        PermissionNeededRow(
-                            onClick = {
-                                defaultOnPermissionLauncher.launch(
-                                    Manifest.permission.POST_NOTIFICATIONS
-                                )
-                            }
-                        )
-                    }
-                }
-
-                // 계절 알림 테스트 — 계절마다 1회뿐이라 기다려서는 확인할 수 없다.
-                // 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
-                if (BuildConfig.DEBUG && seasonalCareAlertEnabled) {
-                    item {
-                        SettingsMenuItem(
-                            icon = Icons.Outlined.BugReport,
-                            title = "계절 알림 테스트 (디버그 전용)",
-                            subtitle = "지금 계절 카드 내용으로 알림을 보내봅니다",
-                            indented = true,
-                            onClick = {
-                                AutoLogNotificationHelper.createChannels(context)
-                                // forceTest — '이번 계절에 보냈나' 기록을 건드리지 않는다.
-                                viewModel.sendSeasonalTestNotification()
-                                Toast.makeText(
-                                    context,
-                                    "알림을 보냈어요. 상단바를 내려보세요.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                    }
-                }
-
-                item {
-                    SettingsSwitchMenuItem(
-                        icon = Icons.Outlined.BarChart,
-                        title = "월간 리포트 알림",
-                        subtitle = "매월 1일, 지난달 지출 요약을 알려드립니다",
-                        checked = monthlyReportEnabled,
-                        onCheckedChange = onMonthlyReportToggleChange
-                    )
-                }
-
-                if (monthlyReportEnabled && !notificationsAllowed) {
-                    item {
-                        PermissionNeededRow(
-                            onClick = {
-                                defaultOnPermissionLauncher.launch(
-                                    Manifest.permission.POST_NOTIFICATIONS
-                                )
-                            }
-                        )
-                    }
-                }
-
-                // 리포트 알림 테스트 — 디버그 빌드 전용. 릴리즈에는 나타나지 않는다.
-                if (BuildConfig.DEBUG && monthlyReportEnabled) {
-                    item {
-                        SettingsMenuItem(
-                            icon = Icons.Outlined.BugReport,
-                            title = "리포트 알림 테스트 (디버그 전용)",
-                            subtitle = "10초 뒤 지난달 집계로 알림을 보내봅니다",
-                            indented = true,
-                            onClick = {
-                                MonthlyReportScheduler.enqueueTest(context)
-                                Toast.makeText(
-                                    context,
-                                    "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                    }
                 }
 
                 item {
@@ -1178,91 +697,6 @@ fun SettingsScreen(
     /**
      * 정비 알림 시간 선택 — 시간이 바뀌면 예약도 새 시각으로 교체한다.
      */
-    if (showAlertHourDialog) {
-        AlertDialog(
-            onDismissRequest = { showAlertHourDialog = false },
-            title = { Text("알림 시간") },
-            text = {
-                Column(
-                    Modifier
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    (6..22).forEach { hour ->
-                        val selected = hour == alertPrefs.hour
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setMaintenanceAlertHour(hour)
-                                    MaintenanceAlertScheduler.reschedule(context, hour)
-                                    showAlertHourDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 4.dp)
-                        ) {
-                            Text(
-                                formatAlertHour(hour),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showAlertHourDialog = false }) { Text("취소") }
-            }
-        )
-    }
-
-    /**
-     * 초과 리마인드 주기 선택
-     */
-    if (showAlertRemindDialog) {
-        AlertDialog(
-            onDismissRequest = { showAlertRemindDialog = false },
-            title = { Text("초과 리마인드") },
-            text = {
-                Column {
-                    Text(
-                        "교체 시기를 넘긴 항목이 계속 방치되면 다시 알려드릴까요?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    MaintenanceAlertPrefs.REMIND_OPTIONS.forEach { days ->
-                        val selected = days == alertPrefs.remindDays
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setMaintenanceAlertRemindDays(days)
-                                    showAlertRemindDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 4.dp)
-                        ) {
-                            Text(
-                                MaintenanceAlertPrefs.remindLabel(days),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showAlertRemindDialog = false }) { Text("취소") }
-            }
-        )
-    }
 }
 
 /**
@@ -1270,7 +704,7 @@ fun SettingsScreen(
  * 대부분 이것이다. 경고 톤으로 보여주고 해당 설정 화면으로 바로 보낸다.
  */
 @Composable
-private fun NotificationBlockedCard(
+internal fun NotificationBlockedCard(
     block: AutoLogNotificationHelper.NotificationBlock,
     onOpenSettings: () -> Unit
 ) {
@@ -1331,7 +765,7 @@ private fun NotificationBlockedCard(
 }
 
 /** 9 → "오전 9시", 14 → "오후 2시" */
-private fun formatAlertHour(hour: Int): String = when {
+internal fun formatAlertHour(hour: Int): String = when {
     hour == 0 -> "오전 12시"
     hour < 12 -> "오전 ${hour}시"
     hour == 12 -> "오후 12시"
@@ -1579,7 +1013,7 @@ private fun Long.toBackupDateText(): String =
  * 사용자가 켠 적 없는 알림이 갑자기 살아난 것처럼 보인다.
  */
 @Composable
-private fun PermissionNeededRow(onClick: () -> Unit) {
+internal fun PermissionNeededRow(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

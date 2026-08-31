@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.LocalCarWash
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Handyman
@@ -63,10 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jsworld.android.autolog.domain.model.Car
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
-import com.jsworld.android.autolog.domain.model.CareRecord
-import com.jsworld.android.autolog.domain.model.buildCareOverview
-import com.jsworld.android.autolog.domain.model.careCounts
-import com.jsworld.android.autolog.domain.model.upkeepLines
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.component.TabTopBar
 import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
@@ -112,33 +107,10 @@ fun MaintenanceTabScreen(
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
+            // 진입점은 전부 아래 칩 한 줄로 모았다 — 상단 액션과 카드·줄이
+            // 제각각이면 무엇이 중요한지 읽히지 않는다.
             TabTopBar(
-                leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) },
-                actions = {
-                    if (car != null) {
-                        // 아이콘만 있으면 무슨 버튼인지 알 수 없다. 라벨을 함께 보여준다.
-                        Row(
-                            modifier = Modifier
-                                .clickable { onManageItems(car.id) }
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Tune,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                "항목 관리",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
+                leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) }
             )
 
             if (car == null) {
@@ -149,28 +121,17 @@ fun MaintenanceTabScreen(
             // 세차는 별도 테이블이라 이 기록엔 섞여 있지 않다.
             val records by viewModel.recordsState(car.id).collectAsState()
 
-            // 세차 카드 — 세차 항목이 켜져 있거나 기록이 있을 때만.
-            // 세차를 안 쓰는 사용자의 탭은 카드 없이 지금과 완전히 같다.
-            val careEnabled by viewModel.careEnabledState(car.id).collectAsState()
-            val careRecords by viewModel.careRecordsState(car.id).collectAsState()
-            if (careEnabled || careRecords.isNotEmpty()) {
-                CareEntryCard(
-                    careRecords = careRecords,
-                    onClick = { onOpenCareDetail(car.id) }
-                )
-                Spacer(Modifier.height(10.dp))
-            } else {
-                // ⚠️ 카드가 없으면 세차 화면으로 갈 길이 아예 없다 — 카드는 세차 항목이
-                // 켜져 있어야 뜨는데, 그 항목을 켜는 화면이 카드 너머에 있다(닭과 달걀).
-                // 새 차량은 여기서 막혀 세차 기록을 남길 방법이 없었다.
-                // 카드 대신 한 줄만 둔다 — 세차를 안 쓰는 사람에게 부담이 없을 만큼 작게.
-                CareStartRow(onClick = { onOpenCareDetail(car.id) })
-                Spacer(Modifier.height(10.dp))
-            }
-
-            // 증상별 점검 가이드 입구 — 세차 입구와 같은 한 줄 메뉴형.
-            // 기록·차량 데이터와 무관한 정적 콘텐츠라 조건 없이 항상 보인다.
-            SymptomGuideStartRow(onClick = onOpenSymptomGuide)
+            // 세차·증상 가이드·항목 관리 — 세 진입점을 같은 모양 한 줄로.
+            // 예전에는 카드 / 한 줄 / 상단 텍스트버튼으로 모양이 제각각이라
+            // 위계가 안 보였고, 정작 이 탭의 주인공인 기록이 세 블록 아래에 있었다.
+            //
+            // ⚠️ 조건 없이 항상 보여야 한다 — 세차 입구를 '세차 항목이 켜져 있을 때'로
+            // 걸었다가 새 차량에서 세차 화면에 갈 길이 아예 막혔던 적이 있다(1.2.2 에서 수정).
+            EntryChipRow(
+                onOpenCare = { onOpenCareDetail(car.id) },
+                onOpenSymptomGuide = onOpenSymptomGuide,
+                onManageItems = { onManageItems(car.id) }
+            )
             Spacer(Modifier.height(10.dp))
 
             var filter by rememberSaveable(car.id) { mutableStateOf<String?>(null) }
@@ -400,158 +361,61 @@ private fun EmptyMessage(title: String, body: String) {
 }
 
 /**
- * 세차·관리 허브 진입 카드 — 단순 링크가 아니라 "세차한 지 N일"을 담는다.
- * 세차 계열 항목이 켜져 있거나 기록이 있을 때만 나타난다.
+ * 정비 탭의 진입점 세 개를 한 줄에 담는다.
+ *
+ * 세로로 쌓인 카드·줄 세 개(약 150dp)를 칩 한 줄(약 36dp)로 줄인 자리다.
+ * 셋이 같은 모양이라 "여기서 갈 수 있는 곳"으로 한 번에 읽힌다.
  */
-/** 세차 기록이 하나도 없을 때의 입구. 카드가 아니라 한 줄이라 탭을 어지럽히지 않는다 */
 @Composable
-private fun CareStartRow(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+private fun EntryChipRow(
+    onOpenCare: () -> Unit,
+    onOpenSymptomGuide: () -> Unit,
+    onManageItems: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.LocalCarWash,
-                contentDescription = null,
-                modifier = Modifier.size(19.dp),
-                tint = MaterialTheme.colorScheme.tertiary
-            )
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "세차·관리 기록하기",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    "세차 주기와 코팅·광택까지 여기서 관리해요",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-/** 증상별 점검 가이드 입구 — 차에서 느낀 증상으로 점검 방향을 찾는 보조 기능 */
-@Composable
-private fun SymptomGuideStartRow(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Outlined.Troubleshoot,
-                contentDescription = null,
-                modifier = Modifier.size(19.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "증상별 점검 가이드",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    "차에서 느껴지는 증상을 고르면 어디를 점검할지 안내해드려요",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        EntryChip(Icons.Default.LocalCarWash, "세차·관리", Modifier.weight(1f), onOpenCare)
+        EntryChip(Icons.Outlined.Troubleshoot, "증상 가이드", Modifier.weight(1f), onOpenSymptomGuide)
+        EntryChip(Icons.Default.Tune, "항목 관리", Modifier.weight(1f), onManageItems)
     }
 }
 
 @Composable
-private fun CareEntryCard(
-    careRecords: List<CareRecord>,
+private fun EntryChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val today = remember { LocalDate.now() }
-    val overview = remember(careRecords) { buildCareOverview(careRecords, today) }
-    val counts = remember(careRecords) { careCounts(careRecords, today) }
-    val upkeep = remember(careRecords) { upkeepLines(careRecords, today) }
-
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f)
-            .compositeOver(MaterialTheme.colorScheme.surface),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier
     ) {
         Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
+            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
             Icon(
-                Icons.Default.WaterDrop,
+                icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                modifier = Modifier.size(15.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    when {
-                        overview.daysSinceWash == null -> "세차 기록을 시작해보세요"
-                        overview.daysSinceWash == 0 -> "오늘 세차했어요"
-                        else -> "세차한 지 ${overview.daysSinceWash}일"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-                Text(
-                    if (overview.daysSinceWash == null) {
-                        "세차·코팅·왁스를 간단히 기록할 수 있어요"
-                    } else {
-                        buildList {
-                            add("이번 달 ${counts.monthCount}회")
-                            upkeep.firstOrNull()?.let { (name, days) ->
-                                add(if (days == 0) "$name 오늘" else "$name ${days}일 전")
-                            }
-                        }.joinToString(" · ")
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+            Spacer(Modifier.width(5.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

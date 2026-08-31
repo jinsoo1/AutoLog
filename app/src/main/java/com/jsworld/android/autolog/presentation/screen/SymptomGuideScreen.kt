@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,13 +16,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Troubleshoot
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -31,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -65,6 +74,12 @@ fun SymptomGuideScreen(
     viewModel: SymptomGuideViewModel = hiltViewModel()
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val noticeSeen by viewModel.noticeSeen.collectAsStateWithLifecycle()
+
+    // 목록이 그려진 뒤에 띄운다 — 로딩 중에 뜨면 빈 화면 위에 뜬 것처럼 보인다.
+    if (!noticeSeen && !ui.loading) {
+        SymptomGuideNoticeDialog(onConfirm = viewModel::markNoticeSeen)
+    }
 
     Scaffold(
         topBar = {
@@ -302,6 +317,123 @@ private fun EmptySearchMessage() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * 첫 진입 안내 — "이 가이드는 진단하지 않는다".
+ *
+ * 목록·상세 하단에도 같은 취지의 고지가 있지만, 그건 다 읽고 난 뒤에 보이는 글이다.
+ * 이 기능의 가장 중요한 제약이라 **들어오는 순간 한 번은 정면으로** 말한다.
+ * 본 사람에게는 다시 띄우지 않는다(전역 설정) — 매번 막아서면 잔소리가 된다.
+ */
+@Composable
+private fun SymptomGuideNoticeDialog(onConfirm: () -> Unit) {
+    val accent = MaterialTheme.colorScheme.primary
+
+    AlertDialog(
+        onDismissRequest = onConfirm,
+        icon = {
+            Surface(color = accent.copy(alpha = 0.14f), shape = CircleShape) {
+                Icon(
+                    Icons.Outlined.Troubleshoot,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier
+                        .padding(11.dp)
+                        .size(23.dp)
+                )
+            }
+        },
+        title = {
+            Text(
+                "진단이 아니라 점검 가이드예요",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                NoticePoint(
+                    icon = Icons.Outlined.Search,
+                    title = "원인을 확정하지 않아요",
+                    body = "어디를 점검해볼지, 지금 운행해도 되는지까지만 알려드려요."
+                )
+                NoticePoint(
+                    icon = Icons.Outlined.DirectionsCar,
+                    title = "차에 따라 원인이 달라요",
+                    body = "같은 소리도 차종과 상태에 따라 다른 곳이 원인일 수 있어요."
+                )
+                NoticePoint(
+                    icon = Icons.Outlined.WarningAmber,
+                    title = "안전과 관련되면 꼭 점검받으세요",
+                    body = "브레이크·조향·누유처럼 위험한 증상은 전문 정비 점검을 권해요.",
+                    emphasized = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("확인", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
+private fun NoticePoint(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    body: String,
+    emphasized: Boolean = false
+) {
+    // 안전 항목만 색을 준다 — 셋 다 강조하면 아무것도 강조되지 않는다.
+    val accent =
+        if (emphasized) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = if (emphasized) MaterialTheme.colorScheme.error.copy(alpha = 0.06f)
+        else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = if (emphasized) 1.5.dp else 1.dp,
+            color = if (emphasized) MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(top = 1.dp)
+                    .size(18.dp),
+                tint = if (emphasized) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(11.dp))
+            Column {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

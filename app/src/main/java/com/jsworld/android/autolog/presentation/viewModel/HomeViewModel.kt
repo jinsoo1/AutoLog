@@ -54,6 +54,19 @@ class HomeViewModel @Inject constructor(
 
     private val seasonalSnoozeMap = mutableMapOf<Long, StateFlow<String>>()
 
+    /** 계절 카드 접힘(차량별). '올해는 넘어가기'와 달리 계절이 바뀌어도 유지된다. */
+    fun seasonalCareCollapsedState(carId: Long): StateFlow<Boolean> =
+        seasonalCollapsedMap.getOrPut(carId) {
+            userPrefsRepository.observeSeasonalCareCollapsed(carId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+        }
+
+    private val seasonalCollapsedMap = mutableMapOf<Long, StateFlow<Boolean>>()
+
+    fun setSeasonalCareCollapsed(carId: Long, collapsed: Boolean) {
+        viewModelScope.launch { userPrefsRepository.setSeasonalCareCollapsed(carId, collapsed) }
+    }
+
     /** '내년에 다시' — 이번 계절은 끝. 계절이 바뀌면 저절로 돌아온다 */
     fun dismissSeasonalCare(carId: Long, key: String) {
         viewModelScope.launch { userPrefsRepository.setSeasonalCareDismissedKey(carId, key) }

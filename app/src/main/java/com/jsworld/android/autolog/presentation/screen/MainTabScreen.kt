@@ -88,6 +88,8 @@ fun MainTabScreen(
     onOpenSchedule: (Long) -> Unit,
     /** 정비 탭 > 증상별 점검 가이드 */
     onOpenSymptomGuide: () -> Unit,
+    /** 설정 > 알림 */
+    onNotificationSettingsClick: () -> Unit,
     /** 월간 리포트 알림 탭 → 리포트 탭 열기 요청. 소비하면 반드시 알린다 */
     openReportRequested: Boolean = false,
     onConsumeOpenReport: () -> Unit = {}
@@ -214,6 +216,7 @@ fun MainTabScreen(
                     onNoticeClick = onNoticeClick,
                     onExcelExportClick = onExcelExportClick,
                     onScheduleClick = { selectedCar?.id?.let(onOpenSchedule) },
+                    onNotificationSettingsClick = onNotificationSettingsClick,
                     carName = selectedCar?.name,
                     showBack = false
                 )

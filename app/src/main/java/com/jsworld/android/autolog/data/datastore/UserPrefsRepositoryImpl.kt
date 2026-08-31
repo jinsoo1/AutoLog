@@ -88,6 +88,29 @@ class UserPrefsRepositoryImpl @Inject constructor(
         dataStore.edit { it[seasonalCareSnoozeKey(carId)] = date }
     }
 
+    private fun seasonalCareCollapsedKey(carId: Long) =
+        booleanPreferencesKey("seasonal_care_collapsed_$carId")
+
+    override fun observeSeasonalCareCollapsed(carId: Long): Flow<Boolean> =
+        dataStore.data.map { it[seasonalCareCollapsedKey(carId)] ?: false }
+
+    override suspend fun setSeasonalCareCollapsed(carId: Long, collapsed: Boolean) {
+        dataStore.edit { it[seasonalCareCollapsedKey(carId)] = collapsed }
+    }
+
+    /**
+     * 증상별 점검 가이드 첫 진입 안내
+     */
+    private val symptomGuideNoticeSeenKey =
+        booleanPreferencesKey("symptom_guide_notice_seen")
+
+    override fun observeSymptomGuideNoticeSeen(): Flow<Boolean> =
+        dataStore.data.map { it[symptomGuideNoticeSeenKey] ?: false }
+
+    override suspend fun setSymptomGuideNoticeSeen(seen: Boolean) {
+        dataStore.edit { it[symptomGuideNoticeSeenKey] = seen }
+    }
+
     /**
      * 계절별 관리 알림
      */
