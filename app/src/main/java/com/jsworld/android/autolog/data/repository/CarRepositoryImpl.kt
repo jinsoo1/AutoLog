@@ -29,16 +29,18 @@ class CarRepositoryImpl @Inject constructor(
     override suspend fun addCar(input: Car): Long {
         val carId = carDao.insertCar(input.toEntity())
 
-        if (input.mileage > 0) {
-            mileageHistoryDao.insertHistory(
-                MileageHistoryEntity(
-                    carId = carId,
-                    mileage = input.mileage,
-                    recordedAt = 0L,
-                    memo = "초기 등록 주행거리"
-                )
+        // 등록 주행거리는 항상 기준점으로 남긴다 — 0km(새로 뽑은 차)도 유효한 값이다.
+        // 이 행이 없으면 등록한 달은 앞선 관측점이 없어 주행거리가 "계산 불가"로 뜬다
+        // (ExpenseReportCalc.drivenKmIn). 등록 화면에서 주행거리를 필수로 받으므로
+        // "모르는 값을 0으로 적은" 경우는 여기 오지 않는다.
+        mileageHistoryDao.insertHistory(
+            MileageHistoryEntity(
+                carId = carId,
+                mileage = input.mileage,
+                recordedAt = 0L,
+                memo = "초기 등록 주행거리"
             )
-        }
+        )
 
         return carId
     }

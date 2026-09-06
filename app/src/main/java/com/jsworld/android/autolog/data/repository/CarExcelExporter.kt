@@ -388,7 +388,7 @@ class CarExcelExporter @Inject constructor(
 
         createRow(sheet, 3, listOf("총 기록 수", "${histories.size}건"))
         createRow(sheet, 4, listOf("현재 주행거리", "${data.car.mileage} km"))
-        createRow(sheet, 5, listOf("최근 기록일", latestHistory?.recordedAt?.toDateText() ?: ""))
+        createRow(sheet, 5, listOf("최근 기록일", latestHistory?.recordedAt?.toRecordedAtText() ?: ""))
         createRow(sheet, 6, listOf("최근 기록 주행거리", latestHistory?.mileage?.let { "$it km" } ?: ""))
         createRow(sheet, 7, listOf("누적 증가 주행거리", "${totalIncrease.coerceAtLeast(0)} km"))
 
@@ -436,7 +436,7 @@ class CarExcelExporter @Inject constructor(
                 sheet = sheet,
                 rowIndex = 11 + index,
                 values = listOf(
-                    history.recordedAt.toDateText(),
+                    history.recordedAt.toRecordedAtText(),
                     "${history.mileage} km",
                     increasedMileage?.let { "${it.coerceAtLeast(0)} km" } ?: "",
                     history.memo ?: ""
@@ -809,6 +809,14 @@ class CarExcelExporter @Inject constructor(
 
         return formatter.format(Date(this))
     }
+
+    /**
+     * recordedAt = 0 은 날짜가 아니라 "차량 등록 시점"이라는 표식이다
+     * (CarRepositoryImpl.addCar — 등록일을 모르는 최초 기준점을 가장 이른 시점에 둔다).
+     * 그대로 날짜로 찍으면 1970-01-01 로 보인다.
+     */
+    private fun Long.toRecordedAtText(): String =
+        if (this == 0L) "등록 시점" else toDateText()
 
     private fun Long.toFileDateText(): String {
         val formatter = SimpleDateFormat(

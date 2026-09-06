@@ -79,7 +79,9 @@ fun AddCarScreen(
     var fuelType by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
 
-    val isValid = name.isNotBlank() && plate.isNotBlank()
+    // 주행거리는 정비 주기·월 주행거리의 기준점이라 필수다.
+    // 비워두면 0으로 저장돼 "모름"과 "새 차 0km"를 구분할 수 없다.
+    val isValid = name.isNotBlank() && plate.isNotBlank() && mileage.toIntOrNull() != null
 
     Scaffold(
         topBar = {
@@ -134,7 +136,7 @@ fun AddCarScreen(
                     if (!isValid) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "차량 이름과 번호판은 필수예요.",
+                            "차량 이름 · 번호판 · 현재 주행거리는 필수예요.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -194,7 +196,7 @@ fun AddCarScreen(
                             )
                             Text(
                                 if (isFirst)
-                                    "등록하면 정비 주기를 계산해 알려드려요. 이름과 번호판만 있으면 시작할 수 있어요."
+                                    "등록하면 정비 주기를 계산해 알려드려요. 이름 · 번호판 · 주행거리만 있으면 시작할 수 있어요."
                                 else
                                     "등록 후 정비 주기와 알림을 설정할 수 있어요.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -249,7 +251,7 @@ fun AddCarScreen(
                                 selection = TextRange(formatted.length)
                             )
                         },
-                        label = { Text("현재 주행거리") },
+                        label = { Text("현재 주행거리 *") },
                         placeholder = { Text("예: 37,900") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -257,7 +259,7 @@ fun AddCarScreen(
                         trailingIcon = { Text("km", style = MaterialTheme.typography.labelMedium) },
                         supportingText = {
                             Text(
-                                "정비 시기 계산에 사용돼요. 나중에 언제든 수정할 수 있어요.",
+                                "정비 시기와 월 주행거리의 기준점이에요. 나중에 언제든 수정할 수 있어요.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
