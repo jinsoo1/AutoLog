@@ -154,38 +154,14 @@ class ReportYearlyTest {
     }
 
     @Test
-    fun `올해의 기록 - 주유량은 드럼통으로 환산된다`() {
+    fun `올해의 기록 - 주유량·충전량은 비유 없이 숫자만`() {
         val h = buildYearHighlights(
             emptyList(),
-            listOf(fuel(1, 1_240.0)),
+            listOf(fuel(1, 1_240.0), fuel(2, 890.0, unit = FuelUnit.KWH)),
             emptyList()
         )
-        assertEquals("1,240L · 드럼통 6.2개 분량", h.find { it.label.ko() == "올해 주유량" }?.value?.ko())
-    }
-
-    @Test
-    fun `올해의 기록 - 충전량은 가구 전기 사용량으로 환산된다`() {
-        // 890kWh / 350kWh = 약 2.5달 치
-        val big = buildYearHighlights(
-            emptyList(),
-            listOf(fuel(1, 890.0, unit = FuelUnit.KWH)),
-            emptyList()
-        )
-        assertEquals(
-            "890kWh · 4인 가구 약 2.5달 치 전기 분량",
-            big.find { it.label.ko() == "올해 충전량" }?.value?.ko()
-        )
-
-        // 한 달 치 미만이면 일 단위로 — 58kWh ≈ 5일 치
-        val small = buildYearHighlights(
-            emptyList(),
-            listOf(fuel(1, 58.0, unit = FuelUnit.KWH)),
-            emptyList()
-        )
-        assertEquals(
-            "58kWh · 4인 가구 약 5일 치 전기 분량",
-            small.find { it.label.ko() == "올해 충전량" }?.value?.ko()
-        )
+        assertEquals("1,240L", h.find { it.label.ko() == "올해 주유량" }?.value?.ko())
+        assertEquals("890kWh", h.find { it.label.ko() == "올해 충전량" }?.value?.ko())
     }
 
     @Test

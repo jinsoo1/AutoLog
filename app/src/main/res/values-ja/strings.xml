@@ -93,18 +93,6 @@
     <string name="narrative_calm_title">穏やかに過ぎた月です</string>
     <string name="narrative_calm_subtitle">大きな出来事もなく、管理が順調に続いています。</string>
 
-    <!-- お楽しみ指標 -->
-    <string name="fun_earth_laps">この車と一緒に地球%1$.1f周目を走っています</string>
-    <string name="fun_earth_percent">この車と一緒に地球一周の%1$d%%を走りました</string>
-    <string name="fun_record_most_driven">記録を始めてから最も多く走った月です</string>
-    <string name="fun_record_least_driven">記録を始めてから最も走らなかった月です</string>
-    <string name="fun_record_thriftiest">記録を始めてから最も節約できた月です</string>
-    <!-- 距離のたとえ。基準距離は DistanceLandmarks.JAPAN と合わせる -->
-    <string name="fun_ladder_tier1">今月の走行%1$,dkm — 山手線一周（34.5km）を%2$d回まわった距離です</string>
-    <string name="fun_ladder_tier2">今月の走行%1$,dkm — 箱根駅伝の往復（217km）%2$.1f回分の距離です</string>
-    <string name="fun_ladder_tier3">今月の走行%1$,dkm — 東京〜新大阪（553km）を%2$.1f回走った距離です</string>
-    <string name="fun_ladder_tier4">今月の走行%1$,dkm — 東京〜博多（1,175km）を%2$.1f回走った距離です</string>
-    <string name="fun_ladder_tier5">今月の走行%1$,dkm — フルマラソン%2$d回分の距離です</string>
 
     <!-- ───────── 年間ナラティブ・ハイライト ───────── -->
     <string name="year_empty_title">記録のない年です</string>
@@ -121,9 +109,7 @@
     <string name="year_calm_subtitle">大きな出来事もなく、管理が続いています。</string>
 
     <string name="hl_driven_label">今年の走行</string>
-    <string name="hl_driven_value">%1$,dkm · %2$s</string>
-    <string name="hl_earth_laps">地球%1$.1f周</string>
-    <string name="hl_earth_percent">地球一周の%1$d%%</string>
+    <string name="hl_driven_value">%1$,dkm</string>
     <string name="hl_big_spend_label">今年の大きな支出</string>
     <string name="hl_big_spend_value">%1$s%2$s · %3$,d円</string>
     <string name="hl_most_driven_label">最も多く走った月</string>
@@ -133,11 +119,9 @@
     <string name="hl_regular_label">行きつけ</string>
     <string name="hl_regular_value">%1$s · %2$d回</string>
     <string name="hl_fuel_label">今年の給油量</string>
-    <string name="hl_fuel_value">%1$,.0fL · ドラム缶%2$.1f本分</string>
+    <string name="hl_fuel_value">%1$,.0fL</string>
     <string name="hl_charge_label">今年の充電量</string>
-    <string name="hl_charge_value">%1$,.0fkWh · 4人世帯の電気%2$s分</string>
-    <string name="hl_scale_months">約%1$.1fか月</string>
-    <string name="hl_scale_days">約%1$d日</string>
+    <string name="hl_charge_value">%1$,.0fkWh</string>
     <string name="hl_price_label">%1$s単価</string>
     <string name="hl_price_value">昨年より%1$sあたり%2$,d円%3$s</string>
     <string name="hl_price_cheaper">安い</string>
@@ -467,6 +451,7 @@
     <string name="mtab_no_history_body">最初の記録を残すと、その時点を基準に交換時期を計算してお知らせします。</string>
     <string name="mtab_record_action">記録する</string>
     <string name="mtab_no_history_count">まだ記録のない項目が%1$d件あります</string>
+    <string name="mtab_no_history_link">記録のない項目を見る（%1$d件）</string>
     <string name="mtab_no_history_hint">最初の記録を残すと交換時期を計算してお知らせします</string>
     <string name="mtab_unknown_month">日付不明</string>
 
@@ -525,7 +510,6 @@
     <string name="report_no_quantity">数量の記録なし</string>
     <string name="report_price_cheaper">先月より%1$sあたり%2$,d円安く入れました</string>
     <string name="report_price_pricier">先月より%1$sあたり%2$,d円高く入れました</string>
-    <string name="report_earth_caption">累計%1$,dkm · 地球一周40,075km基準</string>
     <string name="report_badge_items">%1$d項目</string>
     <string name="report_no_amount">金額なし</string>
 
@@ -545,6 +529,11 @@
     <string name="fuel_monthly_cost_of">月別%1$s</string>
     <string name="fuel_history">履歴</string>
     <string name="fuel_history_of">%1$sの履歴</string>
+    <string name="fuel_history_this_month">今月の履歴</string>
+    <string name="fuel_history_this_month_of">今月の%1$s履歴</string>
+    <string name="fuel_history_show_all">すべて表示</string>
+    <string name="fuel_history_show_this_month">今月のみ</string>
+    <string name="fuel_history_this_month_empty">今月の記録はまだありません</string>
     <string name="fuel_sheet_title">何を記録しますか？</string>
     <string name="fuel_sheet_subtitle">給油と充電を別々に記録できます</string>
     <string name="fuel_sheet_row_detail">金額 · %1$s(%2$s) · 単価</string>
@@ -1116,4 +1105,10 @@
 
     <!-- ───────── 언어별 콘텐츠 가용성 ───────── -->
     <string name="notice_korean_only">お知らせは現在、韓国語のみで提供しています。</string>
+    <string name="settings_section_support">お問い合わせ</string>
+    <string name="settings_feedback">改善のご提案・ご意見</string>
+    <string name="settings_feedback_sub">不便な点や欲しい機能をメールでお送りください</string>
+    <string name="feedback_mail_subject">[AutoLog] 改善のご提案・ご意見</string>
+    <string name="feedback_mail_body">\n\n\n---\n以下の情報は不具合の確認にのみ使います。削除しても構いません。\nアプリのバージョン: %1$s\n端末: %2$s\nAndroid: %3$s</string>
+    <string name="feedback_no_mail_app">メールアプリがないため、アドレスをコピーしました: %1$s</string>
 </resources>

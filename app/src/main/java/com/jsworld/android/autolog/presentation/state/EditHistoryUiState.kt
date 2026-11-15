@@ -7,6 +7,12 @@ data class EditHistoryUiState(
     val historyId: Long = 0,
     val settingId: Long = 0,
     val carId: Long = 0,
+    /** 기록의 정비 항목 이름(저장된 원문). 못 찾으면 null → 항목 카드를 숨긴다 */
+    val typeName: String? = null,
+    /** 항목 카드의 교체 주기 — 차량별 설정, 없으면 항목 기본값 */
+    val intervalKm: Int? = null,
+    val intervalMonths: Int? = null,
+    val usingDefaultIntervals: Boolean = false,
 
     val date: String = "",         // yyyy-MM-dd
     val mileage: String = "",      // 숫자 문자열

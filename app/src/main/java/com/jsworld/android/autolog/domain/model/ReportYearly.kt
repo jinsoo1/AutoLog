@@ -107,12 +107,6 @@ fun topSpendItems(
 /** 올해의 기록 한 줄 */
 data class YearHighlight(val label: UiText, val value: UiText)
 
-private const val EARTH_KM = 40_075.0
-private const val DRUM_LITER = 200.0
-
-/** 4인 가구 월평균 전기 사용량(kWh) — 충전량을 실감 나는 크기로 환산하는 기준 */
-private const val HOUSEHOLD_MONTH_KWH = 350.0
-
 fun buildYearHighlights(
     yearMonths: List<MonthlyExpense>,
     yearFuel: List<FuelRecord>,
@@ -120,17 +114,13 @@ fun buildYearHighlights(
     prevYearFuel: List<FuelRecord> = emptyList(),
     yearCare: List<CareRecord> = emptyList()
 ): List<YearHighlight> = buildList {
-    // 올해 주행 — 지구 환산
+    // 올해 주행 — 숫자만. 지구·드럼통 같은 비유는 1.5.x 리뷰("필요 없는 텍스트")로 뺐다.
     val drivenKm = yearMonths.mapNotNull { it.drivenKm }.sum()
     if (drivenKm > 0) {
-        val laps = drivenKm / EARTH_KM
-        val lapText =
-            if (laps >= 1.0) UiText.Res(R.string.hl_earth_laps, laps)
-            else UiText.Res(R.string.hl_earth_percent, (laps * 100).roundToInt().coerceAtLeast(1))
         add(
             YearHighlight(
                 UiText.Res(R.string.hl_driven_label),
-                UiText.Res(R.string.hl_driven_value, drivenKm, lapText)
+                UiText.Res(R.string.hl_driven_value, drivenKm)
             )
         )
     }
@@ -191,29 +181,22 @@ fun buildYearHighlights(
             )
         }
 
-    // 주유량/충전량 환산
+    // 주유량/충전량
     val liters = yearFuel.filter { !it.unit.isElectric }.mapNotNull { it.quantity }.sum()
     if (liters > 0) {
         add(
             YearHighlight(
                 UiText.Res(R.string.hl_fuel_label),
-                UiText.Res(R.string.hl_fuel_value, liters, liters / DRUM_LITER)
+                UiText.Res(R.string.hl_fuel_value, liters)
             )
         )
     }
     val kwh = yearFuel.filter { it.unit.isElectric }.mapNotNull { it.quantity }.sum()
     if (kwh > 0) {
-        val months = kwh / HOUSEHOLD_MONTH_KWH
-        val scale =
-            if (months >= 1.0) UiText.Res(R.string.hl_scale_months, months)
-            else UiText.Res(
-                R.string.hl_scale_days,
-                (kwh / (HOUSEHOLD_MONTH_KWH / 30)).roundToInt().coerceAtLeast(1)
-            )
         add(
             YearHighlight(
                 UiText.Res(R.string.hl_charge_label),
-                UiText.Res(R.string.hl_charge_value, kwh, scale)
+                UiText.Res(R.string.hl_charge_value, kwh)
             )
         )
     }

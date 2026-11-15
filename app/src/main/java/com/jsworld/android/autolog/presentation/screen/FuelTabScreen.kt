@@ -21,6 +21,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -31,6 +39,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -165,9 +174,17 @@ fun FuelTabScreen(
 
             var filter by rememberSaveable(car.id) { mutableStateOf<FuelUnit?>(null) }
             val activeFilter = filter?.takeIf { it in unitsInRecords }
-            val shown = remember(records, activeFilter) {
-                if (activeFilter == null) records else records.filter { it.unit == activeFilter }
+
+            // 기간 — 기본은 이번 달. 첫 기록부터 전부 늘어놓으면 쌓일수록 길어지기만 한다.
+            var period by rememberSaveable(car.id) { mutableStateOf(FuelHistoryPeriod.THIS_MONTH) }
+            val shown = remember(records, activeFilter, period, thisMonth) {
+                records.filter { record ->
+                    (activeFilter == null || record.unit == activeFilter) &&
+                        (period == FuelHistoryPeriod.ALL || record.filledAt.startsWith(thisMonth))
+                }
             }
+            // 전체 보기는 달별로 끊어 보여준다(기록은 최신순이라 묶어도 순서가 유지된다).
+            val shownByMonth = remember(shown) { shown.groupBy { it.filledAt.take(7) } }
 
             // "이전 기록 이후 주행거리"는 같은 종류끼리 비교하면 의미가 없다.
             // 주유든 충전이든 그 사이에 실제로 달린 거리이므로 종류를 섞어 계산한다.
@@ -178,7 +195,7 @@ fun FuelTabScreen(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp, top = TabContentTopPadding, bottom = 96.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                // 간격은 항목마다 직접 준다 — 기록 줄은 한 장의 카드처럼 붙어 있어야 해서 spacedBy 를 쓸 수 없다.
             ) {
                 item {
                     if (isMixed) {
@@ -224,6 +241,7 @@ fun FuelTabScreen(
                 }
 
                 if (isMixed) {
+                    fuelGap()
                     item {
                         val total = thisMonthByUnit.values.sum()
                         Surface(
@@ -243,12 +261,14 @@ fun FuelTabScreen(
                 }
 
                 if (monthly.isNotEmpty()) {
+                    fuelGap()
                     item {
                         SectionLabel(
                             if (isMixed) stringResource(R.string.fuel_monthly_energy)
                             else stringResource(R.string.fuel_monthly_cost_of, displayUnits.first().costLabel.asString())
                         )
                     }
+                    fuelGap()
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -268,15 +288,30 @@ fun FuelTabScreen(
                     }
                 }
 
+                fuelGap()
+
                 item {
+                    val showingThisMonth = period == FuelHistoryPeriod.THIS_MONTH
+                    val actionName = displayUnits.first().actionLabel.asString()
                     SectionLabel(
-                        if (isMixed) stringResource(R.string.fuel_history)
-                        else stringResource(R.string.fuel_history_of, displayUnits.first().actionLabel.asString())
+                        title = when {
+                            showingThisMonth && isMixed -> stringResource(R.string.fuel_history_this_month)
+                            showingThisMonth -> stringResource(R.string.fuel_history_this_month_of, actionName)
+                            isMixed -> stringResource(R.string.fuel_history)
+                            else -> stringResource(R.string.fuel_history_of, actionName)
+                        },
+                        actionLabel = stringResource(
+                            if (showingThisMonth) R.string.fuel_history_show_all else R.string.fuel_history_show_this_month
+                        ),
+                        onAction = {
+                            period = if (showingThisMonth) FuelHistoryPeriod.ALL else FuelHistoryPeriod.THIS_MONTH
+                        }
                     )
                 }
 
                 // 두 종류가 섞여 있을 때만 필터를 보여준다.
                 if (unitsInRecords.size > 1) {
+                    fuelGap()
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                             FilterChip(
@@ -299,17 +334,51 @@ fun FuelTabScreen(
                     }
                 }
 
-                item {
-                    ListCard {
-                        shown.forEachIndexed { index, record ->
-                            FuelRecordRow(
-                                record = record,
-                                drivenKm = drivenByRecordId[record.id],
-                                showKindBadge = isMixed,
-                                showDivider = index != shown.lastIndex,
-                                onClick = { onEditFuel(record.id) }
+                when {
+                    // 월초처럼 이번 달 기록이 아직 없을 때 — 빈 화면 대신 전체로 가는 길을 준다
+                    shown.isEmpty() -> {
+                        fuelGap()
+                        item {
+                            ListCard {
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 18.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        stringResource(R.string.fuel_history_this_month_empty),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (period == FuelHistoryPeriod.THIS_MONTH) {
+                                        TextButton(onClick = { period = FuelHistoryPeriod.ALL }) {
+                                            Text(stringResource(R.string.fuel_history_show_all))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    period == FuelHistoryPeriod.THIS_MONTH -> {
+                        fuelGap()
+                        fuelRecordRows(shown, drivenByRecordId, isMixed, onEditFuel)
+                    }
+
+                    // 기록을 한 줄씩 lazy 항목으로 둔다. 달 묶음을 통째로 한 항목에 넣으면
+                    // 그 달이 화면에 들어오는 순간 모든 줄을 한꺼번에 그려 스크롤이 끊긴다.
+                    else -> shownByMonth.forEach { (monthKey, monthRecords) ->
+                        fuelGap()
+                        item(key = "fuel-month-header-$monthKey", contentType = "fuel-month-header") {
+                            Text(
+                                monthKey.toYearMonthLabel(),
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        fuelRecordRows(monthRecords, drivenByRecordId, isMixed, onEditFuel)
                     }
                 }
             }
@@ -568,4 +637,76 @@ private fun List<FuelRecord>.drivenDistances(): Map<Long, Int> {
         if (delta > 0) result[record.id] = delta
     }
     return result
+}
+
+/** 주유 내역 기간 */
+private enum class FuelHistoryPeriod { THIS_MONTH, ALL }
+
+/** 주유 탭 목록의 항목 간격 — LazyColumn 의 spacedBy 대신 */
+private fun LazyListScope.fuelGap() {
+    item(contentType = "fuel-gap") { Spacer(Modifier.height(12.dp)) }
+}
+
+/** 한 묶음(이번 달, 또는 전체 보기의 한 달)의 기록 — 줄마다 lazy 항목, 겉보기는 한 장의 카드 */
+private fun LazyListScope.fuelRecordRows(
+    records: List<FuelRecord>,
+    drivenByRecordId: Map<Long, Int>,
+    showKindBadge: Boolean,
+    onEditFuel: (Long) -> Unit
+) {
+    itemsIndexed(records, key = { _, r -> "fuel-${r.id}" }, contentType = { _, _ -> "fuel-row" }) { index, record ->
+        CardSegment(isFirst = index == 0, isLast = index == records.lastIndex) {
+            FuelRecordRow(
+                record = record,
+                drivenKm = drivenByRecordId[record.id],
+                showKindBadge = showKindBadge,
+                showDivider = index != records.lastIndex,
+                onClick = { onEditFuel(record.id) }
+            )
+        }
+    }
+}
+
+/**
+ * [ListCard] 를 줄 단위로 쪼갠 조각. 위아래로 붙여 놓으면 한 장의 카드처럼 보인다.
+ * 첫 줄만 위 모서리, 끝 줄만 아래 모서리가 둥글고 테두리도 이어진다.
+ * 가운데 조각은 위아래로 넉넉히 늘린 카드를 그린 뒤 자기 높이로 잘라, 둥근 모서리가 안 보이게 한다.
+ */
+@Composable
+private fun CardSegment(isFirst: Boolean, isLast: Boolean, content: @Composable () -> Unit) {
+    val shape = MaterialTheme.shapes.large
+    val background = MaterialTheme.colorScheme.surface
+    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val stroke = 1.dp.toPx()
+                val extend = 48.dp.toPx() // 모서리 반경보다 넉넉히
+                val top = if (isFirst) 0f else -extend
+                val bottom = if (isLast) size.height else size.height + extend
+                clipRect {
+                    translate(left = stroke / 2, top = top + stroke / 2) {
+                        val outline = shape.createOutline(
+                            Size(size.width - stroke, bottom - top - stroke),
+                            layoutDirection,
+                            this
+                        )
+                        drawOutline(outline, background)
+                        drawOutline(outline, borderColor, style = Stroke(width = stroke))
+                    }
+                }
+            }
+            .padding(horizontal = 14.dp)
+    ) {
+        content()
+    }
+}
+
+/** "2026-11" → "2026년 11월" (형식이 어긋나면 그대로) */
+@Composable
+@ReadOnlyComposable
+private fun String.toYearMonthLabel(): String {
+    val ym = runCatching { java.time.YearMonth.parse(this) }.getOrNull() ?: return this
+    return stringResource(R.string.date_year_month, ym.year, ym.monthValue)
 }

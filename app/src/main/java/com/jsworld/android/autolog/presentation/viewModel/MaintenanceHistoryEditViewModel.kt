@@ -9,6 +9,7 @@ import com.jsworld.android.autolog.presentation.state.EditHistoryUiState
 import com.jsworld.android.autolog.data.local.entity.MaintenanceHistoryEntity
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CarRepository
+import com.jsworld.android.autolog.domain.repository.MaintenanceTypeRepository
 import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import com.jsworld.android.autolog.presentation.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val repo: CarMaintenanceRepository,
     private val carRepo: CarRepository,
+    private val maintenanceTypeRepository: MaintenanceTypeRepository,
     private val userPrefsRepository: UserPrefsRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
@@ -63,12 +65,20 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
             val car = carRepo.getCarById(carId).first()
             val currentCarMileage = car?.mileage ?: 0
 
+            // 어떤 항목의 기록인지 — 화면 머리의 항목 카드용(이름은 저장된 원문, 표시할 때 번역)
+            val setting = repo.observeSetting(h.settingId).first()
+            val type = setting?.let { maintenanceTypeRepository.observeType(it.maintenanceTypeId).first() }
+
             _ui.update { old ->
                 old.copy(
                     loading = false,
                     historyId = historyId,
                     settingId = h.settingId,
                     carId = carId,
+                    typeName = type?.name,
+                    intervalKm = setting?.intervalKm ?: type?.defaultIntervalKm,
+                    intervalMonths = setting?.intervalMonths ?: type?.defaultIntervalMonths,
+                    usingDefaultIntervals = setting != null && setting.intervalKm == null && setting.intervalMonths == null,
                     date = h.serviceDate.orEmpty(),
                     mileage = h.serviceMileage?.toString().orEmpty(),
                     place = h.place.orEmpty(),

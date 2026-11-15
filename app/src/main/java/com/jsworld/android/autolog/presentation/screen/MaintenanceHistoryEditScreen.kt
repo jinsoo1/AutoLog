@@ -2,6 +2,14 @@ package com.jsworld.android.autolog.presentation.screen
 
 import androidx.compose.ui.res.stringResource
 import com.jsworld.android.autolog.R
+import androidx.compose.foundation.layout.size
+import com.jsworld.android.autolog.presentation.state.EditHistoryUiState
+import com.jsworld.android.autolog.domain.model.isCareItemName
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.ui.text.style.TextOverflow
+import com.jsworld.android.autolog.core.ui.localizedItemName
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -197,6 +205,9 @@ fun MaintenanceHistoryEditScreen(
         ) {
 
             Spacer(Modifier.height(8.dp))
+
+            // 어떤 항목의 기록인지 — 뒤로 나가지 않아도 보이게(첫 리뷰 지적)
+            ui.typeName?.let { name -> EditHistoryItemHeader(name, ui) }
 
             // 범위 안내 카드
             Card(
@@ -639,4 +650,55 @@ private fun HistoryDatePickerDialog(
     ) {
         DatePicker(state = state)
     }
+}
+
+/** 수정 화면 머리의 항목 카드 — 아이콘 + 항목 이름 + 교체 주기 */
+@Composable
+private fun EditHistoryItemHeader(typeName: String, ui: EditHistoryUiState) {
+    val isCare = isCareItemName(typeName)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = CircleShape
+        ) {
+            Icon(
+                if (isCare) Icons.Default.WaterDrop else Icons.Default.Build,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(9.dp)
+                    .size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                typeName.localizedItemName(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                ui.intervalLabel(isCare),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** "10,000km · 6개월마다" — 정비 항목 상세 화면과 같은 표기 */
+@Composable
+@ReadOnlyComposable
+private fun EditHistoryUiState.intervalLabel(isCare: Boolean): String {
+    val parts = buildList {
+        intervalKm?.let { add("${it.formatThousands()}km") }
+        intervalMonths?.let { add(stringResource(R.string.duration_months, it)) }
+    }
+    if (parts.isEmpty()) {
+        return stringResource(if (isCare) R.string.id_care_no_cycle else R.string.id_repair_no_cycle)
+    }
+    val suffix = stringResource(if (usingDefaultIntervals) R.string.id_cycle_suffix_default else R.string.id_cycle_suffix)
+    return parts.joinToString(" · ") + suffix
 }

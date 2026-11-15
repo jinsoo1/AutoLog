@@ -44,8 +44,6 @@ import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Inbox
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
@@ -106,10 +104,6 @@ import com.jsworld.android.autolog.domain.model.buildExpenseInsight
 import com.jsworld.android.autolog.domain.model.buildReportNarrative
 import com.jsworld.android.autolog.domain.model.buildYearHighlights
 import com.jsworld.android.autolog.domain.model.buildYearNarrative
-import com.jsworld.android.autolog.domain.model.DistanceLandmarks
-import com.jsworld.android.autolog.domain.model.distanceLadderText
-import com.jsworld.android.autolog.domain.model.earthLapsText
-import com.jsworld.android.autolog.domain.model.personalRecordText
 import com.jsworld.android.autolog.domain.model.topSpendItems
 import com.jsworld.android.autolog.presentation.component.CarSwitcherChip
 import com.jsworld.android.autolog.presentation.component.TabTopBar
@@ -338,18 +332,6 @@ fun ReportTabScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                }
-
-                // 재미 지표 — 누적 지구 바퀴 + 자기 기록(없으면 거리 비유)
-                item {
-                    val landmarks = DistanceLandmarks.forLanguage(java.util.Locale.getDefault().language)
-                    val secondLine = personalRecordText(loaded, current)
-                        ?: current.drivenKm?.let { distanceLadderText(it, landmarks) }
-                    FunFactCard(
-                        earthLine = earthLapsText(car.mileage),
-                        totalMileage = car.mileage,
-                        secondLine = secondLine
-                    )
                 }
 
                 // 정비 시기 예측 — 이번 달을 보고 있을 때만(과거 달의 '예측'은 형용모순).
@@ -1392,57 +1374,6 @@ private fun NarrativeCard(narrative: ReportNarrative) {
                     style = MaterialTheme.typography.bodySmall,
                     color = content.copy(alpha = 0.85f)
                 )
-            }
-        }
-    }
-}
-
-/** 재미 지표 — 누적 지구 바퀴 + 자기 기록(또는 이 달 주행 비유) */
-@Composable
-private fun FunFactCard(
-    earthLine: UiText?,
-    totalMileage: Int,
-    secondLine: UiText?
-) {
-    if (earthLine == null && secondLine == null) return
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            earthLine?.let {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.Public,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(it.asString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                        Text(
-                            stringResource(R.string.report_earth_caption, totalMileage),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            if (earthLine != null && secondLine != null) Spacer(Modifier.height(10.dp))
-            secondLine?.let {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.Route,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(it.asString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                }
             }
         }
     }

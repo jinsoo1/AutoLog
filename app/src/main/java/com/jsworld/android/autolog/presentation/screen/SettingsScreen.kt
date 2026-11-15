@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Info
@@ -90,6 +91,7 @@ import com.jsworld.android.autolog.presentation.scheduler.MaintenanceAlertSchedu
 import com.jsworld.android.autolog.presentation.scheduler.MonthlyReportScheduler
 import com.jsworld.android.autolog.presentation.scheduler.WeeklyMileageWorkScheduler
 import androidx.core.app.ActivityCompat
+import com.jsworld.android.autolog.core.util.openFeedbackMail
 import com.jsworld.android.autolog.presentation.component.TabContentTopPadding
 import com.jsworld.android.autolog.presentation.component.TabTopBar
 import com.jsworld.android.autolog.core.util.AutoLogNotificationHelper
@@ -340,6 +342,21 @@ fun SettingsScreen(
                             viewModel.refreshBackups()
                             showRestorePicker = true
                         }
+                    )
+                }
+
+                // 문의 — 연락할 방법이 없어 스토어 리뷰로 의견이 오던 것을 받는 창구
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsSectionTitle(stringResource(R.string.settings_section_support))
+                }
+
+                item {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Email,
+                        title = stringResource(R.string.settings_feedback),
+                        subtitle = stringResource(R.string.settings_feedback_sub),
+                        onClick = { context.openFeedbackMail() }
                     )
                 }
             }

@@ -22,6 +22,16 @@ class UserPrefsRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) : UserPrefsRepository {
 
+    private fun noHistoryBannerDismissedKey(carId: Long) =
+        booleanPreferencesKey("no_history_banner_dismissed_$carId")
+
+    override fun observeNoHistoryBannerDismissed(carId: Long): Flow<Boolean> =
+        dataStore.data.map { it[noHistoryBannerDismissedKey(carId)] ?: false }
+
+    override suspend fun setNoHistoryBannerDismissed(carId: Long) {
+        dataStore.edit { it[noHistoryBannerDismissedKey(carId)] = true }
+    }
+
     /**
      * 기존 차량별 자동 주행거리 업데이트 설정
      */

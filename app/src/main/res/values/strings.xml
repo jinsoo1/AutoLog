@@ -93,18 +93,6 @@
     <string name="narrative_calm_title">잔잔하게 지나간 달이에요</string>
     <string name="narrative_calm_subtitle">큰 일 없이 관리가 잘 이어지고 있어요.</string>
 
-    <!-- 재미 지표 -->
-    <string name="fun_earth_laps">이 차와 함께 지구 %1$.1f바퀴째 달리는 중이에요</string>
-    <string name="fun_earth_percent">이 차와 함께 지구 한 바퀴의 %1$d%%를 달렸어요</string>
-    <string name="fun_record_most_driven">기록을 시작한 뒤 가장 많이 달린 달이에요</string>
-    <string name="fun_record_least_driven">기록을 시작한 뒤 가장 적게 달린 달이에요</string>
-    <string name="fun_record_thriftiest">기록을 시작한 뒤 가장 알뜰했던 달이에요</string>
-    <!-- 거리 비유. %1 = 이 달 주행 km, %2 = 기준 거리 대비 배수. 기준 거리는 DistanceLandmarks 와 맞춘다 -->
-    <string name="fun_ladder_tier1">이 달 주행 %1$,dkm — 여의도를 %2$d바퀴 돈 거리예요</string>
-    <string name="fun_ladder_tier2">이 달 주행 %1$,dkm — 제주 일주도로(181km) %2$.1f바퀴 거리예요</string>
-    <string name="fun_ladder_tier3">이 달 주행 %1$,dkm — 경부고속도로(416km)를 %2$.1f번 달린 거리예요</string>
-    <string name="fun_ladder_tier4">이 달 주행 %1$,dkm — 국토종주 자전거길(633km)을 %2$.1f번 완주한 거리예요</string>
-    <string name="fun_ladder_tier5">이 달 주행 %1$,dkm — 마라톤 풀코스 %2$d번 거리예요</string>
 
     <!-- ───────── 연간 내러티브·하이라이트 ───────── -->
     <string name="year_empty_title">기록이 없는 해예요</string>
@@ -121,9 +109,7 @@
     <string name="year_calm_subtitle">큰 사건 없이 관리가 이어지고 있어요.</string>
 
     <string name="hl_driven_label">올해 주행</string>
-    <string name="hl_driven_value">%1$,dkm · %2$s</string>
-    <string name="hl_earth_laps">지구 %1$.1f바퀴</string>
-    <string name="hl_earth_percent">지구 한 바퀴의 %1$d%%</string>
+    <string name="hl_driven_value">%1$,dkm</string>
     <string name="hl_big_spend_label">올해의 큰 지출</string>
     <string name="hl_big_spend_value">%1$s%2$s · %3$,d원</string>
     <string name="hl_most_driven_label">가장 많이 달린 달</string>
@@ -133,11 +119,9 @@
     <string name="hl_regular_label">단골</string>
     <string name="hl_regular_value">%1$s · %2$d회</string>
     <string name="hl_fuel_label">올해 주유량</string>
-    <string name="hl_fuel_value">%1$,.0fL · 드럼통 %2$.1f개 분량</string>
+    <string name="hl_fuel_value">%1$,.0fL</string>
     <string name="hl_charge_label">올해 충전량</string>
-    <string name="hl_charge_value">%1$,.0fkWh · 4인 가구 %2$s 전기 분량</string>
-    <string name="hl_scale_months">약 %1$.1f달 치</string>
-    <string name="hl_scale_days">약 %1$d일 치</string>
+    <string name="hl_charge_value">%1$,.0fkWh</string>
     <string name="hl_price_label">%1$s 단가</string>
     <string name="hl_price_value">작년보다 %1$s당 %2$,d원 %3$s</string>
     <string name="hl_price_cheaper">저렴</string>
@@ -467,6 +451,7 @@
     <string name="mtab_no_history_body">첫 기록을 남기면 그 시점을 기준으로 교체 시기를 계산해 알려드려요.</string>
     <string name="mtab_record_action">기록하기</string>
     <string name="mtab_no_history_count">아직 기록이 없는 항목이 %1$d개 있어요</string>
+    <string name="mtab_no_history_link">기록 없는 항목 %1$d개 보기</string>
     <string name="mtab_no_history_hint">첫 기록을 남기면 교체 시기를 계산해 알려드려요</string>
     <string name="mtab_unknown_month">날짜 미상</string>
 
@@ -525,7 +510,6 @@
     <string name="report_no_quantity">수량 기록 없음</string>
     <string name="report_price_cheaper">지난달보다 %1$s당 %2$,d원 싸게 넣었어요</string>
     <string name="report_price_pricier">지난달보다 %1$s당 %2$,d원 비싸게 넣었어요</string>
-    <string name="report_earth_caption">누적 %1$,dkm · 지구 둘레 40,075km 기준</string>
     <string name="report_badge_items">항목 %1$d개</string>
     <string name="report_no_amount">금액 없음</string>
 
@@ -545,6 +529,11 @@
     <string name="fuel_monthly_cost_of">월 %1$s</string>
     <string name="fuel_history">내역</string>
     <string name="fuel_history_of">%1$s 내역</string>
+    <string name="fuel_history_this_month">이번 달 내역</string>
+    <string name="fuel_history_this_month_of">이번 달 %1$s 내역</string>
+    <string name="fuel_history_show_all">전체 보기</string>
+    <string name="fuel_history_show_this_month">이번 달만</string>
+    <string name="fuel_history_this_month_empty">이번 달 기록이 아직 없어요</string>
     <string name="fuel_sheet_title">무엇을 기록할까요?</string>
     <string name="fuel_sheet_subtitle">주유와 충전을 따로 남길 수 있어요</string>
     <string name="fuel_sheet_row_detail">금액 · %1$s(%2$s) · 단가</string>
@@ -1116,4 +1105,10 @@
 
     <!-- ───────── 언어별 콘텐츠 가용성 ───────── -->
     <string name="notice_korean_only">공지는 현재 한국어로만 제공됩니다.</string>
+    <string name="settings_section_support">문의</string>
+    <string name="settings_feedback">개선 및 의견 보내기</string>
+    <string name="settings_feedback_sub">불편한 점이나 바라는 기능을 메일로 보내 주세요</string>
+    <string name="feedback_mail_subject">[AutoLog] 개선 및 의견</string>
+    <string name="feedback_mail_body">\n\n\n---\n아래 정보는 문제를 확인하는 데만 쓰여요. 지우셔도 괜찮아요.\n앱 버전: %1$s\n기기: %2$s\nAndroid: %3$s</string>
+    <string name="feedback_no_mail_app">메일 앱이 없어 주소를 복사했어요: %1$s</string>
 </resources>

@@ -8,10 +8,13 @@ import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
 import com.jsworld.android.autolog.domain.repository.CareRepository
 import com.jsworld.android.autolog.domain.repository.MaintenanceHistoryRepository
+import com.jsworld.android.autolog.domain.repository.UserPrefsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -19,7 +22,8 @@ import kotlinx.coroutines.flow.stateIn
 class MaintenanceTabViewModel @Inject constructor(
     private val historyRepository: MaintenanceHistoryRepository,
     private val carMaintenanceRepository: CarMaintenanceRepository,
-    private val careRepository: CareRepository
+    private val careRepository: CareRepository,
+    private val userPrefsRepository: UserPrefsRepository
 ) : ViewModel() {
 
     private val recordsMap = mutableMapOf<Long, StateFlow<List<CarMaintenanceRecord>>>()
@@ -60,4 +64,23 @@ class MaintenanceTabViewModel @Inject constructor(
                 .map { list -> list.filter { !it.hasHistory }.sortedBy { it.name } }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         }
+
+    private val noHistoryBannerMap = mutableMapOf<Long, StateFlow<Boolean>>()
+
+    /**
+     * 배너를 보여줄지. 사용자가 닫으면 그 차에서는 다시 띄우지 않는다 —
+     * 항목을 새로 추가해도 마찬가지(닫았다는 건 이 안내가 필요 없다는 뜻이다).
+     */
+    fun noHistoryBannerVisibleState(carId: Long): StateFlow<Boolean> =
+        noHistoryBannerMap.getOrPut(carId) {
+            combine(
+                noHistoryItemsState(carId),
+                userPrefsRepository.observeNoHistoryBannerDismissed(carId)
+            ) { items, dismissed -> items.isNotEmpty() && !dismissed }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+        }
+
+    fun dismissNoHistoryBanner(carId: Long) {
+        viewModelScope.launch { userPrefsRepository.setNoHistoryBannerDismissed(carId) }
+    }
 }

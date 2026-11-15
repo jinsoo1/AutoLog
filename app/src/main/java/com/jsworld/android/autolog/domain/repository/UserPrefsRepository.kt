@@ -5,6 +5,10 @@ import com.jsworld.android.autolog.domain.model.MaintenanceAlertPrefs
 import kotlinx.coroutines.flow.Flow
 
 interface UserPrefsRepository {
+    /** 정비 탭 '아직 기록이 없는 항목' 배너를 닫았는지(차량별). 한 번 닫으면 다시 띄우지 않는다 */
+    fun observeNoHistoryBannerDismissed(carId: Long): Flow<Boolean>
+    suspend fun setNoHistoryBannerDismissed(carId: Long)
+
     fun observeAutoMileageUpdate(carId: Long): Flow<Boolean>
     suspend fun setAutoMileageUpdate(carId: Long, enabled: Boolean)
     fun observeWeeklyMileageNotificationEnabled(): Flow<Boolean>

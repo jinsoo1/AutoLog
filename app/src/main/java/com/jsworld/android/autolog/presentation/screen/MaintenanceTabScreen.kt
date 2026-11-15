@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Build
@@ -46,6 +47,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -172,11 +174,13 @@ fun MaintenanceTabScreen(
             // 주기는 있는데 기록이 없는 항목 안내 — 이런 항목은 계산 기준이 없어
             // 홈·리포트·알림의 임박/초과에서 빠지므로, 여기서 조용히 알려준다.
             val noHistoryItems by viewModel.noHistoryItemsState(car.id).collectAsState()
+            val showNoHistoryBanner by viewModel.noHistoryBannerVisibleState(car.id).collectAsState()
             var showNoHistorySheet by rememberSaveable(car.id) { mutableStateOf(false) }
-            if (noHistoryItems.isNotEmpty()) {
+            if (showNoHistoryBanner) {
                 NoHistoryHintBanner(
                     count = noHistoryItems.size,
-                    onClick = { showNoHistorySheet = true }
+                    onClick = { showNoHistorySheet = true },
+                    onDismiss = { viewModel.dismissNoHistoryBanner(car.id) }
                 )
                 Spacer(Modifier.height(10.dp))
             }
@@ -254,6 +258,33 @@ fun MaintenanceTabScreen(
                                     record = record,
                                     showDivider = index != monthRecords.lastIndex,
                                     onClick = { onEditHistory(record.historyId) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 배너를 닫은 뒤에도 기록 없는 항목 목록으로 갈 길은 남긴다 — 맨 아래 회색 글자 한 줄.
+                // 배너는 다시 띄우지 않는다. 항목을 다 기록하면(0개) 이 줄도 사라진다.
+                if (!showNoHistoryBanner && noHistoryItems.isNotEmpty()) {
+                    item(key = "no-history-link") {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            TextButton(onClick = { showNoHistorySheet = true }) {
+                                Text(
+                                    stringResource(R.string.mtab_no_history_link, noHistoryItems.size),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -511,7 +542,7 @@ private fun NoHistoryItemsSheet(
  * 누르면 기록 없는 항목 목록 시트가 열린다.
  */
 @Composable
-private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
+private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit, onDismiss: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
@@ -546,12 +577,15 @@ private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                 )
             }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
+            // 닫기 — 항목 목록은 정비 탭에 그대로 있으니 안내만 숨긴다
+            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.common_close),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }
