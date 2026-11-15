@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.core.util.openLocalizedAsset
 import com.jsworld.android.autolog.domain.repository.NoticeRepository
 
 import android.content.Context
@@ -24,7 +25,7 @@ class NoticeRepositoryImpl @Inject constructor(
 
     override suspend fun loadNotices(): List<Notice> = withContext(Dispatchers.IO) {
         runCatching {
-            val jsonText = context.assets.open(AUTOLOG_NOTICE)
+            val jsonText = context.openLocalizedAsset(AUTOLOG_NOTICE)
                 .bufferedReader()
                 .use { it.readText() }
 

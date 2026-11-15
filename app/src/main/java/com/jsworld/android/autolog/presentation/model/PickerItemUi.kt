@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.model
 
+import androidx.annotation.StringRes
+import com.jsworld.android.autolog.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.AcUnit
@@ -15,19 +17,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 
 enum class MaintenanceCategory(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
     val order: Int
 ) {
-    ENGINE("엔진/필터", Icons.Default.Build, 0),
-    BRAKE("브레이크", Icons.Default.Warning, 1),
-    TIRE("타이어/하체", Icons.Default.Route, 2),
-    TRANSMISSION("미션/구동", Icons.Default.Settings, 3),
-    COOLING("냉각/에어컨", Icons.Default.AcUnit, 4),
-    ELECTRIC("전기/점화", Icons.Default.ElectricBolt, 5),
-    LIGHT("조명/와이퍼", Icons.Default.Lightbulb, 6),
-    INSPECTION("검사/점검", Icons.AutoMirrored.Filled.FactCheck, 7),
-    ETC("기타", Icons.Default.MoreHoriz, 99),
+    ENGINE(R.string.cat_engine, Icons.Default.Build, 0),
+    BRAKE(R.string.cat_brake, Icons.Default.Warning, 1),
+    TIRE(R.string.cat_tire, Icons.Default.Route, 2),
+    TRANSMISSION(R.string.cat_transmission, Icons.Default.Settings, 3),
+    COOLING(R.string.cat_cooling, Icons.Default.AcUnit, 4),
+    ELECTRIC(R.string.cat_electric, Icons.Default.ElectricBolt, 5),
+    LIGHT(R.string.cat_light, Icons.Default.Lightbulb, 6),
+    INSPECTION(R.string.cat_inspection, Icons.AutoMirrored.Filled.FactCheck, 7),
+    ETC(R.string.cat_etc, Icons.Default.MoreHoriz, 99),
 }
 
 fun categoryOf(name: String): MaintenanceCategory {

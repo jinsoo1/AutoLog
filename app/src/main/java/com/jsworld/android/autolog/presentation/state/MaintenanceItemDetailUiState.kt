@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.state
 
+import com.jsworld.android.autolog.core.ui.UiText
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 
@@ -15,7 +16,7 @@ data class MaintenanceItemDetailUiState(
     val usingDefaultIntervals: Boolean = true,
 
     val status: MaintenanceStatus = MaintenanceStatus.NORMAL,
-    val remainingText: String = "",
+    val remainingText: UiText = UiText.Empty,
     val progressRatio: Float? = null,
 
     val lastServiceMileage: Int? = null,

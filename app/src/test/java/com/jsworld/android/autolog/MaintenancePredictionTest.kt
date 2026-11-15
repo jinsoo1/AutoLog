@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.core.ui.UiText
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.DrivingPace
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
@@ -38,7 +40,7 @@ class MaintenancePredictionTest {
         settingId: Long = 1L
     ) = MaintenanceUiModel(
         settingId = settingId, name = name, status = MaintenanceStatus.NORMAL,
-        remainingText = "", hasHistory = hasHistory,
+        remainingText = UiText.Empty, hasHistory = hasHistory,
         remainingKm = remainingKm, remainingDays = remainingDays
     )
 
@@ -132,10 +134,10 @@ class MaintenancePredictionTest {
 
     @Test
     fun `예측 해상도는 초·중순·말, 해가 바뀌면 달만`() {
-        assertEquals("8월 중순", predictedDateLabel(LocalDate.of(2026, 8, 15), today))
-        assertEquals("11월 초", predictedDateLabel(LocalDate.of(2026, 11, 3), today))
-        assertEquals("12월 말", predictedDateLabel(LocalDate.of(2026, 12, 28), today))
-        assertEquals("내년 6월", predictedDateLabel(LocalDate.of(2027, 6, 10), today))
-        assertEquals("2029년 3월", predictedDateLabel(LocalDate.of(2029, 3, 10), today))
+        assertEquals("8월 중순", predictedDateLabel(LocalDate.of(2026, 8, 15), today).ko())
+        assertEquals("11월 초", predictedDateLabel(LocalDate.of(2026, 11, 3), today).ko())
+        assertEquals("12월 말", predictedDateLabel(LocalDate.of(2026, 12, 28), today).ko())
+        assertEquals("내년 6월", predictedDateLabel(LocalDate.of(2027, 6, 10), today).ko())
+        assertEquals("2029년 3월", predictedDateLabel(LocalDate.of(2029, 3, 10), today).ko())
     }
 }

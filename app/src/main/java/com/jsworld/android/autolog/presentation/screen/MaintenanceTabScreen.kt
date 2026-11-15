@@ -1,5 +1,11 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.util.isAssetAvailableInCurrentLanguage
+import com.jsworld.android.autolog.core.util.Constant
+import androidx.compose.ui.platform.LocalContext
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -91,7 +97,7 @@ fun MaintenanceTabScreen(
                 ExtendedFloatingActionButton(
                     onClick = { onAddMaintenance(car.id, null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("정비 기록") }
+                    text = { Text(stringResource(R.string.mtab_add_record)) }
                 )
             }
         },
@@ -114,7 +120,7 @@ fun MaintenanceTabScreen(
             )
 
             if (car == null) {
-                EmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
+                EmptyMessage(stringResource(R.string.empty_no_car_title), stringResource(R.string.empty_no_car_body))
                 return@Column
             }
 
@@ -157,8 +163,8 @@ fun MaintenanceTabScreen(
 
             if (records.isEmpty()) {
                 EmptyMessage(
-                    "아직 정비 기록이 없어요",
-                    "오른쪽 아래 '정비 기록'으로 첫 기록을 남겨보세요."
+                    stringResource(R.string.mtab_empty_title),
+                    stringResource(R.string.mtab_empty_body)
                 )
                 return@Column
             }
@@ -195,7 +201,7 @@ fun MaintenanceTabScreen(
                         FilterChip(
                             selected = activeFilter == null,
                             onClick = { filter = null },
-                            label = { Text("전체") }
+                            label = { Text(stringResource(R.string.common_all)) }
                         )
                     }
                     if (hasRepairs) {
@@ -205,7 +211,7 @@ fun MaintenanceTabScreen(
                                 onClick = {
                                     filter = if (activeFilter == REPAIR_FILTER) null else REPAIR_FILTER
                                 },
-                                label = { Text("수리") }
+                                label = { Text(stringResource(R.string.status_repair)) }
                             )
                         }
                     }
@@ -213,7 +219,7 @@ fun MaintenanceTabScreen(
                         FilterChip(
                             selected = activeFilter == name,
                             onClick = { filter = if (activeFilter == name) null else name },
-                            label = { Text(name, maxLines = 1) }
+                            label = { Text(name.localizedItemName(), maxLines = 1) }
                         )
                     }
                 }
@@ -221,7 +227,7 @@ fun MaintenanceTabScreen(
             }
 
             // 월별로 묶는다. 기록은 이미 최신순이므로 순서를 유지하는 그룹핑이면 된다.
-            val grouped = remember(shown) { shown.groupBy { it.monthLabel() } }
+            val grouped = remember(shown) { shown.groupBy { it.monthKey() } }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -230,17 +236,18 @@ fun MaintenanceTabScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                grouped.forEach { (month, monthRecords) ->
-                    item(key = "month-$month") {
+                grouped.forEach { (monthKey, monthRecords) ->
+                    item(key = "month-$monthKey") {
                         Text(
-                            month,
+                            monthKey?.let { stringResource(R.string.date_year_month, it.year, it.monthValue) }
+                                ?: stringResource(R.string.mtab_unknown_month),
                             modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    item(key = "records-$month") {
+                    item(key = "records-$monthKey") {
                         ListCard {
                             monthRecords.forEachIndexed { index, record ->
                                 TimelineRow(
@@ -265,7 +272,7 @@ private fun TimelineRow(
 ) {
     // 아이콘은 항목의 정체를, 배지는 기록의 성격을 말한다.
     // 세차·관리 기록은 이 타임라인에 오지 않는다(세차 허브 전담).
-    val badgeLabel = if (record.isRepair) "수리" else null
+    val badgeLabel = if (record.isRepair) stringResource(R.string.status_repair) else null
     val container =
         if (record.isRepair) MaterialTheme.colorScheme.secondaryContainer
         else MaterialTheme.colorScheme.primaryContainer
@@ -295,7 +302,7 @@ private fun TimelineRow(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        record.typeName,
+                        record.typeName.localizedItemName(),
                         modifier = Modifier.weight(1f, fill = false),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
@@ -378,9 +385,17 @@ private fun EntryChipRow(
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        EntryChip(Icons.Default.LocalCarWash, "세차·관리", Modifier.weight(1f), onOpenCare)
-        EntryChip(Icons.Outlined.Troubleshoot, "증상 가이드", Modifier.weight(1f), onOpenSymptomGuide)
-        EntryChip(Icons.Default.Tune, "항목 관리", Modifier.weight(1f), onManageItems)
+        // 증상 가이드는 한국어 콘텐츠다 — 현재 언어의 가이드 파일이 없으면 진입점을 숨긴다.
+        // 읽을 수 없는 안전 안내를 보이는 것보다 없는 편이 정직하다.
+        val context = LocalContext.current
+        val symptomGuideAvailable = remember(context) {
+            context.isAssetAvailableInCurrentLanguage(Constant.AUTOLOG_SYMPTOM_GUIDE)
+        }
+        EntryChip(Icons.Default.LocalCarWash, stringResource(R.string.mtab_entry_care), Modifier.weight(1f), onOpenCare)
+        if (symptomGuideAvailable) {
+            EntryChip(Icons.Outlined.Troubleshoot, stringResource(R.string.mtab_entry_symptom), Modifier.weight(1f), onOpenSymptomGuide)
+        }
+        EntryChip(Icons.Default.Tune, stringResource(R.string.mtab_entry_manage), Modifier.weight(1f), onManageItems)
     }
 }
 
@@ -439,13 +454,13 @@ private fun NoHistoryItemsSheet(
                 .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
         ) {
             Text(
-                "아직 기록이 없는 항목",
+                stringResource(R.string.mtab_no_history_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "첫 기록을 남기면 그 시점을 기준으로 교체 시기를 계산해 알려드려요.",
+                stringResource(R.string.mtab_no_history_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -467,7 +482,7 @@ private fun NoHistoryItemsSheet(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        item.name,
+                        item.name.localizedItemName(),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
@@ -478,7 +493,7 @@ private fun NoHistoryItemsSheet(
                         onClick = { onRecord(item.settingId) },
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
                     ) {
-                        Text("기록하기", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.mtab_record_action), style = MaterialTheme.typography.labelMedium)
                     }
                 }
                 if (index != items.lastIndex) {
@@ -520,13 +535,13 @@ private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "아직 기록이 없는 항목이 ${count}개 있어요",
+                    stringResource(R.string.mtab_no_history_count, count),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
-                    "첫 기록을 남기면 교체 시기를 계산해 알려드려요",
+                    stringResource(R.string.mtab_no_history_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                 )
@@ -544,9 +559,6 @@ private fun NoHistoryHintBanner(count: Int, onClick: () -> Unit) {
 /** 필터 칩에서 "수리/관리 전체"를 뜻하는 값. 항목 이름과 겹치지 않게 제어문자를 쓴다. */
 private const val REPAIR_FILTER = "\u0000repair"
 
-/** "2026년 7월". 날짜가 없는 기록은 맨 아래 "날짜 미상"으로 모은다. */
-private fun CarMaintenanceRecord.monthLabel(): String {
-    val date = serviceDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        ?: return "날짜 미상"
-    return "${date.year}년 ${date.monthValue}월"
-}
+/** 그룹핑 키 — "2026-07". 날짜가 없는 기록은 null 로 모아 맨 아래 "날짜 미상"으로 그린다. */
+private fun CarMaintenanceRecord.monthKey(): java.time.YearMonth? =
+    serviceDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.let { java.time.YearMonth.from(it) }

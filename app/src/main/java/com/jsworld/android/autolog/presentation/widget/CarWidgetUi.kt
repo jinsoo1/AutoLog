@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.widget
 
+import com.jsworld.android.autolog.core.ui.UiText
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 
 data class CarWidgetUi(
@@ -15,7 +16,7 @@ data class MaintenanceProgressRow(
     val name: String,
     val status: MaintenanceStatus,
     val progress: Float,      // 0..1
-    val remainText: String    // "초과 1200km" / "잔여 22100km·1096일"
+    val remainText: UiText    // "초과 1200km" / "잔여 22100km·1096일"
 )
 
 data class RowWithKey(

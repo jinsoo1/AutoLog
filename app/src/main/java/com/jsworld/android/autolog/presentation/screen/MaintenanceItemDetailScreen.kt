@@ -1,5 +1,11 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import com.jsworld.android.autolog.core.ui.isBlank
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,7 +84,7 @@ fun MaintenanceItemDetailScreen(
                 title = {
                     Column {
                         Text(
-                            ui.typeName,
+                            ui.typeName.localizedItemName(),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -93,12 +99,12 @@ fun MaintenanceItemDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onEditIntervals) {
-                        Icon(Icons.Default.Edit, contentDescription = "교체 주기 수정")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.id_edit_cycle))
                     }
                 }
             )
@@ -116,7 +122,7 @@ fun MaintenanceItemDetailScreen(
                             onClick = { onAddRecord(ui.carId) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("이 항목 기록 추가", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.id_add_record), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -134,6 +140,8 @@ fun MaintenanceItemDetailScreen(
             return@Scaffold
         }
 
+        // LazyListScope 안에서는 컴포저블을 부를 수 없어 위에서 굳힌다
+        val averages = ui.averageLabel()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -153,12 +161,14 @@ fun MaintenanceItemDetailScreen(
 
             item {
                 SectionLabel(
-                    title = when {
-                        ui.isRepair && isCareItemName(ui.typeName) -> "관리 내역"
-                        ui.isRepair -> "수리 내역"
-                        else -> "교체 내역"
-                    },
-                    actionLabel = if (ui.histories.isNotEmpty()) "${ui.histories.size}건" else null
+                    title = stringResource(
+                        when {
+                            ui.isRepair && isCareItemName(ui.typeName) -> R.string.id_history_care
+                            ui.isRepair -> R.string.id_history_repair
+                            else -> R.string.id_history_replace
+                        }
+                    ),
+                    actionLabel = if (ui.histories.isNotEmpty()) stringResource(R.string.count_cases, ui.histories.size) else null
                 )
             }
 
@@ -166,11 +176,13 @@ fun MaintenanceItemDetailScreen(
                 item {
                     ListCard {
                         Text(
-                            when {
-                                ui.isRepair && isCareItemName(ui.typeName) -> "아직 관리 기록이 없어요."
-                                ui.isRepair -> "아직 수리 기록이 없어요."
-                                else -> "아직 교체 기록이 없어요."
-                            },
+                            stringResource(
+                                when {
+                                    ui.isRepair && isCareItemName(ui.typeName) -> R.string.id_no_care
+                                    ui.isRepair -> R.string.id_no_repair
+                                    else -> R.string.id_no_replace
+                                }
+                            ),
                             modifier = Modifier.padding(vertical = 16.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -197,7 +209,6 @@ fun MaintenanceItemDetailScreen(
                 }
             }
 
-            val averages = ui.averageLabel()
             if (averages != null) {
                 item {
                     Card(
@@ -248,24 +259,24 @@ private fun IntervalRow(ui: MaintenanceItemDetailUiState, onClick: () -> Unit) {
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "교체 주기",
+                    stringResource(R.string.id_cycle),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
                 val parts = buildList {
                     ui.intervalKm?.let { add("${it.formatThousands()}km") }
-                    ui.intervalMonths?.let { add("${it}개월") }
+                    ui.intervalMonths?.let { add(stringResource(R.string.duration_months, it)) }
                 }
                 Text(
                     parts.joinToString(" · ") +
-                        if (ui.usingDefaultIntervals) " (기본값)" else "",
+                        if (ui.usingDefaultIntervals) stringResource(R.string.id_default_suffix) else "",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
             Text(
-                "수정",
+                stringResource(R.string.common_edit),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -307,13 +318,13 @@ private fun RepairInfoCard(isCare: Boolean) {
             Spacer(Modifier.width(11.dp))
             Column {
                 Text(
-                    if (isCare) "세차·관리 기록" else "일회성 수리",
+                    stringResource(if (isCare) R.string.id_care_record else R.string.id_one_time_repair),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = onContainer
                 )
                 Text(
-                    "임박 알림·다음 정비에 나타나지 않아요",
+                    stringResource(R.string.id_not_in_alerts),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -347,15 +358,13 @@ private fun PromoteToIntervalCard(onClick: () -> Unit) {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                buildString {
-                    append("반복해서 갈게 되는 부품이라면 주기를 설정해 관리 항목으로 바꿀 수 있어요.")
-                },
+                stringResource(R.string.id_set_cycle_hint),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "주기 설정",
+                stringResource(R.string.id_set_cycle),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -395,17 +404,17 @@ private fun StatusCard(ui: MaintenanceItemDetailUiState) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         when (ui.status) {
-                            MaintenanceStatus.OVERDUE -> "교체 초과"
-                            MaintenanceStatus.SOON -> "교체 임박"
-                            MaintenanceStatus.NORMAL -> "상태 좋아요"
+                            MaintenanceStatus.OVERDUE -> stringResource(R.string.id_status_overdue)
+                            MaintenanceStatus.SOON -> stringResource(R.string.id_status_soon)
+                            MaintenanceStatus.NORMAL -> stringResource(R.string.maint_summary_good_title)
                         },
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = accent
                     )
-                    if (ui.remainingText.isNotBlank()) {
+                    if (!ui.remainingText.isBlank()) {
                         Text(
-                            ui.remainingText,
+                            ui.remainingText.asString(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -466,7 +475,7 @@ private fun HistoryRow(
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    history.serviceDate ?: "날짜 미상",
+                    history.serviceDate ?: stringResource(R.string.id_date_unknown),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -498,32 +507,38 @@ private fun HistoryRow(
     }
 }
 
+@Composable
+@ReadOnlyComposable
 private fun MaintenanceItemDetailUiState.intervalLabel(): String {
     val parts = buildList {
         intervalKm?.let { add("${it.formatThousands()}km") }
-        intervalMonths?.let { add("${it}개월") }
+        intervalMonths?.let { add(stringResource(R.string.duration_months, it)) }
     }
     if (parts.isEmpty()) {
-        return if (isCareItemName(typeName)) "관리 기록 · 주기 없음" else "일회성 수리 · 주기 없음"
+        return stringResource(if (isCareItemName(typeName)) R.string.id_care_no_cycle else R.string.id_repair_no_cycle)
     }
-    val suffix = if (usingDefaultIntervals) " 주기(기본값)" else " 주기"
+    val suffix = stringResource(if (usingDefaultIntervals) R.string.id_cycle_suffix_default else R.string.id_cycle_suffix)
     return parts.joinToString(" · ") + suffix
 }
 
+@Composable
+@ReadOnlyComposable
 private fun MaintenanceItemDetailUiState.mileageLabel(): String? {
     val last = lastServiceMileage ?: return null
     val next = nextDueMileage
     return if (next != null) {
-        "${last.formatThousands()}km 교체 · 다음 ${next.formatThousands()}km"
+        stringResource(R.string.id_mileage_next, last.formatThousands(), next.formatThousands())
     } else {
-        "${last.formatThousands()}km 교체"
+        stringResource(R.string.id_mileage_only, last.formatThousands())
     }
 }
 
+@Composable
+@ReadOnlyComposable
 private fun MaintenanceItemDetailUiState.averageLabel(): String? {
     val parts = buildList {
-        averageIntervalKm?.let { add("평균 ${it.formatThousands()}km마다 교체") }
-        averageCost?.let { add("평균 ${it.formatThousands()}원") }
+        averageIntervalKm?.let { add(stringResource(R.string.id_avg_interval, it.formatThousands())) }
+        averageCost?.let { add(stringResource(R.string.id_avg_cost, it.formatThousands())) }
     }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }

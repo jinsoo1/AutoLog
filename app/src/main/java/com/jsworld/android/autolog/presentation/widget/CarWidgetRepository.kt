@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.widget
 
+import com.jsworld.android.autolog.core.ui.UiText
+import com.jsworld.android.autolog.R
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.data.local.dao.CarDao
 import com.jsworld.android.autolog.data.local.dao.MaintenanceFullDao
@@ -32,7 +34,7 @@ class CarWidgetRepository @Inject constructor(
 
     suspend fun getCarWidgetUiOnce(carId: Long, maxRows: Int = 4): CarWidgetUi {
         val car = carDao.getCarById(carId).first() ?: run {
-            return CarWidgetUi("차량", "-", 0, MaintenanceStatus.NORMAL, 0, emptyList())
+            return CarWidgetUi("—", "-", 0, MaintenanceStatus.NORMAL, 0, emptyList())
         }
 
         val carMileage = car.mileage
@@ -64,7 +66,7 @@ class CarWidgetRepository @Inject constructor(
                         name = type.name,
                         status = MaintenanceStatus.NORMAL,
                         progress = 0f,
-                        remainText = "첫 기록 필요"
+                        remainText = UiText.Res(R.string.widget_first_record)
                     ),
                     statusRank = 2,
                     urgentKey = Long.MAX_VALUE // 정상 항목들보다도 뒤로
@@ -130,9 +132,15 @@ class CarWidgetRepository @Inject constructor(
                 } else null
             ).maxOrNull() ?: 0f
 
-            val kmRemainText = remainingKm?.let { if (it < 0) "초과 ${abs(it).formatKm()}km" else "잔여 ${it.formatKm()}km" }
-            val dayRemainText = remainingDays?.let { if (it < 0) "초과 ${kotlin.math.abs(it)}일" else "잔여 ${it}일" }
-            val remainText = listOfNotNull(kmRemainText, dayRemainText).joinToString(" · ").ifBlank { "-" }
+            val kmRemainText = remainingKm?.let {
+                if (it < 0) UiText.Res(R.string.maint_over_km, abs(it)) else UiText.Res(R.string.widget_remain_km, it)
+            }
+            val dayRemainText = remainingDays?.let {
+                if (it < 0) UiText.Res(R.string.maint_over_days, kotlin.math.abs(it)) else UiText.Res(R.string.widget_remain_days, it)
+            }
+            val remainText: UiText =
+                listOfNotNull(kmRemainText, dayRemainText).takeIf { it.isNotEmpty() }?.let { UiText.Joined(it) }
+                    ?: UiText.Raw("-")
 
             val row = MaintenanceProgressRow(
                 name = type.name,

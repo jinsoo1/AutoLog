@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.worker
 
+import com.jsworld.android.autolog.core.ui.asString
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -74,15 +75,15 @@ class SeasonalCareNotifier @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val body = seasonalNotificationBody(guide)
+        val body = seasonalNotificationBody(guide).asString(context)
         val notification = NotificationCompat.Builder(
             context,
             AutoLogNotificationHelper.SEASONAL_CHANNEL_ID
         )
             .setSmallIcon(R.drawable.ic_stat_autolog)
-            .setContentTitle(guide.title)
+            .setContentTitle(guide.title.asString(context))
             .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$body\n\n${guide.subtitle}"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$body\n\n${guide.subtitle.asString(context)}"))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

@@ -1,5 +1,10 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -137,7 +142,7 @@ fun CarScheduleScreen(
                 title = {
                     Column {
                         Text(
-                            "검사·보험·세금",
+                            stringResource(R.string.schedule_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -160,7 +165,7 @@ fun CarScheduleScreen(
                             if (switchable) {
                                 Icon(
                                     Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "차량 전환",
+                                    contentDescription = stringResource(R.string.car_switcher_switch),
                                     modifier = Modifier.size(17.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -170,7 +175,7 @@ fun CarScheduleScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -186,7 +191,7 @@ fun CarScheduleScreen(
             item { ScheduleHeroCard(nearest, today) }
 
             if (sorted.isNotEmpty()) {
-                item { SectionLabel("등록된 일정") }
+                item { SectionLabel(stringResource(R.string.schedule_registered)) }
                 item {
                     ListCard {
                         Column {
@@ -214,9 +219,7 @@ fun CarScheduleScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "정기검사는 최초 등록일 기준으로 계산해요 (비사업용 승용: 신차 4년, " +
-                                "이후 2년). 차종에 따라 다를 수 있으니 등록증의 유효기간으로 " +
-                                "맞춰주세요.",
+                            stringResource(R.string.schedule_inspection_note),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -237,12 +240,12 @@ fun CarScheduleScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "일정 추가",
+                                stringResource(R.string.schedule_add),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                "정기검사 · 보험 만기 · 자동차세 · 직접 입력",
+                                stringResource(R.string.schedule_add_sub),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -385,20 +388,20 @@ private fun ScheduleHeroCard(nearest: CarSchedule?, today: LocalDate) {
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "등록된 일정이 없어요",
+                        stringResource(R.string.schedule_empty_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = content
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        "정기검사·보험 만기는 기록이 없어도 챙길 수 있어요",
+                        stringResource(R.string.schedule_empty_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = content.copy(alpha = 0.8f)
                     )
                 } else {
                     Text(
-                        "가장 가까운 일정 · ${nearest.title}",
+                        stringResource(R.string.schedule_nearest, nearest.title.localizedItemName()),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         color = content.copy(alpha = 0.75f)
@@ -413,7 +416,7 @@ private fun ScheduleHeroCard(nearest: CarSchedule?, today: LocalDate) {
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            if (remaining >= 0) "일 남음" else "일 지남",
+                            stringResource(if (remaining >= 0) R.string.schedule_days_left_unit else R.string.schedule_days_over_unit),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = content.copy(alpha = 0.85f),
@@ -422,7 +425,7 @@ private fun ScheduleHeroCard(nearest: CarSchedule?, today: LocalDate) {
                     }
                     Text(
                         listOfNotNull(
-                            formatScheduleDate(nearest.dueDate, today),
+                            formatScheduleDate(nearest.dueDate, today).asString(),
                             nearest.memo?.takeIf { it.isNotBlank() }
                         ).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
@@ -436,7 +439,7 @@ private fun ScheduleHeroCard(nearest: CarSchedule?, today: LocalDate) {
                             shape = CircleShape
                         ) {
                             Text(
-                                "갱신 전에 견적 비교해보세요",
+                                stringResource(R.string.schedule_insurance_tip),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
@@ -473,13 +476,13 @@ private fun ScheduleRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                schedule.title,
+                schedule.title.localizedItemName(),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 listOfNotNull(
-                    formatScheduleDate(schedule.dueDate, today),
+                    formatScheduleDate(schedule.dueDate, today).asString(),
                     schedule.repeatMonths?.let { repeatLabel(it) },
                     schedule.memo?.takeIf { it.isNotBlank() }
                 ).joinToString(" · "),
@@ -526,9 +529,11 @@ private fun ScheduleType.icon(): ImageVector = when (this) {
     ScheduleType.CUSTOM -> Icons.Outlined.CalendarMonth
 }
 
+@Composable
+@ReadOnlyComposable
 private fun repeatLabel(months: Int): String = when {
-    months % 12 == 0 -> "${months / 12}년마다"
-    else -> "${months}개월마다"
+    months % 12 == 0 -> stringResource(R.string.schedule_repeat_years, months / 12)
+    else -> stringResource(R.string.schedule_repeat_months, months)
 }
 
 /* ───────────────────────── 추가·수정 시트 ───────────────────────── */
@@ -550,7 +555,9 @@ private fun ScheduleEditSheet(
     ) -> Unit
 ) {
     var type by rememberSaveable { mutableStateOf(existing?.type ?: ScheduleType.INSPECTION) }
-    var title by rememberSaveable { mutableStateOf(existing?.title ?: "") }
+    // 한국어 프리셋 원문으로 저장된 일정도 수정 칸에는 표시 언어로 채운다(제목은 식별자가 아니다).
+    val existingTitle = existing?.title?.localizedItemName()
+    var title by rememberSaveable { mutableStateOf(existingTitle ?: "") }
     var dueDate by rememberSaveable { mutableStateOf(existing?.dueDate ?: "") }
     var repeatMonths by rememberSaveable { mutableStateOf(existing?.repeatMonths) }
     var memo by rememberSaveable { mutableStateOf(existing?.memo ?: "") }
@@ -562,10 +569,12 @@ private fun ScheduleEditSheet(
     // 프리셋을 고르면 제목·날짜·주기를 채워준다. 이미 손댄 값은 덮지 않는다.
     var touched by rememberSaveable { mutableStateOf(existing != null) }
 
+    // 프리셋 제목은 표시 언어로 채운다 — 제목은 식별자가 아니라 사용자가 고칠 수 있는 이름이다.
+    val presetLabels = ScheduleType.entries.associateWith { it.presetLabel() }
     fun applyPreset(next: ScheduleType) {
         type = next
         if (touched) return
-        title = next.presetTitle()
+        title = presetLabels.getValue(next)
         repeatMonths = next.presetRepeat()
         dueDate = when (next) {
             ScheduleType.INSPECTION -> suggestInspectionDate(carYear, today)?.toString().orEmpty()
@@ -591,14 +600,14 @@ private fun ScheduleEditSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (existing == null) "일정 추가" else "일정 수정",
+                    stringResource(if (existing == null) R.string.schedule_add else R.string.schedule_edit),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
                 if (onDelete != null) {
                     TextButton(onClick = onDelete) {
-                        Text("삭제", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -606,7 +615,7 @@ private fun ScheduleEditSheet(
 
             if (existing == null) {
                 Text(
-                    "종류",
+                    stringResource(R.string.schedule_type),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -615,7 +624,7 @@ private fun ScheduleEditSheet(
                         FilterChip(
                             selected = type == option,
                             onClick = { applyPreset(option) },
-                            label = { Text(option.presetTitle(), maxLines = 1) }
+                            label = { Text(presetLabels.getValue(option), maxLines = 1) }
                         )
                     }
                 }
@@ -625,23 +634,23 @@ private fun ScheduleEditSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it; touched = true },
-                label = { Text("이름") },
+                label = { Text(stringResource(R.string.schedule_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
-                value = if (dueDate.isBlank()) "" else formatScheduleDate(dueDate, today),
+                value = if (dueDate.isBlank()) "" else formatScheduleDate(dueDate, today).asString(),
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("날짜") },
-                placeholder = { Text("날짜를 선택해주세요") },
+                label = { Text(stringResource(R.string.common_date)) },
+                placeholder = { Text(stringResource(R.string.schedule_pick_date)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showDatePicker = true },
                 trailingIcon = {
-                    TextButton(onClick = { showDatePicker = true }) { Text("변경") }
+                    TextButton(onClick = { showDatePicker = true }) { Text(stringResource(R.string.common_change)) }
                 }
             )
             if (type == ScheduleType.INSPECTION && existing == null) {
@@ -655,7 +664,7 @@ private fun ScheduleEditSheet(
                             // 오타(1980 미만·내년 초과)면 null 이라 날짜를 건드리지 않는다.
                             suggestInspectionDate(yearInput, today)?.let { dueDate = it.toString() }
                         },
-                        label = { Text("연식") },
+                        label = { Text(stringResource(R.string.schedule_year_label)) },
                         placeholder = { Text("2021") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -663,19 +672,16 @@ private fun ScheduleEditSheet(
                     )
                     Text(
                         when {
-                            yearInput.length < 4 ->
-                                "연식을 알려주시면 검사 시기를 계산해드려요 (직접 골라도 돼요)"
-                            suggestInspectionDate(yearInput, today) == null ->
-                                "연식을 다시 확인해주세요"
-                            else ->
-                                "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요."
+                            yearInput.length < 4 -> stringResource(R.string.schedule_year_hint_enter)
+                            suggestInspectionDate(yearInput, today) == null -> stringResource(R.string.schedule_year_hint_check)
+                            else -> stringResource(R.string.schedule_year_hint_suggested)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Text(
-                        "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요.",
+                        stringResource(R.string.schedule_year_hint_suggested),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -689,7 +695,7 @@ private fun ScheduleEditSheet(
                     repeatMonths = input.filter { it.isDigit() }.take(3).toIntOrNull()
                     touched = true
                 },
-                label = { Text("반복 (개월, 비우면 1회성)") },
+                label = { Text(stringResource(R.string.schedule_repeat_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -699,8 +705,8 @@ private fun ScheduleEditSheet(
             OutlinedTextField(
                 value = memo,
                 onValueChange = { memo = it },
-                label = { Text("메모 (선택)") },
-                placeholder = { Text("예: OO화재") },
+                label = { Text(stringResource(R.string.common_memo_optional)) },
+                placeholder = { Text(stringResource(R.string.schedule_memo_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -712,8 +718,7 @@ private fun ScheduleEditSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (existing?.repeatMonths != null) "완료 — 다음 회차로 넘기기"
-                        else "완료 — 일정 지우기",
+                        stringResource(if (existing?.repeatMonths != null) R.string.schedule_done_next else R.string.schedule_done_remove),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -731,7 +736,7 @@ private fun ScheduleEditSheet(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("저장", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.common_save), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -753,10 +758,10 @@ private fun ScheduleEditSheet(
                         touched = true
                     }
                     showDatePicker = false
-                }) { Text("확인") }
+                }) { Text(stringResource(R.string.common_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("취소") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         ) {
             DatePicker(state = state)
@@ -764,11 +769,20 @@ private fun ScheduleEditSheet(
     }
 }
 
+/** 저장용 제목 — 한국어 원문으로 고정한다(LocalizedNames 가 표시 언어로 바꾼다). */
 internal fun ScheduleType.presetTitle(): String = when (this) {
     ScheduleType.INSPECTION -> "정기검사"
     ScheduleType.INSURANCE -> "보험 만기"
     ScheduleType.TAX -> "자동차세"
     ScheduleType.CUSTOM -> "직접 입력"
+}
+
+/** 표시용 라벨 */
+@Composable
+@ReadOnlyComposable
+internal fun ScheduleType.presetLabel(): String = when (this) {
+    ScheduleType.CUSTOM -> stringResource(R.string.schedule_custom)
+    else -> presetTitle().localizedItemName()
 }
 
 internal fun ScheduleType.presetRepeat(): Int? = when (this) {

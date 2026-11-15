@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -137,16 +139,16 @@ fun MaintenanceHistoryEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("정비 내역 수정") },
+                title = { Text(stringResource(R.string.he_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (ui.showUpdateCarDialog) viewModel.dismissUpdateCarDialog()
                         else onBack()
-                    }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기") }
+                    }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.delete(onDone = onBack) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "삭제")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete))
                     }
                 }
             )
@@ -168,14 +170,14 @@ fun MaintenanceHistoryEditScreen(
                         modifier = Modifier.weight(1f),
                         onClick = onBack
                     ) {
-                        Text("취소")
+                        Text(stringResource(R.string.common_cancel))
                     }
 
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = { viewModel.save(onDone = onBack) }
                     ) {
-                        Text("저장")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             }
@@ -208,7 +210,7 @@ fun MaintenanceHistoryEditScreen(
                         Icon(Icons.Default.Info, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "이전/다음 내역 범위 안에서만 수정할 수 있어요",
+                            stringResource(R.string.he_range_note),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -216,19 +218,19 @@ fun MaintenanceHistoryEditScreen(
 
                     RangeLine(
                         icon = Icons.Default.DateRange,
-                        label = "날짜",
+                        label = stringResource(R.string.common_date),
                         value = dateRangeText
                     )
                     RangeLine(
                         icon = Icons.Default.Route,
-                        label = "주행거리",
+                        label = stringResource(R.string.common_mileage),
                         value = mileageRangeText
                     )
 
                     if (ui.isLast) {
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "※ 마지막 내역입니다. 주행거리 변경 시 차량 최종 주행거리 업데이트 여부를 확인합니다.",
+                            stringResource(R.string.he_last_note),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -268,7 +270,7 @@ fun MaintenanceHistoryEditScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "정비 정보",
+                        stringResource(R.string.he_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -276,7 +278,7 @@ fun MaintenanceHistoryEditScreen(
                     OutlinedTextField(
                         value = ui.date,
                         onValueChange = viewModel::onDateChange,
-                        label = { Text("정비 날짜") },
+                        label = { Text(stringResource(R.string.he_date)) },
                         placeholder = { Text("yyyy-MM-dd") },
                         leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
                         // 직접 입력도 가능하지만, 달력으로 고르는 편이 빠르고 실수도 없다
@@ -284,7 +286,7 @@ fun MaintenanceHistoryEditScreen(
                             IconButton(onClick = { showDatePicker = true }) {
                                 Icon(
                                     Icons.Default.CalendarMonth,
-                                    contentDescription = "날짜 선택"
+                                    contentDescription = stringResource(R.string.am_pick_date)
                                 )
                             }
                         },
@@ -295,8 +297,8 @@ fun MaintenanceHistoryEditScreen(
                     OutlinedTextField(
                         value = ui.mileage,
                         onValueChange = { viewModel.onMileageChange(it.filter(Char::isDigit)) },
-                        label = { Text("정비 주행거리") },
-                        placeholder = { Text("예: 37,900") },
+                        label = { Text(stringResource(R.string.he_mileage)) },
+                        placeholder = { Text(stringResource(R.string.he_mileage_placeholder)) },
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                         trailingIcon = { Text("km", style = MaterialTheme.typography.labelMedium) },
                         singleLine = true,
@@ -308,8 +310,8 @@ fun MaintenanceHistoryEditScreen(
                     OutlinedTextField(
                         value = ui.place,
                         onValueChange = viewModel::onPlaceChange,
-                        label = { Text("장소") },
-                        placeholder = { Text("예: 현대 블루핸즈") },
+                        label = { Text(stringResource(R.string.common_place)) },
+                        placeholder = { Text(stringResource(R.string.he_place_placeholder)) },
                         leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -318,10 +320,10 @@ fun MaintenanceHistoryEditScreen(
                     OutlinedTextField(
                         value = ui.cost,
                         onValueChange = { viewModel.onCostChange(it.filter(Char::isDigit)) },
-                        label = { Text("비용") },
-                        placeholder = { Text("예: 120,000") },
+                        label = { Text(stringResource(R.string.common_cost)) },
+                        placeholder = { Text(stringResource(R.string.he_cost_placeholder)) },
                         leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
-                        trailingIcon = { Text("원", style = MaterialTheme.typography.labelMedium) },
+                        trailingIcon = { Text(stringResource(R.string.money_unit), style = MaterialTheme.typography.labelMedium) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -331,8 +333,8 @@ fun MaintenanceHistoryEditScreen(
                     OutlinedTextField(
                         value = ui.memo,
                         onValueChange = viewModel::onMemoChange,
-                        label = { Text("메모") },
-                        placeholder = { Text("작업 내용, 부품명 등") },
+                        label = { Text(stringResource(R.string.common_memo)) },
+                        placeholder = { Text(stringResource(R.string.he_memo_placeholder)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
@@ -418,9 +420,9 @@ private fun MileageUpdateDialog(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("주행거리 업데이트", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.mu_title), fontWeight = FontWeight.Bold)
                     Text(
-                        "차량 주행거리를 업데이트할까요?",
+                        stringResource(R.string.mu_question),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -431,7 +433,7 @@ private fun MileageUpdateDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
                 Text(
-                    text = "현재 차량 주행거리(${currentMileage.formatKm()}km)에서 이번 정비 주행거리(${newMileage.formatKm()}km)로 업데이트 할까요?",
+                    text = stringResource(R.string.mu_body, currentMileage.formatKm(), newMileage.formatKm()),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -447,21 +449,21 @@ private fun MileageUpdateDialog(
                                 Icon(Icons.Default.Warning, contentDescription = null, tint = warnColor)
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "입력값이 너무 크게 보입니다",
+                                    stringResource(R.string.mu_suspicious_title),
                                     color = warnOnContainer,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
 
-                            val maxText = maxHistoryMileage?.let { "${it.formatKm()}km" } ?: "없음"
+                            val maxText = maxHistoryMileage?.let { "${it.formatKm()}km" } ?: stringResource(R.string.common_none)
                             Text(
-                                "현재 대비 +${diff.formatKm()}km (약 ${String.format("%.1f", ratio)}배), 기록 최대: $maxText",
+                                stringResource(R.string.mu_suspicious_body, diff.formatKm(), String.format("%.1f", ratio), maxText),
                                 color = warnOnContainer,
                                 style = MaterialTheme.typography.bodySmall
                             )
 
                             Text(
-                                "오타가 아니라면 계속 진행해도 괜찮아요.",
+                                stringResource(R.string.mu_suspicious_hint),
                                 color = warnOnContainer,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -476,21 +478,21 @@ private fun MileageUpdateDialog(
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MileageRow(
-                            label = "현재 주행거리",
+                            label = stringResource(R.string.mu_current),
                             value = "${currentMileage.formatKm()} km",
                             icon = Icons.Default.DirectionsCar,
                             valueColor = MaterialTheme.colorScheme.onSurface
                         )
                         MileageRow(
-                            label = "이번 정비",
+                            label = stringResource(R.string.mu_this),
                             value = "${newMileage.formatKm()} km",
                             icon = Icons.Default.Build,
                             valueColor = if (isSuspicious) warnColor else MaterialTheme.colorScheme.primary,
                             bold = true
                         )
-                        val maxText = maxHistoryMileage?.let { "${it.formatKm()} km" } ?: "없음"
+                        val maxText = maxHistoryMileage?.let { "${it.formatKm()} km" } ?: stringResource(R.string.common_none)
                         MileageRow(
-                            label = "기록 최대",
+                            label = stringResource(R.string.mu_max),
                             value = maxText,
                             icon = Icons.Default.History,
                             valueColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -516,9 +518,9 @@ private fun MileageUpdateDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("다음부터 자동 업데이트", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.mu_auto_title), fontWeight = FontWeight.SemiBold)
                             Text(
-                                "조건에 해당하면 차량 주행거리도 자동으로 함께 업데이트해요.",
+                                stringResource(R.string.mu_auto_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -534,14 +536,14 @@ private fun MileageUpdateDialog(
             ) {
                 Icon(Icons.Default.Upgrade, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("업데이트하고 저장", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.mu_update_and_save), fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismissSaveOnly,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
-            ) { Text("저장만") }
+            ) { Text(stringResource(R.string.mu_save_only)) }
         }
     )
 }
@@ -629,10 +631,10 @@ private fun HistoryDatePickerDialog(
                         .toLocalDate()
                     onSelected(picked)
                 }
-            ) { Text("확인") }
+            ) { Text(stringResource(R.string.common_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("취소") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     ) {
         DatePicker(state = state)

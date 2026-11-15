@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
+
 /**
  * 주유(충전) 기록.
  *
@@ -45,16 +48,20 @@ enum class FuelUnit(val symbol: String) {
     val isElectric: Boolean get() = this == KWH
 
     /** "주유" / "충전" */
-    val actionLabel: String get() = if (this == LITER) "주유" else "충전"
+    val actionLabel: UiText
+        get() = UiText.Res(if (this == LITER) R.string.fuel_action_refuel else R.string.fuel_action_charge)
 
     /** "주유비" / "충전비" */
-    val costLabel: String get() = if (this == LITER) "주유비" else "충전비"
+    val costLabel: UiText
+        get() = UiText.Res(if (this == LITER) R.string.fuel_cost_refuel else R.string.fuel_cost_charge)
 
     /** "주유소" / "충전소" */
-    val placeLabel: String get() = if (this == LITER) "주유소" else "충전소"
+    val placeLabel: UiText
+        get() = UiText.Res(if (this == LITER) R.string.fuel_place_refuel else R.string.fuel_place_charge)
 
     /** "주유량" / "충전량" */
-    val quantityLabel: String get() = if (this == LITER) "주유량" else "충전량"
+    val quantityLabel: UiText
+        get() = UiText.Res(if (this == LITER) R.string.fuel_quantity_refuel else R.string.fuel_quantity_charge)
 
     companion object {
         /**

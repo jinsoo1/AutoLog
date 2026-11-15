@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.StrokeCap
@@ -105,7 +109,7 @@ fun CarDetailScreen(
                 title = {
                     Column {
                         Text(
-                            "정비 항목",
+                            stringResource(R.string.cd_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -118,7 +122,7 @@ fun CarDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -159,7 +163,7 @@ fun CarDetailScreen(
             items(items = settings, key = { it.id }) { setting ->
                 val opt = optionMap[setting.id]
                 val type = typeDefaultMap[setting.maintenanceTypeId]
-                val typeName = type?.name ?: "정비항목"
+                val typeName = type?.name ?: stringResource(R.string.cd_unknown_type)
 
                 MaintenanceSettingItem(
                     setting = setting,
@@ -205,7 +209,7 @@ fun MaintenanceSettingsHeader(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "정비 주기 설정",
+                    text = stringResource(R.string.cd_cycle_settings),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -215,7 +219,7 @@ fun MaintenanceSettingsHeader(
             Box {
                 AssistChip(
                     onClick = { sortMenuExpanded = true },
-                    label = { Text(currentSort.label) },
+                    label = { Text(currentSort.label.asString()) },
                     leadingIcon = {
                         Icon(Icons.Default.Sort, contentDescription = null)
                     }
@@ -227,7 +231,7 @@ fun MaintenanceSettingsHeader(
                 ) {
                     MaintenanceSort.entries.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.label) },
+                            text = { Text(option.label.asString()) },
                             leadingIcon = {
                                 if (option == currentSort) {
                                     Icon(Icons.Default.Check, contentDescription = null)
@@ -251,12 +255,12 @@ fun MaintenanceSettingsHeader(
             ) {
                 Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("항목")
+                Text(stringResource(R.string.cd_items_button))
             }
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "정비 내역이 없는 항목은 정렬되지 않아요.",
+            stringResource(R.string.cd_sort_note),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall
         )
@@ -310,7 +314,7 @@ fun MaintenanceSettingItem(
     val remainingDays = dueDate?.let { ChronoUnit.DAYS.between(today, it) }
 
     val kmText = intervalKm?.let { "${it.formatKm()} km" } ?: "-"
-    val monthText = intervalMonths?.let { "${it} 개월" } ?: "-"
+    val monthText = intervalMonths?.let { stringResource(R.string.cd_months_unit, it) } ?: "-"
 
     // --------------------------
     // 상태 판단 (초과 / 도래(임박) / 정상)
@@ -339,11 +343,13 @@ fun MaintenanceSettingItem(
                     (remainingDays != null && soonDaysThreshold != null && remainingDays in 0..soonDaysThreshold)
             )
 
-    val statusLabel = when {
-        isOverdue -> "초과"
-        isDue -> "도래" // "임박"도 추천
-        else -> "정상"
-    }
+    val statusLabel = stringResource(
+        when {
+            isOverdue -> R.string.status_overdue
+            isDue -> R.string.cd_status_due // "임박"도 추천
+            else -> R.string.status_normal
+        }
+    )
 
     // 상태색(고정)
     val statusColor = when {
@@ -361,26 +367,26 @@ fun MaintenanceSettingItem(
     // --------------------------
 
     val lastInfoValue = if (!hasAnyHistory) {
-        "없음 (0km / 오늘 기준)"
+        stringResource(R.string.cd_last_none)
     } else {
-        val d = lastDate?.toString() ?: "없음"
-        val m = lastServiceMileage?.let { "${it.formatKm()} km" } ?: "없음"
+        val d = lastDate?.toString() ?: stringResource(R.string.common_none)
+        val m = lastServiceMileage?.let { "${it.formatKm()} km" } ?: stringResource(R.string.common_none)
         "$d · $m"
     }
 
     val remainKmText = remainingKm?.let {
         when {
-            it < 0 -> "초과 ${abs(it).formatKm()} km"
-            it == 0 -> "0 km(도래)"
-            else -> "${it.formatKm()} km 남음"
+            it < 0 -> stringResource(R.string.cd_remain_over_km, abs(it).formatKm())
+            it == 0 -> stringResource(R.string.cd_remain_due_km)
+            else -> stringResource(R.string.cd_remain_km, it.formatKm())
         }
     } ?: "-"
 
     val remainDayText = remainingDays?.let {
         when {
-            it < 0 -> "초과 ${abs(it)}일"
-            it == 0L -> "0일(오늘)"
-            else -> "${it}일 남음"
+            it < 0 -> stringResource(R.string.cd_remain_over_days, abs(it))
+            it == 0L -> stringResource(R.string.cd_remain_today)
+            else -> stringResource(R.string.cd_remain_days, it)
         }
     } ?: "-"
 
@@ -427,13 +433,13 @@ fun MaintenanceSettingItem(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            typeName,
+                            typeName.localizedItemName(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "주기: $kmText / $monthText",
+                            stringResource(R.string.cd_cycle_line, kmText, monthText),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -460,7 +466,7 @@ fun MaintenanceSettingItem(
 
                 InfoLine(
                     icon = Icons.Default.History,
-                    title = "마지막 정비",
+                    title = stringResource(R.string.cd_last_service),
                     value = lastInfoValue
                 )
 
@@ -469,7 +475,7 @@ fun MaintenanceSettingItem(
                     Spacer(Modifier.height(8.dp))
                     InfoLine(
                         icon = Icons.Default.Route,
-                        title = "잔여",
+                        title = stringResource(R.string.cd_remaining),
                         value = "$remainKmText / $remainDayText",
                         valueColor = accent,
                         boldValue = isDanger
@@ -480,7 +486,7 @@ fun MaintenanceSettingItem(
                 if (kmProgress != null) {
                     Spacer(Modifier.height(10.dp))
                     ProgressLine(
-                        label = "거리",
+                        label = stringResource(R.string.cd_distance),
                         valueText = remainKmText,
                         progress = kmProgress,
                         color = statusColor
@@ -489,7 +495,7 @@ fun MaintenanceSettingItem(
                 if (dayProgress != null) {
                     Spacer(Modifier.height(10.dp))
                     ProgressLine(
-                        label = "기간",
+                        label = stringResource(R.string.cd_period),
                         valueText = remainDayText,
                         progress = dayProgress,
                         color = statusColor
@@ -501,7 +507,7 @@ fun MaintenanceSettingItem(
                 if (dueMileage != null || dueDate != null) {
                     InfoLine(
                         icon = Icons.Default.Event,
-                        title = "다음 예정",
+                        title = stringResource(R.string.cd_next_due),
                         value = "$dueMileageText · $dueDateText",
                         valueColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )

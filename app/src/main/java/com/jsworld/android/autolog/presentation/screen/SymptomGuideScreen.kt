@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,14 +89,14 @@ fun SymptomGuideScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "증상별 점검 가이드",
+                        stringResource(R.string.symptom_guide_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -112,7 +115,7 @@ fun SymptomGuideScreen(
                     .padding(horizontal = 16.dp),
                 placeholder = {
                     Text(
-                        "예: 핸들 떨림, 웅웅, 찌그덕, 탄 냄새",
+                        stringResource(R.string.symptom_search_placeholder),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -129,7 +132,7 @@ fun SymptomGuideScreen(
                         IconButton(onClick = { viewModel.setQuery("") }) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "지우기",
+                                contentDescription = stringResource(R.string.symptom_clear),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -150,7 +153,7 @@ fun SymptomGuideScreen(
                     FilterChip(
                         selected = ui.category == null,
                         onClick = { viewModel.setCategory(null) },
-                        label = { Text("전체") }
+                        label = { Text(stringResource(R.string.common_all)) }
                     )
                 }
                 items(count = SymptomCategory.entries.size) { index ->
@@ -160,7 +163,7 @@ fun SymptomGuideScreen(
                         onClick = {
                             viewModel.setCategory(if (ui.category == category) null else category)
                         },
-                        label = { Text(category.label, maxLines = 1) }
+                        label = { Text(category.label.asString(), maxLines = 1) }
                     )
                 }
             }
@@ -203,7 +206,7 @@ private fun SymptomList(
         grouped.forEach { (category, items) ->
             item(key = "header-${category.name}") {
                 Text(
-                    category.label,
+                    category.label.asString(),
                     modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -225,8 +228,7 @@ private fun SymptomList(
 
         item(key = "disclaimer") {
             Text(
-                text = "이 가이드는 일반적인 점검 참고 정보로, 실제 고장 원인을 확정하지 않아요. " +
-                    "차량 상태와 차종에 따라 원인이 다를 수 있고, 안전과 관련된 증상은 전문 정비 점검을 권장해요.",
+                text = stringResource(R.string.symptom_disclaimer),
                 modifier = Modifier.padding(top = 18.dp, start = 4.dp, end = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -260,7 +262,7 @@ private fun SymptomRow(
                 symptom.powertrainLabel()?.let { label ->
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        "$label 해당",
+                        stringResource(R.string.symptom_applies_to, label.asString()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -288,7 +290,7 @@ internal fun RiskBadge(level: SymptomRiskLevel) {
         shape = MaterialTheme.shapes.large
     ) {
         Text(
-            text = level.label.substringBefore(" ·"),
+            text = level.label.asString().substringBefore(" ·"),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
@@ -311,9 +313,9 @@ private fun EmptySearchMessage() {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
-            Text("찾는 증상이 없어요", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.symptom_not_found_title), fontWeight = FontWeight.Bold)
             Text(
-                "다른 표현으로 검색해보세요. 예: 웅웅, 덜그럭, 탄 냄새",
+                stringResource(R.string.symptom_not_found_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -348,7 +350,7 @@ private fun SymptomGuideNoticeDialog(onConfirm: () -> Unit) {
         },
         title = {
             Text(
-                "진단이 아니라 점검 가이드예요",
+                stringResource(R.string.symptom_notice_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -358,25 +360,25 @@ private fun SymptomGuideNoticeDialog(onConfirm: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 NoticePoint(
                     icon = Icons.Outlined.Search,
-                    title = "원인을 확정하지 않아요",
-                    body = "어디를 점검해볼지, 지금 운행해도 되는지까지만 알려드려요."
+                    title = stringResource(R.string.symptom_notice_1_title),
+                    body = stringResource(R.string.symptom_notice_1_body)
                 )
                 NoticePoint(
                     icon = Icons.Outlined.DirectionsCar,
-                    title = "차에 따라 원인이 달라요",
-                    body = "같은 소리도 차종과 상태에 따라 다른 곳이 원인일 수 있어요."
+                    title = stringResource(R.string.symptom_notice_2_title),
+                    body = stringResource(R.string.symptom_notice_2_body)
                 )
                 NoticePoint(
                     icon = Icons.Outlined.WarningAmber,
-                    title = "안전과 관련되면 꼭 점검받으세요",
-                    body = "브레이크·조향·누유처럼 위험한 증상은 전문 정비 점검을 권해요.",
+                    title = stringResource(R.string.symptom_notice_3_title),
+                    body = stringResource(R.string.symptom_notice_3_body),
                     emphasized = true
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("확인", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.common_confirm), fontWeight = FontWeight.SemiBold)
             }
         },
         shape = MaterialTheme.shapes.extraLarge,

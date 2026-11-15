@@ -60,16 +60,16 @@ class WeeklyMileageReminderWorker @AssistedInject constructor(
         val context = applicationContext
 
         val title = if (cars.size == 1) {
-            "${cars.first().name} 주행거리 업데이트가 필요해요"
+            context.getString(R.string.weekly_title_single, cars.first().name)
         } else {
-            "주행거리 업데이트가 필요한 차량 ${cars.size}대가 있어요"
+            context.getString(R.string.weekly_title_multi, cars.size)
         }
 
         val content = if (cars.size == 1) {
-            "이번 주 주행거리 업데이트가 아직 없어요."
+            context.getString(R.string.weekly_body_single)
         } else {
             cars.take(3).joinToString(", ") { it.name } +
-                    if (cars.size > 3) " 외 ${cars.size - 3}대" else ""
+                    if (cars.size > 3) context.getString(R.string.weekly_body_more, cars.size - 3) else ""
         }
 
         val intent = Intent(context, MainActivity::class.java).apply {

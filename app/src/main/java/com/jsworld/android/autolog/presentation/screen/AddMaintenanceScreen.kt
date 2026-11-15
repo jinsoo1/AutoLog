@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.platform.LocalContext
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -139,6 +143,7 @@ fun AddMaintenanceScreen(
     var memoText by rememberSaveable { mutableStateOf("") }
 
 
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -207,23 +212,23 @@ fun AddMaintenanceScreen(
     // 저장 버튼이 무엇이 모자란지 직접 말한다(눌러서 스낵바로 혼나지 않도록).
     val saveLabel = when {
         // 수리는 항목 목록이 비어 있어도 기록할 수 있어야 한다.
-        !repairMode && options.isEmpty() -> "먼저 정비 항목을 추가해주세요"
-        repairMode && !itemValid -> "수리 이름을 입력해주세요"
-        !itemValid -> "항목을 선택해주세요"
-        !dateValid -> "정비 날짜를 확인해주세요"
-        mileageRuleBroken -> "주행거리를 확인해주세요"
-        !mileageValid -> "주행거리를 입력해주세요"
-        else -> "저장"
+        !repairMode && options.isEmpty() -> stringResource(R.string.am_need_items)
+        repairMode && !itemValid -> stringResource(R.string.am_enter_repair_name)
+        !itemValid -> stringResource(R.string.am_select_item)
+        !dateValid -> stringResource(R.string.am_check_date)
+        mileageRuleBroken -> stringResource(R.string.am_check_mileage)
+        !mileageValid -> stringResource(R.string.am_enter_mileage)
+        else -> stringResource(R.string.common_save)
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("정비 기록 추가") },
+                title = { Text(stringResource(R.string.am_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -280,7 +285,7 @@ fun AddMaintenanceScreen(
                                 if (autoMileageUpdate) {
                                     doSave(updateCarMileage = true)
                                     // (선택) 안내 스낵바
-                                    snackbarHostState.showSnackbar("차량 주행거리도 ${pending.serviceMileage}km로 업데이트했어요.")
+                                    snackbarHostState.showSnackbar(context.getString(R.string.am_mileage_updated_snack, pending.serviceMileage))
                                     return@launch
                                 }
 
@@ -311,8 +316,8 @@ fun AddMaintenanceScreen(
             // 입력 규칙은 화면 상단에 상주시키지 않는다. 각 필드 아래에서, 어겼을 때만 알려준다.
             item {
                 SectionHeader(
-                    title = "무엇을 정비했나요",
-                    subtitle = "항목 · 날짜 · 주행거리",
+                    title = stringResource(R.string.am_section_what),
+                    subtitle = stringResource(R.string.am_section_what_sub),
                     icon = Icons.Default.Build
                 )
             }
@@ -324,15 +329,15 @@ fun AddMaintenanceScreen(
                         OutlinedTextField(
                             value = repairName,
                             onValueChange = { repairName = it },
-                            label = { Text("수리 이름") },
-                            placeholder = { Text("예: 써모스탯 교체") },
+                            label = { Text(stringResource(R.string.am_repair_name)) },
+                            placeholder = { Text(stringResource(R.string.am_repair_placeholder)) },
                             leadingIcon = { Icon(Icons.Default.Handyman, contentDescription = null) },
                             trailingIcon = {
                                 IconButton(onClick = { expanded = true }) {
-                                    Icon(Icons.Default.ExpandMore, contentDescription = "항목 목록에서 선택")
+                                    Icon(Icons.Default.ExpandMore, contentDescription = stringResource(R.string.am_pick_from_list))
                                 }
                             },
-                            supportingText = { Text("탭하면 항목 목록으로 돌아갈 수 있어요") },
+                            supportingText = { Text(stringResource(R.string.am_tap_back_to_list)) },
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -345,14 +350,13 @@ fun AddMaintenanceScreen(
                         ) {
                             Column(Modifier.padding(horizontal = 13.dp, vertical = 10.dp)) {
                                 Text(
-                                    "주기 없이 저장돼요",
+                                    stringResource(R.string.am_no_cycle_title),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                                 Text(
-                                    "임박 알림이나 다음 정비 목록에 나타나지 않아요. " +
-                                        "필요하면 나중에 항목 상세에서 주기를 설정할 수 있어요.",
+                                    stringResource(R.string.am_no_cycle_body),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                                 )
@@ -362,12 +366,12 @@ fun AddMaintenanceScreen(
                         // 정비 항목 선택 — 좁은 드롭다운 대신 바텀시트를 띄운다.
                         // 항목이 늘어나도 이전 정비·상태를 한눈에 비교할 수 있어야 하기 때문이다.
                         OutlinedTextField(
-                            value = selected?.typeName ?: "",
+                            value = selected?.typeName?.localizedItemName() ?: "",
                             onValueChange = {},
                             readOnly = true,
                             enabled = false,
-                            label = { Text("정비 항목") },
-                            placeholder = { Text("항목을 선택해주세요") },
+                            label = { Text(stringResource(R.string.am_item_label)) },
+                            placeholder = { Text(stringResource(R.string.am_select_item)) },
                             leadingIcon = { Icon(Icons.Default.Build, contentDescription = null) },
                             trailingIcon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
                             supportingText = {
@@ -410,7 +414,7 @@ fun AddMaintenanceScreen(
                                 selection = TextRange(formatted.length)
                             )
                         },
-                        label = { Text("정비 시 주행거리(km) *") },
+                        label = { Text(stringResource(R.string.am_mileage_label)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Route,
@@ -425,22 +429,22 @@ fun AddMaintenanceScreen(
                         supportingText = {
                             when {
                                 mileageRuleBroken -> Text(
-                                    text = "이전 정비 ${lastMileage!!.formatKm()}km보다 커야 해요",
+                                    text = stringResource(R.string.am_mileage_rule, lastMileage!!.formatKm()),
                                     color = MaterialTheme.colorScheme.error,
                                     fontWeight = FontWeight.SemiBold
                                 )
 
                                 mileageSuspiciousHigh -> Text(
-                                    text = "현재 값보다 많이 큽니다. 자릿수를 확인해주세요.",
+                                    text = stringResource(R.string.am_mileage_suspicious),
                                     color = MaterialTheme.colorScheme.tertiary,
                                     fontWeight = FontWeight.SemiBold
                                 )
 
                                 // 자동으로 채워둔 값이면 그렇다고 밝혀준다.
                                 !mileageTouched && currentMileage != null && mileageRaw == currentMileage ->
-                                    Text("차량 주행거리를 그대로 넣었어요")
+                                    Text(stringResource(R.string.am_mileage_prefilled))
 
-                                lastMileage != null -> Text("이전 정비 ${lastMileage.formatKm()}km 이후 값")
+                                lastMileage != null -> Text(stringResource(R.string.am_mileage_after_last, lastMileage.formatKm()))
 
                                 else -> Unit
                             }
@@ -452,8 +456,8 @@ fun AddMaintenanceScreen(
 
             item {
                 SectionHeader(
-                    title = "더 남길 내용",
-                    subtitle = "정비소 · 비용 · 메모 (선택)",
+                    title = stringResource(R.string.am_section_more),
+                    subtitle = stringResource(R.string.am_section_more_sub),
                     icon = Icons.AutoMirrored.Filled.Notes
                 )
             }
@@ -463,7 +467,7 @@ fun AddMaintenanceScreen(
                     OutlinedTextField(
                         value = placeText,
                         onValueChange = { placeText = it },
-                        label = { Text("정비 장소") },
+                        label = { Text(stringResource(R.string.am_place)) },
                         leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -473,9 +477,9 @@ fun AddMaintenanceScreen(
                     OutlinedTextField(
                         value = costText,
                         onValueChange = { costText = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("비용") },
+                        label = { Text(stringResource(R.string.common_cost)) },
                         leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
-                        trailingIcon = { Text("원", style = MaterialTheme.typography.labelMedium) },
+                        trailingIcon = { Text(stringResource(R.string.money_unit), style = MaterialTheme.typography.labelMedium) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         visualTransformation = ThousandsSeparatorTransformation,
                         modifier = Modifier.fillMaxWidth()
@@ -486,7 +490,7 @@ fun AddMaintenanceScreen(
                     OutlinedTextField(
                         value = memoText,
                         onValueChange = { memoText = it },
-                        label = { Text("메모") },
+                        label = { Text(stringResource(R.string.common_memo)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
@@ -508,9 +512,9 @@ fun AddMaintenanceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("차량 주행거리 자동 업데이트", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.am_auto_update_title), fontWeight = FontWeight.SemiBold)
                             Text(
-                                "조건에 해당하면 저장 시 차량 주행거리도 자동으로 갱신해요.",
+                                stringResource(R.string.am_auto_update_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -659,6 +663,7 @@ private fun DatePickerField(
     lastDate: LocalDate?,
     snackbarHostState: SnackbarHostState
 ) {
+    val outOfRangeMessage = stringResource(R.string.am_out_of_range)
     var showDatePicker by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -690,24 +695,24 @@ private fun DatePickerField(
         value = dateText,
         onValueChange = { /* readOnly */ },
         readOnly = true,
-        label = { Text("정비 날짜 *") },
+        label = { Text(stringResource(R.string.am_date_label)) },
         leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
         isError = dateText.isNotBlank() && !dateValid,
         supportingText = {
             Column {
                 Text(
-                    text = if (lastDate != null) "이전 정비일: $lastDate" else "이전 정비일: 없음",
+                    text = if (lastDate != null) stringResource(R.string.am_prev_date, lastDate.toString()) else stringResource(R.string.am_prev_date_none),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "선택 가능: ${minDate?.toString() ?: "제한없음"} ~ ${today}",
+                    text = stringResource(R.string.am_selectable, minDate?.toString() ?: stringResource(R.string.am_no_limit), today.toString()),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (dateText.isNotBlank() && !dateValid) {
                     Text(
-                        text = "이전 정비일 이후이며, 오늘까지의 날짜만 선택할 수 있어요.",
+                        text = stringResource(R.string.am_date_rule),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
@@ -717,7 +722,7 @@ private fun DatePickerField(
         },
         trailingIcon = {
             IconButton(onClick = { showDatePicker = true }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "날짜 선택")
+                Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.am_pick_date))
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -736,7 +741,7 @@ private fun DatePickerField(
 
                         if ((minDate != null && selected.isBefore(minDate)) || selected.isAfter(today)) {
                             scope.launch {
-                                snackbarHostState.showSnackbar("선택 가능한 날짜 범위를 벗어났어요.")
+                                snackbarHostState.showSnackbar(outOfRangeMessage)
                             }
                             return@TextButton
                         }
@@ -744,9 +749,9 @@ private fun DatePickerField(
                         onDateSelected(selected.format(DATE_FMT))
                         showDatePicker = false
                     }
-                ) { Text("확인") }
+                ) { Text(stringResource(R.string.common_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -795,9 +800,9 @@ private fun MileageUpdateDialog(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("주행거리 업데이트", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.mu_title), fontWeight = FontWeight.Bold)
                     Text(
-                        "차량 주행거리를 업데이트할까요?",
+                        stringResource(R.string.mu_question),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -808,7 +813,7 @@ private fun MileageUpdateDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
                 Text(
-                    text = "현재 차량 주행거리(${currentMileage.formatKm()}km)에서 이번 정비 주행거리(${newMileage.formatKm()}km)로 업데이트 할까요?",
+                    text = stringResource(R.string.mu_body, currentMileage.formatKm(), newMileage.formatKm()),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -824,21 +829,21 @@ private fun MileageUpdateDialog(
                                 Icon(Icons.Default.Warning, contentDescription = null, tint = warnColor)
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "입력값이 너무 크게 보입니다",
+                                    stringResource(R.string.mu_suspicious_title),
                                     color = warnOnContainer,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
 
-                            val maxText = maxHistoryMileage?.let { "${it.formatKm()}km" } ?: "없음"
+                            val maxText = maxHistoryMileage?.let { "${it.formatKm()}km" } ?: stringResource(R.string.common_none)
                             Text(
-                                "현재 대비 +${diff.formatKm()}km (약 ${String.format("%.1f", ratio)}배), 기록 최대: $maxText",
+                                stringResource(R.string.mu_suspicious_body, diff.formatKm(), String.format("%.1f", ratio), maxText),
                                 color = warnOnContainer,
                                 style = MaterialTheme.typography.bodySmall
                             )
 
                             Text(
-                                "오타가 아니라면 계속 진행해도 괜찮아요.",
+                                stringResource(R.string.mu_suspicious_hint),
                                 color = warnOnContainer,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -853,21 +858,21 @@ private fun MileageUpdateDialog(
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MileageRow(
-                            label = "현재 주행거리",
+                            label = stringResource(R.string.mu_current),
                             value = "${currentMileage.formatKm()} km",
                             icon = Icons.Default.DirectionsCar,
                             valueColor = MaterialTheme.colorScheme.onSurface
                         )
                         MileageRow(
-                            label = "이번 정비",
+                            label = stringResource(R.string.mu_this),
                             value = "${newMileage.formatKm()} km",
                             icon = Icons.Default.Build,
                             valueColor = if (isSuspicious) warnColor else MaterialTheme.colorScheme.primary,
                             bold = true
                         )
-                        val maxText = maxHistoryMileage?.let { "${it.formatKm()} km" } ?: "없음"
+                        val maxText = maxHistoryMileage?.let { "${it.formatKm()} km" } ?: stringResource(R.string.common_none)
                         MileageRow(
-                            label = "기록 최대",
+                            label = stringResource(R.string.mu_max),
                             value = maxText,
                             icon = Icons.Default.History,
                             valueColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -893,9 +898,9 @@ private fun MileageUpdateDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("다음부터 자동 업데이트", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.mu_auto_title), fontWeight = FontWeight.SemiBold)
                             Text(
-                                "조건에 해당하면 차량 주행거리도 자동으로 함께 업데이트해요.",
+                                stringResource(R.string.mu_auto_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -911,14 +916,14 @@ private fun MileageUpdateDialog(
             ) {
                 Icon(Icons.Default.Upgrade, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("업데이트하고 저장", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.mu_update_and_save), fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismissSaveOnly,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
-            ) { Text("저장만") }
+            ) { Text(stringResource(R.string.mu_save_only)) }
         }
     )
 }

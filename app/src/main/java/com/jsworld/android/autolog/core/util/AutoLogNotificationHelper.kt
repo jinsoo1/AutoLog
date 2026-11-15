@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.core.util
 
+import com.jsworld.android.autolog.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -11,7 +12,6 @@ import androidx.core.app.NotificationManagerCompat
 object AutoLogNotificationHelper {
 
     const val WEEKLY_MILEAGE_CHANNEL_ID = "weekly_mileage_channel"
-    private const val WEEKLY_MILEAGE_CHANNEL_NAME = "주간 주행거리 알림"
 
     // 임박/초과를 채널로 분리해 사용자가 시스템 설정에서도 따로 제어할 수 있게 한다.
     const val MAINT_SOON_CHANNEL_ID = "maintenance_soon_channel"
@@ -24,51 +24,51 @@ object AutoLogNotificationHelper {
     fun createChannels(context: Context) {
         val weekly = NotificationChannel(
             WEEKLY_MILEAGE_CHANNEL_ID,
-            WEEKLY_MILEAGE_CHANNEL_NAME,
+            context.getString(R.string.channel_weekly_name),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "주 1회 차량 주행거리 업데이트를 알려줍니다."
+            description = context.getString(R.string.channel_weekly_desc)
         }
 
         val maintSoon = NotificationChannel(
             MAINT_SOON_CHANNEL_ID,
-            "교체 임박 알림",
+            context.getString(R.string.channel_soon_name),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "정비 항목의 교체 시기가 다가오면 알려줍니다."
+            description = context.getString(R.string.channel_soon_desc)
         }
 
         val maintOverdue = NotificationChannel(
             MAINT_OVERDUE_CHANNEL_ID,
-            "교체 시기 초과 알림",
+            context.getString(R.string.channel_overdue_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "정비 항목의 교체 시기를 넘기면 알려줍니다."
+            description = context.getString(R.string.channel_overdue_desc)
         }
 
         val monthlyReport = NotificationChannel(
             MONTHLY_REPORT_CHANNEL_ID,
-            "월간 리포트 알림",
+            context.getString(R.string.channel_monthly_name),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "매월 1일 지난달 지출 리포트가 준비되면 알려줍니다."
+            description = context.getString(R.string.channel_monthly_desc)
         }
 
         val schedule = NotificationChannel(
             SCHEDULE_CHANNEL_ID,
-            "검사·보험·세금 알림",
+            context.getString(R.string.channel_schedule_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "정기검사·보험 만기·자동차세 날짜가 다가오면 알려줍니다."
+            description = context.getString(R.string.channel_schedule_desc)
         }
 
         val seasonal = NotificationChannel(
             SEASONAL_CHANNEL_ID,
-            "계절별 관리 알림",
+            context.getString(R.string.channel_seasonal_name),
             // 읽는 콘텐츠라 소리로 재촉하지 않는다. 계절마다 1회뿐이기도 하다.
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "계절이 바뀔 때 확인하면 좋은 항목을 알려줍니다."
+            description = context.getString(R.string.channel_seasonal_desc)
         }
 
         val manager = context.getSystemService(NotificationManager::class.java)

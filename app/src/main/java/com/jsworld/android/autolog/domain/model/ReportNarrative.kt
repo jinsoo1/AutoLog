@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
 import kotlin.math.roundToInt
 
 /**
@@ -7,8 +9,8 @@ import kotlin.math.roundToInt
  * 숫자는 아래 카드들이 말하므로 여기서는 "분위기 + 어디를 보라"만 말한다.
  */
 data class ReportNarrative(
-    val title: String,
-    val subtitle: String,
+    val title: UiText,
+    val subtitle: UiText,
     val tone: NarrativeTone
 )
 
@@ -25,35 +27,34 @@ fun buildReportNarrative(
     soonCount: Int
 ): ReportNarrative = when {
     overdueCount > 0 -> ReportNarrative(
-        title = "정비가 밀린 달이에요",
-        subtitle = "교체 시기를 넘긴 항목이 ${overdueCount}개 있어요. 다가오는 지출에서 확인해보세요.",
+        title = UiText.Res(R.string.narrative_overdue_title),
+        subtitle = UiText.Res(R.string.narrative_overdue_subtitle, overdueCount),
         tone = NarrativeTone.WARNING
     )
 
     previous != null &&
         current.total - previous.total >= SPIKE_MIN_WON &&
         current.total >= previous.total + previous.total / 2 -> ReportNarrative(
-        title = "큰 지출이 있었던 달이에요",
-        subtitle = "지난달보다 %,d원 늘었어요. 원인은 총지출 카드에서 짚어드려요."
-            .format(current.total - previous.total),
+        title = UiText.Res(R.string.narrative_spike_title),
+        subtitle = UiText.Res(R.string.narrative_spike_subtitle, current.total - previous.total),
         tone = NarrativeTone.SPIKE
     )
 
     soonCount > 0 -> ReportNarrative(
-        title = "교체 준비가 필요한 달이에요",
-        subtitle = "곧 교체 시기가 오는 항목이 ${soonCount}개 있어요. 미리 준비하면 여유롭죠.",
+        title = UiText.Res(R.string.narrative_prep_title),
+        subtitle = UiText.Res(R.string.narrative_prep_subtitle, soonCount),
         tone = NarrativeTone.PREP
     )
 
     current.total == 0L -> ReportNarrative(
-        title = "기록이 없는 달이에요",
-        subtitle = "이 달엔 지출 기록이 없어요.",
+        title = UiText.Res(R.string.narrative_empty_title),
+        subtitle = UiText.Res(R.string.narrative_empty_subtitle),
         tone = NarrativeTone.EMPTY
     )
 
     else -> ReportNarrative(
-        title = "잔잔하게 지나간 달이에요",
-        subtitle = "큰 일 없이 관리가 잘 이어지고 있어요.",
+        title = UiText.Res(R.string.narrative_calm_title),
+        subtitle = UiText.Res(R.string.narrative_calm_subtitle),
         tone = NarrativeTone.CALM
     )
 }
@@ -63,14 +64,14 @@ fun buildReportNarrative(
 private const val EARTH_LAP_KM = 40_075.0
 
 /** 차량 누적 주행거리 → "이 차와 함께 지구 1.8바퀴째 달리는 중이에요" */
-fun earthLapsText(totalMileageKm: Int): String? {
+fun earthLapsText(totalMileageKm: Int): UiText? {
     if (totalMileageKm <= 0) return null
     val laps = totalMileageKm / EARTH_LAP_KM
     return if (laps >= 1.0) {
-        "이 차와 함께 지구 ${"%.1f".format(laps)}바퀴째 달리는 중이에요"
+        UiText.Res(R.string.fun_earth_laps, laps)
     } else {
         val percent = (laps * 100).roundToInt().coerceAtLeast(1)
-        "이 차와 함께 지구 한 바퀴의 ${percent}%를 달렸어요"
+        UiText.Res(R.string.fun_earth_percent, percent)
     }
 }
 
@@ -78,40 +79,71 @@ fun earthLapsText(totalMileageKm: Int): String? {
  * 자기 기록 한 마디 — 비유가 아니라 내 데이터 안의 팩트라 유치하지 않다.
  * 비교할 과거가 3달 이상 쌓였을 때만 말한다(초기엔 아무 달이나 신기록이라서).
  */
-fun personalRecordText(allMonths: List<MonthlyExpense>, current: MonthlyExpense): String? {
+fun personalRecordText(allMonths: List<MonthlyExpense>, current: MonthlyExpense): UiText? {
     val history = allMonths.filter { it.month < current.month }
 
     val kmHistory = history.mapNotNull { it.drivenKm }
     val currentKm = current.drivenKm
     if (currentKm != null && kmHistory.size >= 3) {
-        if (currentKm > kmHistory.max()) return "기록을 시작한 뒤 가장 많이 달린 달이에요"
+        if (currentKm > kmHistory.max()) return UiText.Res(R.string.fun_record_most_driven)
         val minPositiveKm = kmHistory.filter { it > 0 }.minOrNull()
         if (currentKm > 0 && minPositiveKm != null && currentKm < minPositiveKm) {
-            return "기록을 시작한 뒤 가장 적게 달린 달이에요"
+            return UiText.Res(R.string.fun_record_least_driven)
         }
     }
 
     val spentHistory = history.map { it.total }.filter { it > 0L }
     if (current.total > 0L && spentHistory.size >= 3 && current.total < spentHistory.min()) {
-        return "기록을 시작한 뒤 가장 알뜰했던 달이에요"
+        return UiText.Res(R.string.fun_record_thriftiest)
     }
     return null
 }
 
 /**
+ * 거리 비유의 기준 거리. 나라마다 "누구나 아는 거리"가 다르므로 로케일별로 고른다 —
+ * 리소스 문구(fun_ladder_tier*)에 적힌 이름·거리와 반드시 짝이 맞아야 한다.
+ */
+data class DistanceLandmarks(
+    val tier1Km: Double,
+    val tier2Km: Double,
+    val tier3Km: Double,
+    val tier4Km: Double
+) {
+    companion object {
+        /** 여의도 둘레 · 제주 일주도로 · 경부고속도로 · 국토종주 자전거길 */
+        val KOREA = DistanceLandmarks(8.4, 181.0, 416.0, 633.0)
+
+        /** 야마노테선 한 바퀴 · 하코네 에키덴 왕복 · 도쿄~신오사카 · 도쿄~하카타 */
+        val JAPAN = DistanceLandmarks(34.5, 217.1, 552.6, 1174.9)
+
+        fun forLanguage(language: String): DistanceLandmarks =
+            if (language == "ja") JAPAN else KOREA
+    }
+}
+
+private const val MARATHON_KM = 42.195
+
+/**
  * 이 달 주행거리의 규모별 비유 — 자기 기록이 없는 조용한 달의 대체 문구.
  * 규모에 따라 비유가 바뀌어서 매달 다른 문장이 나온다.
  */
-fun distanceLadderText(drivenKm: Int): String? = when {
+fun distanceLadderText(
+    drivenKm: Int,
+    landmarks: DistanceLandmarks = DistanceLandmarks.KOREA
+): UiText? = when {
     drivenKm <= 0 -> null
     drivenKm < 60 ->
-        "이 달 주행 ${"%,d".format(drivenKm)}km — 여의도를 ${(drivenKm / 8.4).roundToInt().coerceAtLeast(1)}바퀴 돈 거리예요"
+        UiText.Res(
+            R.string.fun_ladder_tier1,
+            drivenKm,
+            (drivenKm / landmarks.tier1Km).roundToInt().coerceAtLeast(1)
+        )
     drivenKm < 300 ->
-        "이 달 주행 ${"%,d".format(drivenKm)}km — 제주 일주도로(181km) ${"%.1f".format(drivenKm / 181.0)}바퀴 거리예요"
+        UiText.Res(R.string.fun_ladder_tier2, drivenKm, drivenKm / landmarks.tier2Km)
     drivenKm < 800 ->
-        "이 달 주행 ${"%,d".format(drivenKm)}km — 경부고속도로(416km)를 ${"%.1f".format(drivenKm / 416.0)}번 달린 거리예요"
+        UiText.Res(R.string.fun_ladder_tier3, drivenKm, drivenKm / landmarks.tier3Km)
     drivenKm < 2_500 ->
-        "이 달 주행 ${"%,d".format(drivenKm)}km — 국토종주 자전거길(633km)을 ${"%.1f".format(drivenKm / 633.0)}번 완주한 거리예요"
+        UiText.Res(R.string.fun_ladder_tier4, drivenKm, drivenKm / landmarks.tier4Km)
     else ->
-        "이 달 주행 ${"%,d".format(drivenKm)}km — 마라톤 풀코스 ${(drivenKm / 42.195).roundToInt()}번 거리예요"
+        UiText.Res(R.string.fun_ladder_tier5, drivenKm, (drivenKm / MARATHON_KM).roundToInt())
 }

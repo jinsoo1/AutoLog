@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.domain.model
 
+import androidx.annotation.StringRes
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
+
 /**
  * 증상별 점검 가이드의 한 증상.
  *
@@ -44,13 +48,15 @@ data class Symptom(
  * ⚠️ `ICE` 와 `DIESEL`·`LPG` 를 함께 붙이지 말 것 — "내연기관 · 디젤"이라는 이상한
  * 배지가 나온다. 내연기관 전반이면 `ICE`, 그 연료 전용이면 `DIESEL`/`LPG` 하나만.
  */
-enum class Powertrain(val label: String) {
-    ICE("내연기관"),
-    DIESEL("디젤"),
-    LPG("LPG"),
-    HYBRID("하이브리드"),
-    EV("전기"),
-    FCEV("수소");
+enum class Powertrain(@StringRes val labelRes: Int) {
+    ICE(R.string.powertrain_ice),
+    DIESEL(R.string.powertrain_diesel),
+    LPG(R.string.powertrain_lpg),
+    HYBRID(R.string.powertrain_hybrid),
+    EV(R.string.powertrain_ev),
+    FCEV(R.string.powertrain_fcev);
+
+    val label: UiText get() = UiText.Res(labelRes)
 
     companion object {
         fun fromOrNull(raw: String): Powertrain? = entries.firstOrNull { it.name == raw }
@@ -65,11 +71,9 @@ val Symptom.appliesToAllPowertrains: Boolean
  * "내연기관 · 하이브리드" 같은 표시 문구. **모든 차량 해당이면 null.**
  * 목록에서 쓴다 — 절반이 넘는 항목에 같은 배지를 달면 배지가 신호를 잃는다.
  */
-fun Symptom.powertrainLabel(): String? {
+fun Symptom.powertrainLabel(): UiText? {
     if (appliesToAllPowertrains) return null
-    return Powertrain.entries
-        .filter { it in powertrains }
-        .joinToString(" · ") { it.label }
+    return UiText.Joined(Powertrain.entries.filter { it in powertrains }.map { it.label })
 }
 
 /**
@@ -78,31 +82,33 @@ fun Symptom.powertrainLabel(): String? {
  * 상세는 "내 차에 해당하나"를 판단하는 자리라 배지가 없으면 공통인지 태깅을
  * 안 한 건지 알 수 없다. 그래서 여기서는 늘 밝힌다.
  */
-fun Symptom.powertrainScopeLabel(): String = powertrainLabel() ?: "모든 차량"
+fun Symptom.powertrainScopeLabel(): UiText =
+    powertrainLabel() ?: UiText.Res(R.string.powertrain_all_vehicles)
 
 /** 배지 아래에 붙는 한 문장. 배지가 무슨 뜻인지 풀어준다. */
-fun Symptom.powertrainNote(): String =
-    powertrainLabel()?.let {
-        "이 증상은 $it 차량에 해당하는 내용이에요. 다른 차량은 해당 부품이 없거나 원인이 다를 수 있어요."
-    } ?: "이 증상은 연료 종류와 관계없이 모든 차량에서 나타날 수 있어요."
+fun Symptom.powertrainNote(): UiText =
+    powertrainLabel()?.let { UiText.Res(R.string.powertrain_note_specific, it) }
+        ?: UiText.Res(R.string.powertrain_note_all)
 
 data class SymptomEscalation(
     val condition: String,
     val level: SymptomRiskLevel
 )
 
-enum class SymptomCategory(val label: String) {
-    NOISE_VIBRATION("소리·진동"),
-    DRIVING_STEERING("주행·조향"),
-    BRAKE("브레이크"),
-    TIRE_WHEEL("타이어·휠"),
-    SUSPENSION("하체·서스펜션"),
-    ENGINE_START("엔진·시동"),
-    COOLING("냉각"),
-    TRANSMISSION("변속·구동"),
-    ELECTRIC_WARNING("전기·경고등"),
-    AC("에어컨"),
-    SMELL_SMOKE_LEAK("냄새·연기·누유");
+enum class SymptomCategory(@StringRes val labelRes: Int) {
+    NOISE_VIBRATION(R.string.symptom_cat_noise_vibration),
+    DRIVING_STEERING(R.string.symptom_cat_driving_steering),
+    BRAKE(R.string.symptom_cat_brake),
+    TIRE_WHEEL(R.string.symptom_cat_tire_wheel),
+    SUSPENSION(R.string.symptom_cat_suspension),
+    ENGINE_START(R.string.symptom_cat_engine_start),
+    COOLING(R.string.symptom_cat_cooling),
+    TRANSMISSION(R.string.symptom_cat_transmission),
+    ELECTRIC_WARNING(R.string.symptom_cat_electric_warning),
+    AC(R.string.symptom_cat_ac),
+    SMELL_SMOKE_LEAK(R.string.symptom_cat_smell_smoke_leak);
+
+    val label: UiText get() = UiText.Res(labelRes)
 
     companion object {
         fun fromOrNull(raw: String): SymptomCategory? = entries.firstOrNull { it.name == raw }
@@ -113,23 +119,18 @@ enum class SymptomCategory(val label: String) {
  * 주행위험도 — 수리비나 고장의 심각성이 아니라, 이 증상인 채로
  * 계속 운행했을 때 안전에 미칠 가능성을 나타내는 참고 지표.
  */
-enum class SymptomRiskLevel(val level: Int, val label: String, val guidance: String) {
-    CHECK(
-        1, "점검 권장",
-        "현재 설명만으로는 주행 안전에 직접 영향을 줄 가능성이 낮아 보이지만, 증상이 지속되면 점검을 받아보세요."
-    ),
-    CAUTION(
-        2, "주의 · 빠른 점검",
-        "고속·장거리 주행을 피하고 가까운 시일 내에 점검을 권장해요."
-    ),
-    MINIMIZE(
-        3, "운행 최소화",
-        "안전 문제나 추가 손상 가능성이 있어요. 필요한 이동 외에는 운행을 줄이고 빠르게 점검을 받아보세요."
-    ),
-    STOP(
-        4, "운행 중지",
-        "안전한 곳에 정차하고 계속 운행하지 않는 것을 권장해요. 필요하면 견인을 고려하세요."
-    );
+enum class SymptomRiskLevel(
+    val level: Int,
+    @StringRes val labelRes: Int,
+    @StringRes val guidanceRes: Int
+) {
+    CHECK(1, R.string.risk_check_label, R.string.risk_check_guidance),
+    CAUTION(2, R.string.risk_caution_label, R.string.risk_caution_guidance),
+    MINIMIZE(3, R.string.risk_minimize_label, R.string.risk_minimize_guidance),
+    STOP(4, R.string.risk_stop_label, R.string.risk_stop_guidance);
+
+    val label: UiText get() = UiText.Res(labelRes)
+    val guidance: UiText get() = UiText.Res(guidanceRes)
 
     companion object {
         /** 데이터 오류로 범위 밖 값이 오면 보수적으로 한 단계 높은 쪽을 택한다 */

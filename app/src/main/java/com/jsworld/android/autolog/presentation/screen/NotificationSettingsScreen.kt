@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -178,7 +181,7 @@ fun NotificationSettingsScreen(
                 }.onFailure {
                     Toast.makeText(
                         context,
-                        "설정 > 앱 > 오토로그 > 알림에서 켜주세요.",
+                        context.getString(R.string.notif_enable_in_system),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -216,7 +219,7 @@ fun NotificationSettingsScreen(
 
             Toast.makeText(
                 context,
-                "매주 일요일 오후 8시에 알림을 보내드릴게요.",
+                context.getString(R.string.notif_weekly_on),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -229,7 +232,7 @@ fun NotificationSettingsScreen(
 
             Toast.makeText(
                 context,
-                "주간 알림이 꺼졌습니다.",
+                context.getString(R.string.notif_weekly_off),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -246,7 +249,7 @@ fun NotificationSettingsScreen(
 
                     Toast.makeText(
                         context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        context.getString(R.string.notif_permission_denied),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -280,13 +283,14 @@ fun NotificationSettingsScreen(
      * 정비 임박/초과 알림 — 마스터 스위치를 켜는 순간 채널 생성 + 일일 검사 예약.
      * (remember 로 감싸지 않는다 — alertPrefs.hour 최신값을 잡아야 해서)
      */
+    val maintOnToast = stringResource(R.string.notif_maint_on, formatAlertHour(alertPrefs.hour))
     val enableMaintenanceAlert: () -> Unit = {
         AutoLogNotificationHelper.createChannels(context)
         MaintenanceAlertScheduler.reschedule(context, alertPrefs.hour)
         viewModel.setMaintenanceAlertEnabled(true)
         Toast.makeText(
             context,
-            "매일 ${formatAlertHour(alertPrefs.hour)}에 정비 상태를 확인해 알려드릴게요.",
+            maintOnToast,
             Toast.LENGTH_SHORT
         ).show()
     }
@@ -294,7 +298,7 @@ fun NotificationSettingsScreen(
     val disableMaintenanceAlert: () -> Unit = {
         MaintenanceAlertScheduler.cancel(context)
         viewModel.setMaintenanceAlertEnabled(false)
-        Toast.makeText(context, "정비 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.notif_maint_off), Toast.LENGTH_SHORT).show()
     }
 
     val maintenanceAlertPermissionLauncher =
@@ -307,7 +311,7 @@ fun NotificationSettingsScreen(
                     viewModel.setMaintenanceAlertEnabled(false)
                     Toast.makeText(
                         context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        context.getString(R.string.notif_permission_denied),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -345,7 +349,7 @@ fun NotificationSettingsScreen(
         AutoLogNotificationHelper.createChannels(context)
         MonthlyReportScheduler.reschedule(context)
         viewModel.setMonthlyReportNotificationEnabled(true)
-        Toast.makeText(context, "매월 1일에 지난달 리포트를 알려드릴게요.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.notif_monthly_on), Toast.LENGTH_SHORT).show()
     }
 
     val monthlyReportPermissionLauncher =
@@ -358,7 +362,7 @@ fun NotificationSettingsScreen(
                     viewModel.setMonthlyReportNotificationEnabled(false)
                     Toast.makeText(
                         context,
-                        "알림 권한이 허용되지 않아 알림을 켤 수 없습니다.",
+                        context.getString(R.string.notif_permission_denied),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -386,7 +390,7 @@ fun NotificationSettingsScreen(
         } else {
             MonthlyReportScheduler.cancel(context)
             viewModel.setMonthlyReportNotificationEnabled(false)
-            Toast.makeText(context, "월간 리포트 알림이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.notif_monthly_off), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -395,14 +399,14 @@ fun NotificationSettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "알림",
+                        stringResource(R.string.settings_notification),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -416,7 +420,7 @@ fun NotificationSettingsScreen(
         ) {
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    SettingsSectionTitle("알림")
+                    SettingsSectionTitle(stringResource(R.string.settings_section_notification))
                 }
 
                 if (notificationBlock != AutoLogNotificationHelper.NotificationBlock.NONE) {
@@ -440,7 +444,7 @@ fun NotificationSettingsScreen(
                                 }.onFailure {
                                     Toast.makeText(
                                         context,
-                                        "시스템 설정을 열 수 없어요. 설정 > 앱 > 오토로그 > 알림에서 확인해주세요.",
+                                        context.getString(R.string.notif_open_system_failed),
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -452,8 +456,8 @@ fun NotificationSettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.Notifications,
-                        title = "주간 주행거리 알림",
-                        subtitle = "매주 1회 주행거리 업데이트 여부를 알려드립니다",
+                        title = stringResource(R.string.notif_weekly_title),
+                        subtitle = stringResource(R.string.notif_weekly_sub),
                         checked = notificationEnabled,
                         onCheckedChange = onNotificationToggleChange
                     )
@@ -462,8 +466,8 @@ fun NotificationSettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.NotificationsActive,
-                        title = "정비 알림",
-                        subtitle = "교체 시기가 다가오거나 지나면 알려드립니다",
+                        title = stringResource(R.string.notif_maint_title),
+                        subtitle = stringResource(R.string.notif_maint_sub),
                         checked = alertPrefs.enabled,
                         onCheckedChange = onMaintenanceAlertToggleChange
                     )
@@ -473,8 +477,8 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsSwitchMenuItem(
                             icon = Icons.Outlined.Notifications,
-                            title = "임박 알림",
-                            subtitle = "교체 시기가 다가올 때",
+                            title = stringResource(R.string.notif_soon_title),
+                            subtitle = stringResource(R.string.notif_soon_sub),
                             checked = alertPrefs.soonEnabled,
                             indented = true,
                             onCheckedChange = viewModel::setMaintenanceAlertSoonEnabled
@@ -484,8 +488,8 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsSwitchMenuItem(
                             icon = Icons.Outlined.NotificationImportant,
-                            title = "초과 알림",
-                            subtitle = "교체 시기를 넘겼을 때",
+                            title = stringResource(R.string.notif_overdue_title),
+                            subtitle = stringResource(R.string.notif_overdue_sub),
                             checked = alertPrefs.overdueEnabled,
                             indented = true,
                             onCheckedChange = viewModel::setMaintenanceAlertOverdueEnabled
@@ -495,8 +499,8 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsMenuItem(
                             icon = Icons.Outlined.Schedule,
-                            title = "알림 시간",
-                            subtitle = "매일 ${formatAlertHour(alertPrefs.hour)}에 확인",
+                            title = stringResource(R.string.notif_time_title),
+                            subtitle = stringResource(R.string.notif_time_sub, formatAlertHour(alertPrefs.hour)),
                             indented = true,
                             onClick = { showAlertHourDialog = true }
                         )
@@ -505,12 +509,9 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsMenuItem(
                             icon = Icons.Outlined.Repeat,
-                            title = "초과 리마인드",
-                            subtitle = if (alertPrefs.remindDays == 0) {
-                                "안 함 — 초과 시 한 번만 알려드려요"
-                            } else {
-                                "초과 상태가 계속되면 ${alertPrefs.remindDays}일마다 다시 알림"
-                            },
+                            title = stringResource(R.string.notif_remind_title),
+                            subtitle = if (alertPrefs.remindDays == 0) stringResource(R.string.notif_remind_none_sub)
+                            else stringResource(R.string.notif_remind_days_sub, alertPrefs.remindDays),
                             indented = true,
                             onClick = { showAlertRemindDialog = true }
                         )
@@ -521,14 +522,14 @@ fun NotificationSettingsScreen(
                         item {
                             SettingsMenuItem(
                                 icon = Icons.Outlined.BugReport,
-                                title = "알림 테스트 (디버그 전용)",
-                                subtitle = "10초 뒤 현재 임박·초과 항목으로 알림을 보내봅니다",
+                                title = stringResource(R.string.notif_test_title),
+                                subtitle = stringResource(R.string.notif_test_sub),
                                 indented = true,
                                 onClick = {
                                     MaintenanceAlertScheduler.enqueueTest(context)
                                     Toast.makeText(
                                         context,
-                                        "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
+                                        context.getString(R.string.notif_test_toast),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -540,8 +541,8 @@ fun NotificationSettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.CalendarMonth,
-                        title = "검사·보험·세금 알림",
-                        subtitle = "정기검사·보험 만기 2주 전부터 알려드립니다",
+                        title = stringResource(R.string.notif_schedule_title),
+                        subtitle = stringResource(R.string.notif_schedule_sub),
                         checked = scheduleAlertEnabled,
                         onCheckedChange = { checked ->
                             if (checked) AutoLogNotificationHelper.createChannels(context)
@@ -565,8 +566,8 @@ fun NotificationSettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.WbSunny,
-                        title = "계절별 관리 알림",
-                        subtitle = "계절이 바뀔 때 확인할 항목을 한 번 알려드립니다",
+                        title = stringResource(R.string.notif_seasonal_title),
+                        subtitle = stringResource(R.string.notif_seasonal_sub),
                         checked = seasonalCareAlertEnabled,
                         onCheckedChange = { checked ->
                             if (checked) AutoLogNotificationHelper.createChannels(context)
@@ -593,8 +594,8 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsMenuItem(
                             icon = Icons.Outlined.BugReport,
-                            title = "계절 알림 테스트 (디버그 전용)",
-                            subtitle = "지금 계절 카드 내용으로 알림을 보내봅니다",
+                            title = stringResource(R.string.notif_seasonal_test_title),
+                            subtitle = stringResource(R.string.notif_seasonal_test_sub),
                             indented = true,
                             onClick = {
                                 AutoLogNotificationHelper.createChannels(context)
@@ -602,7 +603,7 @@ fun NotificationSettingsScreen(
                                 viewModel.sendSeasonalTestNotification()
                                 Toast.makeText(
                                     context,
-                                    "알림을 보냈어요. 상단바를 내려보세요.",
+                                    context.getString(R.string.notif_seasonal_test_toast),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -613,8 +614,8 @@ fun NotificationSettingsScreen(
                 item {
                     SettingsSwitchMenuItem(
                         icon = Icons.Outlined.BarChart,
-                        title = "월간 리포트 알림",
-                        subtitle = "매월 1일, 지난달 지출 요약을 알려드립니다",
+                        title = stringResource(R.string.notif_monthly_title),
+                        subtitle = stringResource(R.string.notif_monthly_sub),
                         checked = monthlyReportEnabled,
                         onCheckedChange = onMonthlyReportToggleChange
                     )
@@ -637,14 +638,14 @@ fun NotificationSettingsScreen(
                     item {
                         SettingsMenuItem(
                             icon = Icons.Outlined.BugReport,
-                            title = "리포트 알림 테스트 (디버그 전용)",
-                            subtitle = "10초 뒤 지난달 집계로 알림을 보내봅니다",
+                            title = stringResource(R.string.notif_monthly_test_title),
+                            subtitle = stringResource(R.string.notif_monthly_test_sub),
                             indented = true,
                             onClick = {
                                 MonthlyReportScheduler.enqueueTest(context)
                                 Toast.makeText(
                                     context,
-                                    "10초 뒤 알림이 옵니다. 앱을 백그라운드로 보내보세요.",
+                                    context.getString(R.string.notif_test_toast),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -657,7 +658,7 @@ fun NotificationSettingsScreen(
     if (showAlertHourDialog) {
         AlertDialog(
             onDismissRequest = { showAlertHourDialog = false },
-            title = { Text("알림 시간") },
+            title = { Text(stringResource(R.string.notif_time_title)) },
             text = {
                 Column(
                     Modifier
@@ -690,7 +691,7 @@ fun NotificationSettingsScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showAlertHourDialog = false }) { Text("취소") }
+                TextButton(onClick = { showAlertHourDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -701,11 +702,11 @@ fun NotificationSettingsScreen(
     if (showAlertRemindDialog) {
         AlertDialog(
             onDismissRequest = { showAlertRemindDialog = false },
-            title = { Text("초과 리마인드") },
+            title = { Text(stringResource(R.string.notif_remind_title)) },
             text = {
                 Column {
                     Text(
-                        "교체 시기를 넘긴 항목이 계속 방치되면 다시 알려드릴까요?",
+                        stringResource(R.string.notif_remind_dialog_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -723,7 +724,7 @@ fun NotificationSettingsScreen(
                                 .padding(vertical = 12.dp, horizontal = 4.dp)
                         ) {
                             Text(
-                                MaintenanceAlertPrefs.remindLabel(days),
+                                MaintenanceAlertPrefs.remindLabel(days).asString(),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selected) MaterialTheme.colorScheme.primary
@@ -735,7 +736,7 @@ fun NotificationSettingsScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showAlertRemindDialog = false }) { Text("취소") }
+                TextButton(onClick = { showAlertRemindDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }

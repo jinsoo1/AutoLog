@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.component
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedItemName
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -87,13 +91,12 @@ fun MaintenanceItemPickSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "정비 항목",
+                        stringResource(R.string.pick_sheet_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (sorted.isEmpty()) "켜둔 정비 항목이 없어요"
-                        else "교체가 임박한 항목이 위에 있어요",
+                        stringResource(if (sorted.isEmpty()) R.string.pick_sheet_empty else R.string.pick_sheet_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -113,7 +116,7 @@ fun MaintenanceItemPickSheet(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        "정비 항목 관리",
+                        stringResource(R.string.pick_sheet_manage),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -151,13 +154,13 @@ fun MaintenanceItemPickSheet(
                 )
                 Column {
                     Text(
-                        "수리 기록 추가",
+                        stringResource(R.string.pick_sheet_add_repair),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
-                        "차량 수리 내역을 입력해요",
+                        stringResource(R.string.pick_sheet_add_repair_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -186,13 +189,15 @@ private fun ItemRow(
     // status == null 은 주기 없는 항목(수리/관리)뿐이다 — "첫 기록"이라고 하면
     // 기록이 있어도 계속 그렇게 보이므로 성격을 말해준다.
     val isCare = isCareItemName(option.typeName)
-    val badgeLabel = when {
-        status == null && isCare -> "관리"
-        status == null -> "수리"
-        status.status == MaintenanceStatus.OVERDUE -> "초과"
-        status.status == MaintenanceStatus.SOON -> "임박"
-        else -> "정상"
-    }
+    val badgeLabel = stringResource(
+        when {
+            status == null && isCare -> R.string.status_care
+            status == null -> R.string.status_repair
+            status.status == MaintenanceStatus.OVERDUE -> R.string.status_overdue
+            status.status == MaintenanceStatus.SOON -> R.string.status_soon
+            else -> R.string.status_normal
+        }
+    )
 
     Row(
         modifier = Modifier
@@ -225,14 +230,14 @@ private fun ItemRow(
 
         Column(Modifier.weight(1f)) {
             Text(
-                option.typeName,
+                option.typeName.localizedItemName(),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                option.previousServiceLabel() ?: "기록 없음",
+                option.previousServiceLabel() ?: stringResource(R.string.pick_sheet_no_record),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -255,10 +260,13 @@ private fun ItemRow(
 }
 
 /** "이전 정비 2025.11.03 · 24,300km". 기록이 없으면 null. */
+@Composable
+@ReadOnlyComposable
 fun SettingOption.previousServiceLabel(): String? {
     val parts = buildList {
         lastServiceDate?.takeIf { it.isNotBlank() }?.let { add(it) }
         lastServiceMileage?.let { add("${java.text.NumberFormat.getIntegerInstance().format(it)}km") }
     }
-    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")?.let { "이전 정비 $it" }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+        ?.let { stringResource(R.string.pick_sheet_previous, it) }
 }

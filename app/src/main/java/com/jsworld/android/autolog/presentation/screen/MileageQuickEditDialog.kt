@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,11 +49,11 @@ internal fun MileageQuickEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("주행거리 업데이트", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.mileage_dialog_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "현재 값: ${currentMileage.formatKm()} km",
+                    stringResource(R.string.mileage_current, currentMileage.formatKm()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -67,24 +69,24 @@ internal fun MileageQuickEditDialog(
                             selection = TextRange(formatted.length)
                         )
                     },
-                    label = { Text("새 주행거리(km)") },
+                    label = { Text(stringResource(R.string.mileage_new_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = isBelowMin,
                     supportingText = {
                         when {
-                            digits.isBlank() -> Text("숫자만 입력해 주세요.")
-                            parsed == null -> Text("올바른 숫자를 입력해 주세요.")
+                            digits.isBlank() -> Text(stringResource(R.string.mileage_digits_only))
+                            parsed == null -> Text(stringResource(R.string.mileage_invalid))
                             isBelowMin -> Text(
-                                "가장 최근 정비 기록(${minText} km)보다 낮게 설정할 수 없어요.",
+                                stringResource(R.string.mileage_below_min, minText ?: ""),
                                 color = MaterialTheme.colorScheme.error
                             )
                             minAllowedMileage == null -> Text(
-                                "정비 기록이 아직 없어서 자유롭게 입력할 수 있어요.",
+                                stringResource(R.string.mileage_free_input),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             else -> Text(
-                                "정비 기록(최소 ${minText} km) 이상으로 입력해 주세요.",
+                                stringResource(R.string.mileage_min_hint, minText ?: ""),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -100,10 +102,10 @@ internal fun MileageQuickEditDialog(
                     if (minAllowedMileage != null && v < minAllowedMileage) return@Button // 방어
                     onSave(v)
                 }
-            ) { Text("저장") }
+            ) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("취소") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

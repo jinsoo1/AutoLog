@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -21,43 +25,42 @@ fun buildYearNarrative(
     maxRepairCost: Long = 0L
 ): ReportNarrative = when {
     yearTotal == 0L -> ReportNarrative(
-        title = "기록이 없는 해예요",
-        subtitle = "이 해엔 지출 기록이 없어요.",
+        title = UiText.Res(R.string.year_empty_title),
+        subtitle = UiText.Res(R.string.year_empty_subtitle),
         tone = NarrativeTone.EMPTY
     )
 
     // 횟수는 적어도 금액이 크면 그 해의 사건이다 — 잦은 수리보다 먼저 판정.
     maxRepairCost >= BIG_REPAIR_WON -> ReportNarrative(
-        title = "큰 수리가 있었던 해예요",
-        subtitle = "%,d원짜리 수리가 있었어요. 올해의 기록에서 확인해보세요."
-            .format(maxRepairCost),
+        title = UiText.Res(R.string.year_big_repair_title),
+        subtitle = UiText.Res(R.string.year_big_repair_subtitle, maxRepairCost),
         tone = NarrativeTone.SPIKE
     )
 
     repairCount >= 2 -> ReportNarrative(
-        title = "수리가 잦았던 해예요",
-        subtitle = "일회성 수리가 ${repairCount}건 있었어요. 항목별 지출에서 확인해보세요.",
+        title = UiText.Res(R.string.year_frequent_repair_title),
+        subtitle = UiText.Res(R.string.year_frequent_repair_subtitle, repairCount),
         tone = NarrativeTone.SPIKE
     )
 
     prevYearTotal != null &&
         yearTotal - prevYearTotal >= 300_000L &&
         yearTotal >= prevYearTotal + prevYearTotal * 3 / 10 -> ReportNarrative(
-        title = "지출이 커진 해예요",
-        subtitle = "작년보다 %,d원 늘었어요.".format(yearTotal - prevYearTotal),
+        title = UiText.Res(R.string.year_spend_up_title),
+        subtitle = UiText.Res(R.string.year_spend_up_subtitle, yearTotal - prevYearTotal),
         tone = NarrativeTone.SPIKE
     )
 
     isCompleteYear && prevYearTotal != null &&
         yearTotal <= prevYearTotal * 8 / 10 -> ReportNarrative(
-        title = "작년보다 알뜰했던 해예요",
-        subtitle = "전년보다 %,d원 줄었어요.".format(prevYearTotal - yearTotal),
+        title = UiText.Res(R.string.year_thrifty_title),
+        subtitle = UiText.Res(R.string.year_thrifty_subtitle, prevYearTotal - yearTotal),
         tone = NarrativeTone.CALM
     )
 
     else -> ReportNarrative(
-        title = "잔잔하게 흘러간 해예요",
-        subtitle = "큰 사건 없이 관리가 이어지고 있어요.",
+        title = UiText.Res(R.string.year_calm_title),
+        subtitle = UiText.Res(R.string.year_calm_subtitle),
         tone = NarrativeTone.CALM
     )
 }
@@ -102,7 +105,7 @@ fun topSpendItems(
 }
 
 /** 올해의 기록 한 줄 */
-data class YearHighlight(val label: String, val value: String)
+data class YearHighlight(val label: UiText, val value: UiText)
 
 private const val EARTH_KM = 40_075.0
 private const val DRUM_LITER = 200.0
@@ -122,9 +125,14 @@ fun buildYearHighlights(
     if (drivenKm > 0) {
         val laps = drivenKm / EARTH_KM
         val lapText =
-            if (laps >= 1.0) "지구 ${"%.1f".format(laps)}바퀴"
-            else "지구 한 바퀴의 ${(laps * 100).roundToInt().coerceAtLeast(1)}%"
-        add(YearHighlight("올해 주행", "${"%,d".format(drivenKm)}km · $lapText"))
+            if (laps >= 1.0) UiText.Res(R.string.hl_earth_laps, laps)
+            else UiText.Res(R.string.hl_earth_percent, (laps * 100).roundToInt().coerceAtLeast(1))
+        add(
+            YearHighlight(
+                UiText.Res(R.string.hl_driven_label),
+                UiText.Res(R.string.hl_driven_value, drivenKm, lapText)
+            )
+        )
     }
 
     // 올해의 큰 지출 — 단일 기록 중 최대 (정비·수리·세차 통틀어)
@@ -138,16 +146,21 @@ fun buildYearHighlights(
     }
     bigCandidates.maxByOrNull { it.second }?.let { (name, cost, date) ->
         val month = date?.substring(5, 7)?.toIntOrNull()
-        val prefix = month?.let { "${it}월 " }.orEmpty()
-        add(YearHighlight("올해의 큰 지출", "$prefix$name · ${"%,d".format(cost)}원"))
+        val prefix: UiText = month?.let { UiText.Res(R.string.month_prefix, it) } ?: UiText.Empty
+        add(
+            YearHighlight(
+                UiText.Res(R.string.hl_big_spend_label),
+                UiText.Res(R.string.hl_big_spend_value, prefix, LocalizedNames.item(name), cost)
+            )
+        )
     }
 
     // 가장 많이 달린 달
     yearMonths.filter { (it.drivenKm ?: 0) > 0 }.maxByOrNull { it.drivenKm!! }?.let {
         add(
             YearHighlight(
-                "가장 많이 달린 달",
-                "${it.month.monthValue}월 · ${"%,d".format(it.drivenKm)}km"
+                UiText.Res(R.string.hl_most_driven_label),
+                UiText.Res(R.string.hl_most_driven_value, it.month.monthValue, it.drivenKm!!)
             )
         )
     }
@@ -158,8 +171,8 @@ fun buildYearHighlights(
         val thrifty = spentMonths.minBy { it.total }
         add(
             YearHighlight(
-                "가장 알뜰했던 달",
-                "${thrifty.month.monthValue}월 · ${"%,d".format(thrifty.total)}원"
+                UiText.Res(R.string.hl_thrifty_label),
+                UiText.Res(R.string.hl_thrifty_value, thrifty.month.monthValue, thrifty.total)
             )
         )
     }
@@ -169,15 +182,22 @@ fun buildYearHighlights(
         .groupingBy { it }.eachCount()
         .maxByOrNull { it.value }
         ?.takeIf { it.value >= 2 }
-        ?.let { add(YearHighlight("단골", "${it.key} · ${it.value}회")) }
+        ?.let {
+            add(
+                YearHighlight(
+                    UiText.Res(R.string.hl_regular_label),
+                    UiText.Res(R.string.hl_regular_value, it.key, it.value)
+                )
+            )
+        }
 
     // 주유량/충전량 환산
     val liters = yearFuel.filter { !it.unit.isElectric }.mapNotNull { it.quantity }.sum()
     if (liters > 0) {
         add(
             YearHighlight(
-                "올해 주유량",
-                "${"%,.0f".format(liters)}L · 드럼통 ${"%.1f".format(liters / DRUM_LITER)}개 분량"
+                UiText.Res(R.string.hl_fuel_label),
+                UiText.Res(R.string.hl_fuel_value, liters, liters / DRUM_LITER)
             )
         )
     }
@@ -185,12 +205,15 @@ fun buildYearHighlights(
     if (kwh > 0) {
         val months = kwh / HOUSEHOLD_MONTH_KWH
         val scale =
-            if (months >= 1.0) "약 ${"%.1f".format(months)}달 치"
-            else "약 ${(kwh / (HOUSEHOLD_MONTH_KWH / 30)).roundToInt().coerceAtLeast(1)}일 치"
+            if (months >= 1.0) UiText.Res(R.string.hl_scale_months, months)
+            else UiText.Res(
+                R.string.hl_scale_days,
+                (kwh / (HOUSEHOLD_MONTH_KWH / 30)).roundToInt().coerceAtLeast(1)
+            )
         add(
             YearHighlight(
-                "올해 충전량",
-                "${"%,.0f".format(kwh)}kWh · 4인 가구 $scale 전기 분량"
+                UiText.Res(R.string.hl_charge_label),
+                UiText.Res(R.string.hl_charge_value, kwh, scale)
             )
         )
     }
@@ -204,9 +227,13 @@ fun buildYearHighlights(
             val diff = cur - prev
             add(
                 YearHighlight(
-                    "${dominantUnit.actionLabel} 단가",
-                    "작년보다 ${dominantUnit.symbol}당 ${"%,d".format(kotlin.math.abs(diff))}원 " +
-                        if (diff < 0) "저렴" else "비쌈"
+                    UiText.Res(R.string.hl_price_label, dominantUnit.actionLabel),
+                    UiText.Res(
+                        R.string.hl_price_value,
+                        dominantUnit.symbol,
+                        abs(diff),
+                        UiText.Res(if (diff < 0) R.string.hl_price_cheaper else R.string.hl_price_pricier)
+                    )
                 )
             )
         }
@@ -216,12 +243,12 @@ fun buildYearHighlights(
     val cares = yearCare.size
     val repairs = yearMaint.count { it.isRepair }
     val maints = yearMaint.size - repairs
-    val parts = buildList {
-        if (maints > 0) add("정비 ${maints}건")
-        if (repairs > 0) add("수리 ${repairs}건")
-        if (cares > 0) add("세차·관리 ${cares}회")
+    val parts = buildList<UiText> {
+        if (maints > 0) add(UiText.Res(R.string.count_maintenance, maints))
+        if (repairs > 0) add(UiText.Res(R.string.count_repair, repairs))
+        if (cares > 0) add(UiText.Res(R.string.count_care, cares))
     }
-    if (parts.isNotEmpty()) add(YearHighlight("관리 기록", parts.joinToString(" · ")))
+    if (parts.isNotEmpty()) add(YearHighlight(UiText.Res(R.string.hl_records_label), UiText.Joined(parts)))
 }
 
 /** 평균 단가 — 수량·금액이 모두 있는 기록으로만 */

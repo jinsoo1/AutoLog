@@ -1,5 +1,12 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
+import com.jsworld.android.autolog.core.ui.asString
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -99,6 +106,7 @@ import com.jsworld.android.autolog.domain.model.buildExpenseInsight
 import com.jsworld.android.autolog.domain.model.buildReportNarrative
 import com.jsworld.android.autolog.domain.model.buildYearHighlights
 import com.jsworld.android.autolog.domain.model.buildYearNarrative
+import com.jsworld.android.autolog.domain.model.DistanceLandmarks
 import com.jsworld.android.autolog.domain.model.distanceLadderText
 import com.jsworld.android.autolog.domain.model.earthLapsText
 import com.jsworld.android.autolog.domain.model.personalRecordText
@@ -138,7 +146,7 @@ fun ReportTabScreen(
         TabTopBar(leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) })
 
         if (car == null) {
-            ReportEmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
+            ReportEmptyMessage(stringResource(R.string.empty_no_car_title), stringResource(R.string.empty_no_car_body))
             return@Column
         }
 
@@ -187,8 +195,8 @@ fun ReportTabScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     SectionLabel(
-                        title = "곧 있을 일",
-                        actionLabel = "일정 관리",
+                        title = stringResource(R.string.report_upcoming),
+                        actionLabel = stringResource(R.string.report_manage_schedule),
                         onAction = { onOpenSchedule(car.id) }
                     )
                     UpcomingCard(
@@ -201,8 +209,8 @@ fun ReportTabScreen(
                 }
             }
             ReportEmptyMessage(
-                "아직 리포트에 담을 기록이 없어요",
-                "주유·정비 기록을 남기면 지출 리포트가 채워져요."
+                stringResource(R.string.report_empty_title),
+                stringResource(R.string.report_empty_body)
             )
             return@Column
         }
@@ -252,19 +260,19 @@ fun ReportTabScreen(
                         selected = !yearly,
                         onClick = { yearly = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                    ) { Text("월간") }
+                    ) { Text(stringResource(R.string.report_monthly)) }
                     SegmentedButton(
                         selected = yearly,
                         onClick = { yearly = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                    ) { Text("연간") }
+                    ) { Text(stringResource(R.string.report_yearly)) }
                 }
             }
 
             if (!yearly) {
                 item {
                     PeriodSelector(
-                        label = "${current.month.year}년 ${current.month.monthValue}월",
+                        label = stringResource(R.string.date_year_month, current.month.year, current.month.monthValue),
                         canPrev = monthKeys.indexOf(current.month.toString()) > 0,
                         canNext = monthKeys.indexOf(current.month.toString()) < monthKeys.lastIndex,
                         onPrev = {
@@ -305,7 +313,7 @@ fun ReportTabScreen(
                         .filter { (it.cost ?: 0) > 0 }
                         .maxByOrNull { it.cost!! }
                     TotalCard(
-                        title = "${current.month.monthValue}월 총지출",
+                        title = stringResource(R.string.report_month_total, current.month.monthValue),
                         fuel = current.fuelCost,
                         maintenance = current.maintenanceCost,
                         care = current.careCost,
@@ -318,15 +326,15 @@ fun ReportTabScreen(
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MetricCard(
-                            label = "km당 유지비",
-                            value = current.costPerKm?.let { "${it.formatWon()}원" },
-                            emptyHint = "주행거리 기록 필요",
+                            label = stringResource(R.string.report_cost_per_km),
+                            value = current.costPerKm?.let { stringResource(R.string.money_amount, it) },
+                            emptyHint = stringResource(R.string.report_need_mileage),
                             modifier = Modifier.weight(1f)
                         )
                         MetricCard(
-                            label = "이 달 주행",
+                            label = stringResource(R.string.report_month_driven),
                             value = current.drivenKm?.let { "${it.formatWon()}km" },
-                            emptyHint = "주행거리 기록 필요",
+                            emptyHint = stringResource(R.string.report_need_mileage),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -334,8 +342,9 @@ fun ReportTabScreen(
 
                 // 재미 지표 — 누적 지구 바퀴 + 자기 기록(없으면 거리 비유)
                 item {
+                    val landmarks = DistanceLandmarks.forLanguage(java.util.Locale.getDefault().language)
                     val secondLine = personalRecordText(loaded, current)
-                        ?: current.drivenKm?.let { distanceLadderText(it) }
+                        ?: current.drivenKm?.let { distanceLadderText(it, landmarks) }
                     FunFactCard(
                         earthLine = earthLapsText(car.mileage),
                         totalMileage = car.mileage,
@@ -347,17 +356,14 @@ fun ReportTabScreen(
                 if (isLatestMonth) {
                     when {
                         predictions.isNotEmpty() -> {
-                            item { SectionLabel("정비 시기 예측") }
+                            item { SectionLabel(stringResource(R.string.report_prediction_section)) }
                             item {
                                 PredictionCard(
                                     predictions = predictions,
                                     overview = overview,
                                     paceCaption = pace?.let {
-                                        "최근 ${it.monthsUsed}개월 월평균 " +
-                                            NumberFormat.getIntegerInstance().format(it.monthlyKm) +
-                                            "km로 달렸을 때예요."
-                                    } ?: "기간 주기만으로 계산했어요 — 주행거리를 " +
-                                        "업데이트하면 거리 기준도 예상할 수 있어요.",
+                                        stringResource(R.string.report_pace_caption, it.monthsUsed, it.monthlyKm)
+                                    } ?: stringResource(R.string.report_pace_period_only),
                                     today = today
                                 )
                             }
@@ -365,14 +371,12 @@ fun ReportTabScreen(
 
                         // 기록이 하나도 없으면 계산 근거 자체가 없다 — 첫 기록으로 보낸다.
                         !anyHistory && overview.isNotEmpty() -> {
-                            item { SectionLabel("정비 시기 예측") }
+                            item { SectionLabel(stringResource(R.string.report_prediction_section)) }
                             item {
                                 PredictionGuideCard(
-                                    title = "첫 정비 기록을 남기면 시작돼요",
-                                    body = "언제 무엇을 했는지 하나라도 알아야 다음 시기를 " +
-                                        "계산할 수 있어요. 기록이 없는 항목은 0km·오늘 기준이 " +
-                                        "되어버려서, 예측에서 빼두었습니다.",
-                                    actionLabel = "정비 탭에서 기록하기",
+                                    title = stringResource(R.string.report_pred_guide_first_title),
+                                    body = stringResource(R.string.report_pred_guide_first_body),
+                                    actionLabel = stringResource(R.string.report_pred_guide_first_action),
                                     onAction = onOpenMaintenanceTab
                                 )
                             }
@@ -380,14 +384,12 @@ fun ReportTabScreen(
 
                         // 기록은 있는데 페이스를 모른다 — 주행거리 업데이트로 보낸다.
                         pace == null && anyHistory -> {
-                            item { SectionLabel("정비 시기 예측") }
+                            item { SectionLabel(stringResource(R.string.report_prediction_section)) }
                             item {
                                 PredictionGuideCard(
-                                    title = "아직 예상 시기를 계산할 수 없어요",
-                                    body = "월평균 주행거리를 알아야 계산할 수 있는데, " +
-                                        "최근 두 달 주행거리 기록이 없어요. 홈에서 " +
-                                        "주행거리를 업데이트하면 알려드릴게요.",
-                                    actionLabel = "주행거리 업데이트",
+                                    title = stringResource(R.string.report_pred_guide_pace_title),
+                                    body = stringResource(R.string.report_pred_guide_pace_body),
+                                    actionLabel = stringResource(R.string.report_pred_guide_pace_action),
                                     onAction = onOpenHomeTab
                                 )
                             }
@@ -402,8 +404,8 @@ fun ReportTabScreen(
                 if (isLatestMonth && (urgentItems.isNotEmpty() || dueSchedules.isNotEmpty())) {
                     item {
                         SectionLabel(
-                            title = "곧 있을 일",
-                            actionLabel = if (dueSchedules.isNotEmpty()) "일정 관리" else null,
+                            title = stringResource(R.string.report_upcoming),
+                            actionLabel = if (dueSchedules.isNotEmpty()) stringResource(R.string.report_manage_schedule) else null,
                             onAction = { onOpenSchedule(car.id) }
                         )
                     }
@@ -424,7 +426,7 @@ fun ReportTabScreen(
 
                 val entries = buildMonthEntries(monthFuel, monthMaint, monthCare)
                 if (entries.isNotEmpty()) {
-                    item { SectionLabel("지출 내역 · ${entries.size}건") }
+                    item { SectionLabel(stringResource(R.string.report_entries_section, entries.size)) }
                     item {
                         // 기록이 많은 달엔 카드가 화면을 다 먹는다 — 6건까지만 보이고 접는다.
                         // 7~8건에 "외 1~2건" 펼치기가 생기는 게 더 어색해서 9건부터 적용.
@@ -452,8 +454,8 @@ fun ReportTabScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            if (expanded) "접기"
-                                            else "외 ${entries.size - ENTRY_COLLAPSED_COUNT}건 모두 보기",
+                                            if (expanded) stringResource(R.string.common_collapse)
+                                            else stringResource(R.string.report_entries_more, entries.size - ENTRY_COLLAPSED_COUNT),
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.primary
@@ -472,7 +474,7 @@ fun ReportTabScreen(
                     }
                 }
 
-                item { SectionLabel("월별 추이") }
+                item { SectionLabel(stringResource(R.string.report_trend_section)) }
                 item {
                     TrendCard(
                         months = loaded.takeLast(12),
@@ -492,7 +494,7 @@ fun ReportTabScreen(
 
                 item {
                     PeriodSelector(
-                        label = "${selectedYear}년",
+                        label = stringResource(R.string.report_year_label, selectedYear),
                         canPrev = yearIndex > 0,
                         canNext = yearIndex < years.lastIndex,
                         onPrev = { if (yearIndex > 0) selectedYear = years[yearIndex - 1] },
@@ -519,7 +521,7 @@ fun ReportTabScreen(
 
                 item {
                     TotalCard(
-                        title = "${selectedYear}년 총지출",
+                        title = stringResource(R.string.report_year_total, selectedYear),
                         fuel = yearMonths.sumOf { it.fuelCost },
                         maintenance = yearMonths.sumOf { it.maintenanceCost },
                         care = yearMonths.sumOf { it.careCost },
@@ -532,17 +534,17 @@ fun ReportTabScreen(
                     val total = yearMonths.sumOf { it.total }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MetricCard(
-                            label = "km당 유지비",
-                            value = if (totalKm > 0) "${(total / totalKm).formatWon()}원" else null,
-                            emptyHint = "주행거리 기록 필요",
+                            label = stringResource(R.string.report_cost_per_km),
+                            value = if (totalKm > 0) stringResource(R.string.money_amount, total / totalKm) else null,
+                            emptyHint = stringResource(R.string.report_need_mileage),
                             caption = if (knownKm.size < yearMonths.size && totalKm > 0)
-                                "주행거리 파악된 달 기준" else null,
+                                stringResource(R.string.report_partial_months) else null,
                             modifier = Modifier.weight(1f)
                         )
                         MetricCard(
-                            label = "연 주행",
+                            label = stringResource(R.string.report_year_driven),
                             value = if (totalKm > 0) "${totalKm.formatWon()}km" else null,
-                            emptyHint = "주행거리 기록 필요",
+                            emptyHint = stringResource(R.string.report_need_mileage),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -552,18 +554,18 @@ fun ReportTabScreen(
                     val top = yearMonths.maxByOrNull { it.total }?.takeIf { it.total > 0L }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MetricCard(
-                            label = "월평균 지출",
+                            label = stringResource(R.string.report_monthly_avg),
                             value = if (yearMonths.isNotEmpty() && total > 0L)
-                                "${(total / yearMonths.size).formatWon()}원" else null,
-                            emptyHint = "지출 기록 필요",
-                            caption = "기록 시작 후 ${yearMonths.size}개월 기준",
+                                stringResource(R.string.money_amount, total / yearMonths.size) else null,
+                            emptyHint = stringResource(R.string.report_need_expense),
+                            caption = stringResource(R.string.report_since_months, yearMonths.size),
                             modifier = Modifier.weight(1f)
                         )
                         MetricCard(
-                            label = "지출 최다 달",
-                            value = top?.let { "${it.month.monthValue}월" },
-                            emptyHint = "지출 기록 필요",
-                            caption = top?.let { "${it.total.formatWon()}원" },
+                            label = stringResource(R.string.report_top_month),
+                            value = top?.let { stringResource(R.string.date_month, it.month.monthValue) },
+                            emptyHint = stringResource(R.string.report_need_expense),
+                            caption = top?.let { stringResource(R.string.money_amount, it.total) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -571,18 +573,18 @@ fun ReportTabScreen(
 
                 val topItems = topSpendItems(yearMaint, yearCare)
                 if (topItems.isNotEmpty()) {
-                    item { SectionLabel("항목별 지출 TOP") }
+                    item { SectionLabel(stringResource(R.string.report_top_items_section)) }
                     item { TopSpendCard(topItems) }
                 }
 
                 val highlights =
                     buildYearHighlights(yearMonths, yearFuel, yearMaint, prevYearFuel, yearCare)
                 if (highlights.isNotEmpty()) {
-                    item { SectionLabel("올해의 기록") }
+                    item { SectionLabel(stringResource(R.string.report_highlights_section)) }
                     item { YearHighlightsCard(highlights) }
                 }
 
-                item { SectionLabel("월별 지출") }
+                item { SectionLabel(stringResource(R.string.report_monthly_section)) }
                 item {
                     TrendCard(
                         months = yearMonths,
@@ -613,7 +615,7 @@ private fun PeriodSelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPrev, enabled = canPrev) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "이전")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.common_prev))
         }
         Text(
             label,
@@ -623,7 +625,7 @@ private fun PeriodSelector(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         IconButton(onClick = onNext, enabled = canNext) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "다음")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.common_next))
         }
     }
 }
@@ -656,9 +658,9 @@ private fun TotalCard(
                     )
                     Spacer(Modifier.width(20.dp))
                     Column(Modifier.weight(1f)) {
-                        CategoryLegendRow("주유·충전", fuel, total, MaterialTheme.colorScheme.primary)
-                        CategoryLegendRow("정비·수리", maintenance, total, MaterialTheme.colorScheme.secondary)
-                        CategoryLegendRow("세차·관리", care, total, MaterialTheme.colorScheme.tertiary)
+                        CategoryLegendRow(stringResource(R.string.category_fuel), fuel, total, MaterialTheme.colorScheme.primary)
+                        CategoryLegendRow(stringResource(R.string.category_maintenance), maintenance, total, MaterialTheme.colorScheme.secondary)
+                        CategoryLegendRow(stringResource(R.string.category_care), care, total, MaterialTheme.colorScheme.tertiary)
                     }
                 }
             } else {
@@ -668,13 +670,13 @@ private fun TotalCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "0원",
+                    stringResource(R.string.report_zero_won),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "이 기간엔 지출 기록이 없어요",
+                    stringResource(R.string.report_no_expense_period),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -690,7 +692,7 @@ private fun TotalCard(
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Text(
-                        insight.headline,
+                        insight.headline.asString(),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = when {
@@ -702,7 +704,7 @@ private fun TotalCard(
                     insight.detail?.let {
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            it,
+                            it.asString(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -714,7 +716,7 @@ private fun TotalCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     // 정비뿐 아니라 세차·관리 묶음도 함께 세므로 '기록'으로 뭉뚱그린다
-                    "금액이 입력되지 않은 기록 ${missingCostCount}건은 합계에서 빠져 있어요",
+                    stringResource(R.string.report_missing_cost, missingCostCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -803,7 +805,7 @@ private fun CategoryLegendRow(label: String, value: Long, total: Long, color: Co
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${value.formatWon()}원",
+                    stringResource(R.string.money_amount, value),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (value > 0L) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (value > 0L) MaterialTheme.colorScheme.onSurface
@@ -863,18 +865,18 @@ private fun PredictionCard(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            prediction.name,
+                            prediction.name.localizedItemName(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            predictionBasisLabel(prediction, byId[prediction.settingId]),
+                            predictionBasisLabel(prediction, byId[prediction.settingId]).asString(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Text(
-                        predictedDateLabel(prediction.date, today),
+                        predictedDateLabel(prediction.date, today).asString(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -886,7 +888,7 @@ private fun PredictionCard(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
             )
             Text(
-                "주행거리를 자주 업데이트할수록 예상이 정확해져요.",
+                stringResource(R.string.report_pred_footer),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -976,8 +978,7 @@ private fun UpcomingCard(
             Text(
                 // 금액은 정비 항목에만 붙는다. 자동차세·보험료는 앱이 모르는 값이라
                 // 평균을 지어내지 않고 날짜만 말한다.
-                if (schedules.isEmpty()) "교체 시기가 다가온 항목의 지난 교체 비용 기준 예상이에요."
-                else "곧 챙길 것들이에요. 금액은 지난 교체 비용 기준 예상이라 실제와 달라요.",
+                stringResource(if (schedules.isEmpty()) R.string.report_upcoming_hint_items else R.string.report_upcoming_hint_mixed),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1003,19 +1004,20 @@ private fun UpcomingCard(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            item.name,
+                            item.name.localizedItemName(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            item.remainingText,
+                            item.remainingText.asString(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     val cost = lastCosts[item.settingId]
                     Text(
-                        cost?.let { "약 ${formatCompactWon(it.toLong())}원" } ?: "비용 미상",
+                        cost?.let { stringResource(R.string.report_approx_won, formatCompactWon(it.toLong())) }
+                            ?: stringResource(R.string.report_cost_unknown),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (cost != null) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (cost != null) MaterialTheme.colorScheme.onSurface
@@ -1046,18 +1048,18 @@ private fun UpcomingCard(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            schedule.title,
+                            schedule.title.localizedItemName(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "${formatScheduleDate(schedule.dueDate, today)} · ${dDayLabel(remaining)}",
+                            "${formatScheduleDate(schedule.dueDate, today).asString()} · ${dDayLabel(remaining)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Text(
-                        "날짜 일정",
+                        stringResource(R.string.report_date_schedule),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1074,13 +1076,13 @@ private fun UpcomingCard(
                     Text(
                         // 일정(자동차세·보험료)은 금액을 모르니 합계에 못 넣는다.
                         // 같이 놓인 줄이 있는데 그냥 "합계"라고 하면 포함된 줄 안다.
-                        if (schedules.isEmpty()) "예상 지출 합계" else "정비 예상 지출",
+                        stringResource(if (schedules.isEmpty()) R.string.report_expected_total else R.string.report_expected_maint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "약 ${formatCompactWon(known.sumOf { it.toLong() })}원",
+                        stringResource(R.string.report_approx_won, formatCompactWon(known.sumOf { it.toLong() })),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -1250,7 +1252,7 @@ private fun TrendCard(
             if (avg > 0L) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "점선은 표시 기간 평균 (월 ${formatCompactWon(avg)}원)",
+                    stringResource(R.string.report_trend_avg, formatCompactWon(avg)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1259,15 +1261,19 @@ private fun TrendCard(
     }
 }
 
-/** 427,300 → "42.7만", 12,000,000 → "1,200만", 150,000,000 → "1.5억" */
+/** 427,300 → "42.7만", 12,000,000 → "1,200만", 150,000,000 → "1.5억" (일본어는 万·億) */
+@Composable
+@ReadOnlyComposable
 internal fun formatCompactWon(value: Long): String = when {
     value >= 100_000_000L -> {
         val eok = value / 100_000_000.0
-        if (eok >= 10 || eok == eok.toLong().toDouble()) "%,.0f억".format(eok) else "%.1f억".format(eok)
+        val n = if (eok >= 10 || eok == eok.toLong().toDouble()) "%,.0f".format(eok) else "%.1f".format(eok)
+        stringResource(R.string.compact_eok, n)
     }
     value >= 10_000L -> {
         val man = value / 10_000.0
-        if (man >= 100 || man == man.toLong().toDouble()) "%,.0f만".format(man) else "%.1f만".format(man)
+        val n = if (man >= 100 || man == man.toLong().toDouble()) "%,.0f".format(man) else "%.1f".format(man)
+        stringResource(R.string.compact_man, n)
     }
     else -> "%,d".format(value)
 }
@@ -1297,7 +1303,7 @@ private fun FuelSummaryCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${unit.actionLabel} ${list.size}회",
+                        stringResource(R.string.report_fuel_count, unit.actionLabel.asString(), list.size),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
@@ -1305,8 +1311,8 @@ private fun FuelSummaryCard(
                     Text(
                         buildList {
                             if (qty > 0) add("${FuelAmountCalc.formatQuantity(qty)}${unit.symbol}")
-                            avgPrice?.let { add("평균 ${it.formatWon()}원/${unit.symbol}") }
-                        }.joinToString(" · ").ifBlank { "수량 기록 없음" },
+                            avgPrice?.let { add(stringResource(R.string.report_avg_price, it, unit.symbol)) }
+                        }.joinToString(" · ").ifBlank { stringResource(R.string.report_no_quantity) },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1318,10 +1324,8 @@ private fun FuelSummaryCard(
                     val diff = avgPrice - prevAvg
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (diff < 0)
-                            "지난달보다 ${unit.symbol}당 ${abs(diff).formatWon()}원 싸게 넣었어요"
-                        else
-                            "지난달보다 ${unit.symbol}당 ${diff.formatWon()}원 비싸게 넣었어요",
+                        if (diff < 0) stringResource(R.string.report_price_cheaper, unit.symbol, abs(diff))
+                        else stringResource(R.string.report_price_pricier, unit.symbol, diff),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (diff < 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error
@@ -1377,14 +1381,14 @@ private fun NarrativeCard(narrative: ReportNarrative) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    narrative.title,
+                    narrative.title.asString(),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = content
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    narrative.subtitle,
+                    narrative.subtitle.asString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = content.copy(alpha = 0.85f)
                 )
@@ -1396,9 +1400,9 @@ private fun NarrativeCard(narrative: ReportNarrative) {
 /** 재미 지표 — 누적 지구 바퀴 + 자기 기록(또는 이 달 주행 비유) */
 @Composable
 private fun FunFactCard(
-    earthLine: String?,
+    earthLine: UiText?,
     totalMileage: Int,
-    secondLine: String?
+    secondLine: UiText?
 ) {
     if (earthLine == null && secondLine == null) return
     Card(
@@ -1418,9 +1422,9 @@ private fun FunFactCard(
                     )
                     Spacer(Modifier.width(10.dp))
                     Column {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text(it.asString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         Text(
-                            "누적 ${totalMileage.formatWon()}km · 지구 둘레 40,075km 기준",
+                            stringResource(R.string.report_earth_caption, totalMileage),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1437,7 +1441,7 @@ private fun FunFactCard(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(it.asString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -1448,7 +1452,7 @@ private enum class EntryKind { FUEL, MAINT, CARE }
 
 private data class MonthEntry(
     val date: String,
-    val title: String,
+    val title: UiText,
     val amount: Int?,
     val kind: EntryKind,
     /** 주기 없는 정비 항목의 기록 = 일회성 수리 (공구 아이콘) */
@@ -1456,7 +1460,7 @@ private data class MonthEntry(
     /** 충전 기록 (번개 아이콘) */
     val isElectric: Boolean = false,
     /** 제목 옆 작은 표식 — 세차 묶음의 '항목 3개' */
-    val badge: String? = null
+    val badge: UiText? = null
 )
 
 /** 그 달의 주유·정비·세차 기록을 하나의 지출 내역으로 합친다(최신순) */
@@ -1468,8 +1472,12 @@ private fun buildMonthEntries(
     val fuelEntries = fuel.map { record ->
         MonthEntry(
             date = record.filledAt,
-            title = record.unit.actionLabel +
-                (record.station?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+            title = UiText.Joined(
+                listOfNotNull(
+                    record.unit.actionLabel,
+                    record.station?.takeIf { it.isNotBlank() }?.let { UiText.Raw(it) }
+                )
+            ),
             amount = record.amount,
             kind = EntryKind.FUEL,
             isElectric = record.unit.isElectric
@@ -1478,7 +1486,7 @@ private fun buildMonthEntries(
     val maintEntries = maint.map { record ->
         MonthEntry(
             date = record.serviceDate.orEmpty(),
-            title = record.typeName,
+            title = LocalizedNames.item(record.typeName),
             amount = record.cost,
             kind = EntryKind.MAINT,
             isRepair = record.isRepair
@@ -1489,11 +1497,15 @@ private fun buildMonthEntries(
     val careEntries = buildCareSessions(care).map { session ->
         MonthEntry(
             date = session.performedAt.orEmpty(),
-            title = session.primary.itemName +
-                (session.primary.method?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+            title = UiText.Joined(
+                listOfNotNull(
+                    LocalizedNames.item(session.primary.itemName),
+                    session.primary.method?.takeIf { it.isNotBlank() }?.let { LocalizedNames.washMethod(it) }
+                )
+            ),
             amount = session.totalCost,
             kind = EntryKind.CARE,
-            badge = if (session.records.size > 1) "항목 ${session.records.size}개" else null
+            badge = if (session.records.size > 1) UiText.Res(R.string.report_badge_items, session.records.size) else null
         )
     }
     return (fuelEntries + maintEntries + careEntries).sortedByDescending { it.date }
@@ -1528,11 +1540,12 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    entry.title,
+                    entry.title.asString(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
-                entry.badge?.let { badge ->
+                entry.badge?.let { badgeText ->
+                    val badge = badgeText.asString()
                     Spacer(Modifier.width(6.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
@@ -1549,13 +1562,13 @@ private fun ExpenseEntryRow(entry: MonthEntry, showDivider: Boolean) {
                 }
             }
             Text(
-                entry.date.toDisplayDateOrNull() ?: entry.date.ifBlank { "날짜 없음" },
+                entry.date.toDisplayDateOrNull() ?: entry.date.ifBlank { stringResource(R.string.common_no_date) },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Text(
-            entry.amount?.let { "${it.formatWon()}원" } ?: "금액 없음",
+            entry.amount?.let { stringResource(R.string.money_amount, it) } ?: stringResource(R.string.report_no_amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (entry.amount != null) FontWeight.SemiBold else FontWeight.Normal,
             color = if (entry.amount != null) MaterialTheme.colorScheme.onSurface
@@ -1594,14 +1607,14 @@ private fun TopSpendCard(items: List<TopSpendItem>) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                item.name,
+                                item.name.localizedItemName(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                             if (item.count > 1) {
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    "${item.count}회",
+                                    stringResource(R.string.count_times, item.count),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1621,7 +1634,7 @@ private fun TopSpendCard(items: List<TopSpendItem>) {
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "${item.total.formatWon()}원",
+                        stringResource(R.string.money_amount, item.total),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1649,13 +1662,13 @@ private fun YearHighlightsCard(highlights: List<YearHighlight>) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        highlight.label,
+                        highlight.label.asString(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(104.dp)
                     )
                     Text(
-                        highlight.value,
+                        highlight.value.asString(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)

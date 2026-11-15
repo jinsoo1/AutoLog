@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.component
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import android.widget.Toast
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -29,7 +31,7 @@ fun BackupPromptHost(viewModel: BackupPromptViewModel = hiltViewModel()) {
                 is BackupPromptViewModel.Event.BackupDone ->
                     Toast.makeText(
                         context,
-                        "백업 완료 — ${event.path} 에 저장했어요.",
+                        context.getString(R.string.backup_prompt_done, event.path),
                         Toast.LENGTH_LONG
                     ).show()
 
@@ -45,33 +47,25 @@ fun BackupPromptHost(viewModel: BackupPromptViewModel = hiltViewModel()) {
         onDismissRequest = { viewModel.dismiss() },
         title = {
             Text(
-                if (staleBackup) "백업이 오래됐어요" else "백업 파일을 만들어둘까요?",
+                stringResource(if (staleBackup) R.string.backup_prompt_title_stale else R.string.backup_prompt_title_first),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Text(
-                if (staleBackup) {
-                    "마지막 백업 이후 기록이 많이 쌓였어요. 오토로그의 데이터는 이 휴대폰에만 " +
-                        "저장되기 때문에, 백업 파일이 최신이어야 그만큼 되살릴 수 있어요.\n\n" +
-                        "지금 백업하면 '다운로드 > AutoLog' 폴더에 새 파일로 저장됩니다."
-                } else {
-                    "기록이 쌓이기 시작했어요. 오토로그의 데이터는 이 휴대폰에만 저장되기 때문에, " +
-                        "휴대폰을 잃어버리거나 앱을 삭제하면 되돌릴 수 없어요.\n\n" +
-                        "지금 백업하면 '다운로드 > AutoLog' 폴더에 파일로 저장되고, " +
-                        "기기를 바꿀 때 그 파일 하나로 복원할 수 있습니다.\n\n" +
-                        "설정 > 데이터 관리에서도 언제든 백업할 수 있어요."
-                }
+                stringResource(
+                    if (staleBackup) R.string.backup_prompt_body_stale else R.string.backup_prompt_body_first
+                )
             )
         },
         confirmButton = {
             TextButton(onClick = { viewModel.backupNow() }) {
-                Text("지금 백업", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.backup_prompt_now), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = { viewModel.dismiss() }) {
-                Text("나중에")
+                Text(stringResource(R.string.common_later))
             }
         }
     )

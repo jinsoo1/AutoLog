@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.navigation
 
+import com.jsworld.android.autolog.R
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -124,7 +125,7 @@ fun AutoLogNavHost(
                     } else {
                         Toast.makeText(
                             context,
-                            message ?: "복원에 실패했습니다.",
+                            message ?: context.getString(R.string.nav_restore_failed),
                             Toast.LENGTH_LONG
                         ).show()
                     }

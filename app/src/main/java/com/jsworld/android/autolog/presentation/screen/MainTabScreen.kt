@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,15 +53,15 @@ import kotlinx.coroutines.launch
  * 색만으로 구분하는 것보다 현재 위치가 훨씬 분명해진다.
  */
 private enum class MainTab(
-    val label: String,
+    @androidx.annotation.StringRes val labelRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
-    HOME("홈", Icons.Filled.Home, Icons.Outlined.Home),
-    MAINTENANCE("정비", Icons.Filled.Build, Icons.Outlined.Build),
-    FUEL("주유", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
-    REPORT("리포트", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    SETTINGS("설정", Icons.Filled.Settings, Icons.Outlined.Settings)
+    HOME(R.string.tab_home, Icons.Filled.Home, Icons.Outlined.Home),
+    MAINTENANCE(R.string.tab_maintenance, Icons.Filled.Build, Icons.Outlined.Build),
+    FUEL(R.string.tab_fuel, Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
+    REPORT(R.string.tab_report, Icons.Filled.BarChart, Icons.Outlined.BarChart),
+    SETTINGS(R.string.tab_settings, Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
 /**
@@ -138,13 +140,13 @@ fun MainTabScreen(
                             icon = {
                                 Icon(
                                     if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label,
+                                    contentDescription = stringResource(item.labelRes),
                                     modifier = Modifier.size(23.dp)
                                 )
                             },
                             label = {
                                 Text(
-                                    item.label,
+                                    stringResource(item.labelRes),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                 )

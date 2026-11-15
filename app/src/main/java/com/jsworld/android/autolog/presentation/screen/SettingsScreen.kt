@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -124,8 +127,8 @@ fun SettingsScreen(
     val alertPrefs by viewModel.maintenanceAlertPrefs
         .collectAsStateWithLifecycle(initialValue = MaintenanceAlertPrefs())
     val notificationSummary =
-        if (alertPrefs.enabled) "정비 알림 켜짐 · 매일 ${formatAlertHour(alertPrefs.hour)}"
-        else "정비 알림이 꺼져 있어요"
+        if (alertPrefs.enabled) stringResource(R.string.settings_alert_summary_on, formatAlertHour(alertPrefs.hour))
+        else stringResource(R.string.settings_alert_summary_off)
 
     // 복원 대상 선택(목록) 다이얼로그 표시 여부
     var showRestorePicker by remember { mutableStateOf(false) }
@@ -153,8 +156,8 @@ fun SettingsScreen(
             when (event) {
                 is BackupUiEvent.ExportSuccess -> {
                     val msg = event.location
-                        ?.let { "백업을 저장했습니다.\n$it" }
-                        ?: "백업 파일을 저장했습니다."
+                        ?.let { context.getString(R.string.settings_backup_saved_at, it) }
+                        ?: context.getString(R.string.settings_backup_saved)
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
 
@@ -169,7 +172,7 @@ fun SettingsScreen(
                 BackupUiEvent.RestoreSuccess -> {
                     Toast.makeText(
                         context,
-                        "백업 데이터를 복원했습니다.",
+                        context.getString(R.string.settings_restore_done),
                         Toast.LENGTH_SHORT
                     ).show()
 
@@ -206,7 +209,7 @@ fun SettingsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "설정",
+                            text = stringResource(R.string.settings_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -215,7 +218,7 @@ fun SettingsScreen(
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "뒤로가기"
+                                contentDescription = stringResource(R.string.common_back)
                             )
                         }
                     }
@@ -224,7 +227,7 @@ fun SettingsScreen(
                 TabTopBar(
                     leading = {
                         Text(
-                            text = "설정",
+                            text = stringResource(R.string.settings_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -246,14 +249,14 @@ fun SettingsScreen(
                 )
             ) {
                 item {
-                    SettingsSectionTitle("앱 정보")
+                    SettingsSectionTitle(stringResource(R.string.settings_section_app))
                 }
 
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.Campaign,
-                        title = "공지사항",
-                        subtitle = "업데이트 및 안내사항 확인",
+                        title = stringResource(R.string.settings_notice),
+                        subtitle = stringResource(R.string.settings_notice_sub),
                         onClick = onNoticeClick
                     )
                 }
@@ -263,10 +266,10 @@ fun SettingsScreen(
                         icon = Icons.Outlined.CalendarMonth,
                         // '날짜 일정'은 날짜와 일정이 같은 말이라 무엇인지 알 수 없었다.
                         // 담긴 것을 그대로 이름으로 쓴다.
-                        title = "검사·보험·세금",
+                        title = stringResource(R.string.settings_schedule),
                         subtitle = listOfNotNull(
                             carName?.takeIf { it.isNotBlank() },
-                            "만기일을 2주 전부터 알려드려요"
+                            stringResource(R.string.settings_schedule_sub)
                         ).joinToString(" · "),
                         onClick = onScheduleClick
                     )
@@ -274,7 +277,7 @@ fun SettingsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    SettingsSectionTitle("알림")
+                    SettingsSectionTitle(stringResource(R.string.settings_section_notification))
                 }
 
                 // 알림은 화면을 따로 뒀다 — 토글 5개에 하위 항목·권한 안내·권한 런처까지
@@ -285,7 +288,7 @@ fun SettingsScreen(
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.Notifications,
-                        title = "알림",
+                        title = stringResource(R.string.settings_notification),
                         subtitle = notificationSummary,
                         onClick = onNotificationSettingsClick
                     )
@@ -293,14 +296,14 @@ fun SettingsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    SettingsSectionTitle("데이터 관리")
+                    SettingsSectionTitle(stringResource(R.string.settings_section_data))
                 }
 
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.TableView,
-                        title = "엑셀 내보내기",
-                        subtitle = "차량을 선택하여 정비내역을 엑셀 파일로 저장",
+                        title = stringResource(R.string.settings_excel),
+                        subtitle = stringResource(R.string.settings_excel_sub),
                         enabled = !backupUiState.isExporting &&
                                 !backupUiState.isRestoring,
                         onClick = onExcelExportClick
@@ -313,16 +316,8 @@ fun SettingsScreen(
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.Backup,
-                        title = if (backupUiState.isExporting) {
-                            "백업 파일 생성 중"
-                        } else {
-                            "백업 파일 만들기"
-                        },
-                        subtitle = if (backupUiState.isExporting) {
-                            "차량과 정비 기록을 저장하고 있습니다."
-                        } else {
-                            "다운로드 > AutoLog 폴더에 저장돼요 (복원이 쉬워요)"
-                        },
+                        title = stringResource(if (backupUiState.isExporting) R.string.settings_backup_creating else R.string.settings_backup_create),
+                        subtitle = stringResource(if (backupUiState.isExporting) R.string.settings_backup_creating_sub else R.string.settings_backup_create_sub),
                         enabled = !backupUiState.isExporting &&
                                 !backupUiState.isRestoring,
                         onClick = {
@@ -337,16 +332,8 @@ fun SettingsScreen(
                 item {
                     SettingsMenuItem(
                         icon = Icons.Outlined.Restore,
-                        title = if (backupUiState.isRestoring) {
-                            "백업 복원 중"
-                        } else {
-                            "백업 파일 복원"
-                        },
-                        subtitle = if (backupUiState.isRestoring) {
-                            "백업 데이터를 적용하고 있습니다."
-                        } else {
-                            "AutoLog 폴더의 백업 목록에서 복원"
-                        },
+                        title = stringResource(if (backupUiState.isRestoring) R.string.settings_restoring else R.string.settings_restore),
+                        subtitle = stringResource(if (backupUiState.isRestoring) R.string.settings_restoring_sub else R.string.settings_restore_sub),
                         enabled = !backupUiState.isRestoring &&
                                 !backupUiState.isExporting,
                         onClick = {
@@ -384,7 +371,7 @@ fun SettingsScreen(
                     .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
             ) {
                 Text(
-                    "백업에서 복원",
+                    stringResource(R.string.settings_restore_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -404,10 +391,7 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            "이 목록에는 이 기기에서 만든 백업만 보여요.\n" +
-                                "앱을 다시 설치했거나 기기를 바꿨다면 예전 백업은 " +
-                                "'다운로드 > AutoLog' 폴더에 파일로 남아 있어요 — " +
-                                "아래 '다른 파일에서 복원'으로 직접 선택해주세요.",
+                            stringResource(R.string.settings_restore_sheet_info),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -417,7 +401,7 @@ fun SettingsScreen(
                 when {
                     backupUiState.isLoadingBackups -> {
                         Text(
-                            text = "불러오는 중…",
+                            text = stringResource(R.string.common_loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 16.dp)
@@ -439,13 +423,13 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "이 기기에서 만든 백업이 아직 없어요",
+                                stringResource(R.string.settings_no_backups),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                "예전 백업 파일이 있다면 아래 버튼으로 직접 선택해주세요.",
+                                stringResource(R.string.settings_no_backups_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -496,7 +480,7 @@ fun SettingsScreen(
                                     IconButton(onClick = { shareBackup(context, info.uri) }) {
                                         Icon(
                                             imageVector = Icons.Outlined.Share,
-                                            contentDescription = "백업 공유"
+                                            contentDescription = stringResource(R.string.settings_share_backup)
                                         )
                                     }
                                 }
@@ -533,7 +517,7 @@ fun SettingsScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("다른 파일에서 복원")
+                    Text(stringResource(R.string.settings_restore_other_file))
                 }
             }
         }
@@ -556,21 +540,19 @@ fun SettingsScreen(
                 }
             },
             title = {
-                Text("⚠️ 백업 복원 주의")
+                Text(stringResource(R.string.settings_restore_warning_title))
             },
             text = {
                 Column {
                     Text(
-                        text = "현재 저장된 모든 데이터(차량 · 정비 기록 · 주행거리 기록 · 주유 기록)가 " +
-                                "삭제됩니다.",
+                        text = stringResource(R.string.settings_restore_warning_body1),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "선택한 백업 파일의 데이터로 완전히 교체되며, 이 작업은 " +
-                                "되돌릴 수 없습니다.",
+                        text = stringResource(R.string.settings_restore_warning_body2),
                         style = MaterialTheme.typography.bodyMedium
                     )
 
@@ -579,7 +561,7 @@ fun SettingsScreen(
                     when {
                         preview == null || preview.loading -> {
                             Text(
-                                "백업 파일을 확인하는 중…",
+                                stringResource(R.string.settings_restore_checking),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -592,7 +574,7 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    "이 파일을 읽을 수 없습니다.\n${preview.error}",
+                                    stringResource(R.string.settings_restore_unreadable, preview.error ?: ""),
                                     modifier = Modifier.padding(12.dp),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -610,20 +592,18 @@ fun SettingsScreen(
                             ) {
                                 Column(Modifier.padding(12.dp)) {
                                     Text(
-                                        "이 백업에 들어있는 데이터",
+                                        stringResource(R.string.settings_restore_contents),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        "차량 ${info.carCount}대 · " +
-                                                "정비 기록 ${info.maintenanceHistoryCount}건 · " +
-                                                "주유 기록 ${info.fuelRecordCount}건",
+                                        stringResource(R.string.settings_restore_counts, info.carCount, info.maintenanceHistoryCount, info.fuelRecordCount),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        "저장 시각 ${info.createdAt.toBackupDateText()}",
+                                        stringResource(R.string.settings_restore_created_at, info.createdAt.toBackupDateText()),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -641,16 +621,14 @@ fun SettingsScreen(
                                 ) {
                                     Column(Modifier.padding(12.dp)) {
                                         Text(
-                                            "이 백업에는 주유 기록이 없어요",
+                                            stringResource(R.string.settings_restore_no_fuel_title),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            "복원하면 지금 저장된 주유 기록 " +
-                                                    "${info.currentFuelRecordCount}건이 삭제됩니다. " +
-                                                    "필요하면 먼저 백업을 새로 만들어주세요.",
+                                            stringResource(R.string.settings_restore_no_fuel_body, info.currentFuelRecordCount),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )
@@ -674,7 +652,7 @@ fun SettingsScreen(
                     }
                 ) {
                     Text(
-                        text = "삭제하고 복원",
+                        text = stringResource(R.string.settings_restore_confirm),
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )
@@ -688,7 +666,7 @@ fun SettingsScreen(
                         viewModel.clearRestorePreview()
                     }
                 ) {
-                    Text("취소")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -728,22 +706,20 @@ internal fun NotificationBlockedCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) {
-                        "시스템에서 알림이 꺼져 있어요"
-                    } else {
-                        "일부 알림 종류가 차단돼 있어요"
-                    },
+                    stringResource(
+                        if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) R.string.settings_block_app_title
+                        else R.string.settings_block_channel_title
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) {
-                        "앱에서 켠 알림이 전달되지 않습니다. 시스템 설정에서 알림을 허용해주세요."
-                    } else {
-                        "'교체 임박' 또는 '교체 시기 초과' 알림이 시스템에서 꺼져 있어 전달되지 않습니다."
-                    },
+                    stringResource(
+                        if (block == AutoLogNotificationHelper.NotificationBlock.APP_DISABLED) R.string.settings_block_app_body
+                        else R.string.settings_block_channel_body
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f)
                 )
@@ -753,7 +729,7 @@ internal fun NotificationBlockedCard(
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                 ) {
                     Text(
-                        "시스템 알림 설정 열기",
+                        stringResource(R.string.settings_open_system_notification),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -765,11 +741,13 @@ internal fun NotificationBlockedCard(
 }
 
 /** 9 → "오전 9시", 14 → "오후 2시" */
+@Composable
+@ReadOnlyComposable
 internal fun formatAlertHour(hour: Int): String = when {
-    hour == 0 -> "오전 12시"
-    hour < 12 -> "오전 ${hour}시"
-    hour == 12 -> "오후 12시"
-    else -> "오후 ${hour - 12}시"
+    hour == 0 -> stringResource(R.string.hour_am_12)
+    hour < 12 -> stringResource(R.string.hour_am, hour)
+    hour == 12 -> stringResource(R.string.hour_pm_12)
+    else -> stringResource(R.string.hour_pm, hour - 12)
 }
 
 @Composable
@@ -989,7 +967,7 @@ private fun shareBackup(context: android.content.Context, uri: Uri) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "백업 공유"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.settings_share_backup)))
 }
 
 private fun formatBackupDate(millis: Long): String {
@@ -1029,13 +1007,13 @@ internal fun PermissionNeededRow(onClick: () -> Unit) {
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            "휴대폰에서 알림이 꺼져 있어요",
+            stringResource(R.string.settings_phone_notification_off),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
         Text(
-            "허용하기",
+            stringResource(R.string.settings_allow),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary

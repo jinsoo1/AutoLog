@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.domain.model.DuplicateItemNameException
 import com.jsworld.android.autolog.domain.repository.CarSortPreferenceRepository
 
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
@@ -108,7 +112,7 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 ChronoUnit.DAYS.between(today, baseDateForCalc.plusMonths(it.toLong()))
             }
 
-            val kmPart: Pair<MaintenanceStatus, String>? =
+            val kmPart: Pair<MaintenanceStatus, UiText>? =
                 if (intervalKm != null) {
                     val dueMileage = baseLastMileage + intervalKm
                     val remainingKm = dueMileage - carMileage
@@ -120,15 +124,15 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                         else -> MaintenanceStatus.NORMAL
                     }
 
-                    val text = when {
-                        remainingKm < 0 -> "초과 ${abs(remainingKm).formatKm()}km"
-                        else -> "${remainingKm.formatKm()}km 남음"
+                    val text: UiText = when {
+                        remainingKm < 0 -> UiText.Res(R.string.maint_over_km, abs(remainingKm))
+                        else -> UiText.Res(R.string.maint_remain_km, remainingKm)
                     }
 
                     status to text
                 } else null
 
-            val dayPart: Pair<MaintenanceStatus, String>? =
+            val dayPart: Pair<MaintenanceStatus, UiText>? =
                 if (intervalMonths != null) {
                     val dueDate = baseDateForCalc.plusMonths(intervalMonths.toLong())
                     val remainingDays = ChronoUnit.DAYS.between(today, dueDate)
@@ -144,9 +148,9 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                         else -> MaintenanceStatus.NORMAL
                     }
 
-                    val text = when {
-                        remainingDays < 0 -> "초과 ${abs(remainingDays)}일"
-                        else -> "${remainingDays}일 남음"
+                    val text: UiText = when {
+                        remainingDays < 0 -> UiText.Res(R.string.maint_over_days, abs(remainingDays))
+                        else -> UiText.Res(R.string.maint_remain_days, remainingDays)
                     }
 
                     status to text
@@ -161,13 +165,14 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
                 else -> MaintenanceStatus.NORMAL
             }
 
-            val remainingText = buildString {
-                append(parts.joinToString(" · ") { it.second })
-                // 첫 기록이 없으면 계산 기준(0km/오늘)을 밝혀준다 — 임박한 항목에만 붙인다.
-                if (hasNoHistory && finalStatus != MaintenanceStatus.NORMAL) {
-                    append(" · 첫 기록이 필요해요(0km/오늘 기준)")
-                }
-            }
+            // 첫 기록이 없으면 계산 기준(0km/오늘)을 밝혀준다 — 임박한 항목에만 붙인다.
+            val remainingText: UiText = UiText.Joined(
+                parts.map { it.second } +
+                    listOfNotNull(
+                        UiText.Res(R.string.maint_first_record_hint)
+                            .takeIf { hasNoHistory && finalStatus != MaintenanceStatus.NORMAL }
+                    )
+            )
 
             // 주기 소진율 — km·개월 둘 다 있으면 더 많이 소진된 쪽을 쓴다(상태 판정과 같은 기준).
             val kmRatio = if (intervalKm != null && intervalKm > 0) {
@@ -432,13 +437,13 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
             val summary = if (top == null) {
                 MaintenanceSummaryUi(
                     status = MaintenanceStatus.NORMAL,
-                    title = "상태 좋아요",
-                    detail = "현재 정비할 항목이 없어요."
+                    title = UiText.Res(R.string.maint_summary_good_title),
+                    detail = UiText.Res(R.string.maint_summary_good_detail)
                 )
             } else {
                 MaintenanceSummaryUi(
                     status = top.status,
-                    title = top.name,
+                    title = LocalizedNames.item(top.name),
                     detail = top.remainingText
                 )
             }
@@ -590,7 +595,7 @@ class CarMaintenanceRepositoryImpl @Inject constructor(
         // 중복 체크 (대소문자 무시)
         val existing = maintenanceTypeDao.findByName(trimmed)
         if (existing != null) {
-            throw IllegalStateException("이미 존재하는 항목이에요. 다른 이름으로 추가해 주세요.")
+            throw DuplicateItemNameException(trimmed)
         }
 
         // 새 타입 생성

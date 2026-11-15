@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.CarMaintenanceRecord
 import com.jsworld.android.autolog.domain.model.CareRecord
 import com.jsworld.android.autolog.domain.model.FuelRecord
@@ -51,7 +52,7 @@ class ReportYearlyTest {
     @Test
     fun `연간 내러티브 - 수리 2건이면 수리가 잦았던 해`() {
         val n = buildYearNarrative(500_000, null, repairCount = 2, isCompleteYear = false)
-        assertTrue(n.title.contains("수리가 잦았던"))
+        assertTrue(n.title.ko().contains("수리가 잦았던"))
     }
 
     @Test
@@ -60,32 +61,32 @@ class ReportYearlyTest {
             1_200_000, null, repairCount = 1, isCompleteYear = false,
             maxRepairCost = 1_000_000
         )
-        assertTrue(big.title.contains("큰 수리"))
-        assertTrue(big.subtitle.contains("1,000,000원"))
+        assertTrue(big.title.ko().contains("큰 수리"))
+        assertTrue(big.subtitle.ko().contains("1,000,000원"))
 
         // 잦은 수리(2건)이면서 그중 하나가 100만원 이상이면 큰 수리가 우선
         val both = buildYearNarrative(
             2_000_000, null, repairCount = 2, isCompleteYear = false,
             maxRepairCost = 1_500_000
         )
-        assertTrue(both.title.contains("큰 수리"))
+        assertTrue(both.title.ko().contains("큰 수리"))
 
         // 100만원 미만이면 기존 규칙대로
         val small = buildYearNarrative(
             900_000, null, repairCount = 1, isCompleteYear = false,
             maxRepairCost = 990_000
         )
-        assertTrue(!small.title.contains("큰 수리"))
+        assertTrue(!small.title.ko().contains("큰 수리"))
     }
 
     @Test
     fun `연간 내러티브 - 진행 중인 해에는 알뜰했다고 단정하지 않는다`() {
         val ongoing = buildYearNarrative(100_000, 1_000_000, 0, isCompleteYear = false)
         assertEquals(NarrativeTone.CALM, ongoing.tone)
-        assertTrue(!ongoing.title.contains("알뜰"))
+        assertTrue(!ongoing.title.ko().contains("알뜰"))
 
         val complete = buildYearNarrative(100_000, 1_000_000, 0, isCompleteYear = true)
-        assertTrue(complete.title.contains("알뜰"))
+        assertTrue(complete.title.ko().contains("알뜰"))
     }
 
     @Test
@@ -114,7 +115,7 @@ class ReportYearlyTest {
         )
         assertEquals(
             "6월 유리막 코팅 · 500,000원",
-            h.find { it.label == "올해의 큰 지출" }?.value
+            h.find { it.label.ko() == "올해의 큰 지출" }?.value?.ko()
         )
     }
 
@@ -127,7 +128,7 @@ class ReportYearlyTest {
         )
         assertEquals(
             "정비 1건 · 수리 1건 · 세차·관리 2회",
-            h.find { it.label == "관리 기록" }?.value
+            h.find { it.label.ko() == "관리 기록" }?.value?.ko()
         )
     }
 
@@ -138,7 +139,7 @@ class ReportYearlyTest {
             listOf(fuel(50_000, 30.0, station = "GS칼텍스")),
             emptyList()
         )
-        assertNull(once.find { it.label == "단골" })
+        assertNull(once.find { it.label.ko() == "단골" })
 
         val twice = buildYearHighlights(
             emptyList(),
@@ -149,7 +150,7 @@ class ReportYearlyTest {
             ),
             emptyList()
         )
-        assertEquals("GS칼텍스 · 2회", twice.find { it.label == "단골" }?.value)
+        assertEquals("GS칼텍스 · 2회", twice.find { it.label.ko() == "단골" }?.value?.ko())
     }
 
     @Test
@@ -159,7 +160,7 @@ class ReportYearlyTest {
             listOf(fuel(1, 1_240.0)),
             emptyList()
         )
-        assertEquals("1,240L · 드럼통 6.2개 분량", h.find { it.label == "올해 주유량" }?.value)
+        assertEquals("1,240L · 드럼통 6.2개 분량", h.find { it.label.ko() == "올해 주유량" }?.value?.ko())
     }
 
     @Test
@@ -172,7 +173,7 @@ class ReportYearlyTest {
         )
         assertEquals(
             "890kWh · 4인 가구 약 2.5달 치 전기 분량",
-            big.find { it.label == "올해 충전량" }?.value
+            big.find { it.label.ko() == "올해 충전량" }?.value?.ko()
         )
 
         // 한 달 치 미만이면 일 단위로 — 58kWh ≈ 5일 치
@@ -183,7 +184,7 @@ class ReportYearlyTest {
         )
         assertEquals(
             "58kWh · 4인 가구 약 5일 치 전기 분량",
-            small.find { it.label == "올해 충전량" }?.value
+            small.find { it.label.ko() == "올해 충전량" }?.value?.ko()
         )
     }
 
@@ -192,7 +193,7 @@ class ReportYearlyTest {
         val noPrev = buildYearHighlights(
             emptyList(), listOf(fuel(48_000, 30.0)), emptyList(), prevYearFuel = emptyList()
         )
-        assertNull(noPrev.find { it.label == "주유 단가" })
+        assertNull(noPrev.find { it.label.ko() == "주유 단가" })
 
         val withPrev = buildYearHighlights(
             emptyList(),
@@ -202,18 +203,18 @@ class ReportYearlyTest {
         )
         assertEquals(
             "작년보다 L당 45원 저렴",
-            withPrev.find { it.label == "주유 단가" }?.value
+            withPrev.find { it.label.ko() == "주유 단가" }?.value?.ko()
         )
     }
 
     @Test
     fun `올해의 기록 - 알뜰한 달은 지출 있는 달이 둘 이상일 때만`() {
         val one = buildYearHighlights(listOf(month(3, 50_000)), emptyList(), emptyList())
-        assertNull(one.find { it.label == "가장 알뜰했던 달" })
+        assertNull(one.find { it.label.ko() == "가장 알뜰했던 달" })
 
         val two = buildYearHighlights(
             listOf(month(3, 50_000), month(4, 30_000)), emptyList(), emptyList()
         )
-        assertEquals("4월 · 30,000원", two.find { it.label == "가장 알뜰했던 달" }?.value)
+        assertEquals("4월 · 30,000원", two.find { it.label.ko() == "가장 알뜰했던 달" }?.value?.ko())
     }
 }

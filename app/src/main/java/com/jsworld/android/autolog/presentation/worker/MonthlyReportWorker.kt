@@ -93,15 +93,14 @@ class MonthlyReportWorker @AssistedInject constructor(
 
     /** 테스트 실행 전용 결과 안내 — 정기 알림 경로에서는 호출되지 않는다 */
     private fun showTestResultNotification(lastMonth: YearMonth) {
-        val reason = "지난달(${lastMonth.monthValue}월)에 지출 기록이 없어 정기 실행에서도 " +
-            "알림이 가지 않아요. 지난달 날짜로 주유나 정비 기록을 하나 넣고 다시 테스트해보세요."
+        val reason = applicationContext.getString(R.string.monthly_test_none_body, lastMonth.monthValue)
 
         val notification = NotificationCompat.Builder(
             applicationContext,
             AutoLogNotificationHelper.MONTHLY_REPORT_CHANNEL_ID
         )
             .setSmallIcon(R.drawable.ic_stat_autolog)
-            .setContentTitle("테스트: 보낼 리포트가 없어요")
+            .setContentTitle(applicationContext.getString(R.string.monthly_test_none_title))
             .setContentText(reason)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
             .setAutoCancel(true)
@@ -126,16 +125,15 @@ class MonthlyReportWorker @AssistedInject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val won = NumberFormat.getIntegerInstance()
-        val title = "${notice.month.monthValue}월 리포트가 준비됐어요"
+        val title = context.getString(R.string.monthly_title, notice.month.monthValue)
         val body = when {
             // 기록은 있는데 전부 금액 미입력 — 0원이라고 말하면 거짓말이 된다
             notice.total == 0L ->
-                "지난달 기록 ${notice.missingCostCount}건에 금액이 입력되지 않았어요"
+                context.getString(R.string.monthly_body_all_missing, notice.missingCostCount)
             notice.missingCostCount > 0 ->
-                "지난달 총 ${won.format(notice.total)}원 · 금액 미입력 ${notice.missingCostCount}건 제외"
+                context.getString(R.string.monthly_body_some_missing, notice.total, notice.missingCostCount)
             else ->
-                "지난달 총 ${won.format(notice.total)}원 — 어디에 얼마 썼는지 확인해보세요"
+                context.getString(R.string.monthly_body_total, notice.total)
         }
 
         val builder = NotificationCompat.Builder(
@@ -152,7 +150,7 @@ class MonthlyReportWorker @AssistedInject constructor(
             builder.setStyle(NotificationCompat.BigTextStyle().bigText(body))
         } else {
             val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
-            notice.lines.forEach { style.addLine("${it.carName} — ${won.format(it.total)}원") }
+            notice.lines.forEach { style.addLine(context.getString(R.string.monthly_line, it.carName, it.total)) }
             builder.setStyle(style)
         }
 

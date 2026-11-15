@@ -1,5 +1,12 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.platform.LocalContext
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import androidx.compose.runtime.ReadOnlyComposable
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -139,6 +146,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val undoLabel = stringResource(R.string.common_undo)
 
     Column(Modifier.fillMaxSize()) {
 
@@ -148,11 +157,11 @@ fun HomeScreen(
             actions = {
                 if (car != null) {
                     IconButton(onClick = { onEditCar(car.id) }) {
-                        Icon(Icons.Default.Edit, contentDescription = "차량 정보 수정")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.home_edit_car))
                     }
                 }
                 IconButton(onClick = onNoticeClick) {
-                    Icon(Icons.Default.Campaign, contentDescription = "공지사항")
+                    Icon(Icons.Default.Campaign, contentDescription = stringResource(R.string.home_notice))
                 }
             }
         )
@@ -211,6 +220,7 @@ fun HomeScreen(
         var showSeasonalSkipDialog by rememberSaveable(car.id) { mutableStateOf(false) }
         val seasonalCollapsed by viewModel.seasonalCareCollapsedState(car.id).collectAsState()
         val seasonalGuide = remember(today.monthValue) { seasonalGuide(today) }
+        val skipYearMessage = stringResource(R.string.home_seasonal_undo_year, seasonalGuide.season.label())
         val dueSchedules = remember(schedules, today) {
             upcomingSchedules(schedules, today, SCHEDULE_HOME_DAYS)
         }
@@ -235,18 +245,18 @@ fun HomeScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatCard(
-                        label = "주행거리",
+                        label = stringResource(R.string.home_stat_mileage),
                         value = car.mileage.formatThousands(),
                         unit = "km",
-                        caption = "탭해서 업데이트",
+                        caption = stringResource(R.string.home_stat_mileage_caption),
                         modifier = Modifier.weight(1f),
                         onClick = { showMileageDialog = true }
                     )
                     StatCard(
-                        label = "이번 달 지출",
+                        label = stringResource(R.string.home_stat_month_expense),
                         value = thisMonthExpense.formatThousands(),
-                        unit = "원",
-                        caption = "탭해서 리포트 보기",
+                        unit = stringResource(R.string.money_unit),
+                        caption = stringResource(R.string.home_stat_month_expense_caption),
                         modifier = Modifier.weight(1f),
                         onClick = onOpenReport
                     )
@@ -282,7 +292,7 @@ fun HomeScreen(
             // 묶되 급한 줄의 색은 그대로 둔다 — 초과 빨강 / 임박 주황.
             // 카드가 하나로 합쳐질 뿐 눈에 띔은 잃지 않는다.
             if (urgent.isNotEmpty() || next.isNotEmpty()) {
-                item(key = "maintenance-label") { SectionLabel("정비") }
+                item(key = "maintenance-label") { SectionLabel(stringResource(R.string.home_section_maintenance)) }
                 item(key = "maintenance-block") {
                     val shownUrgent = urgent.take(URGENT_CARD_PREVIEW)
                     val hidden = urgent.size - shownUrgent.size
@@ -334,8 +344,8 @@ fun HomeScreen(
             if (records.isNotEmpty()) {
                 item {
                     SectionLabel(
-                        title = "최근 정비",
-                        actionLabel = "전체 보기",
+                        title = stringResource(R.string.home_section_recent_maintenance),
+                        actionLabel = stringResource(R.string.common_see_all),
                         onAction = onSeeAllRecords
                     )
                 }
@@ -355,8 +365,9 @@ fun HomeScreen(
             if (fuelRecords.isNotEmpty()) {
                 item {
                     SectionLabel(
-                        title = if (isMixed) "최근 주유·충전" else "최근 ${displayUnits.first().actionLabel}",
-                        actionLabel = "전체 보기",
+                        title = if (isMixed) stringResource(R.string.home_section_recent_fuel_mixed)
+                        else stringResource(R.string.home_section_recent_fuel, displayUnits.first().actionLabel.asString()),
+                        actionLabel = stringResource(R.string.common_see_all),
                         onAction = onSeeAllFuel
                     )
                 }
@@ -371,7 +382,7 @@ fun HomeScreen(
                                     record.quantity?.let {
                                         add("${FuelAmountCalc.formatQuantity(it)}${record.unit.symbol}")
                                     }
-                                    record.amount?.let { add("${it.formatThousands()}원") }
+                                    record.amount?.let { add(stringResource(R.string.money_amount, it)) }
                                 }.joinToString(" · "),
                                 showKind = isMixed,
                                 showDivider = index != recentFuel.lastIndex
@@ -390,12 +401,18 @@ fun HomeScreen(
                 onSnooze = { until ->
                     showSeasonalSkipDialog = false
                     viewModel.snoozeSeasonalCare(car.id, until)
-                    scope.launch { showSeasonalUndo(snackbarHostState, viewModel, car.id, "${until.monthValue}월 ${until.dayOfMonth}일에 다시 보여드려요") }
+                    scope.launch {
+                        showSeasonalUndo(
+                            snackbarHostState, viewModel, car.id,
+                            context.getString(R.string.home_seasonal_undo_snooze, until.monthValue, until.dayOfMonth),
+                            undoLabel
+                        )
+                    }
                 },
                 onSkipYear = {
                     showSeasonalSkipDialog = false
                     viewModel.dismissSeasonalCare(car.id, seasonalKey)
-                    scope.launch { showSeasonalUndo(snackbarHostState, viewModel, car.id, "내년 ${seasonalGuide.season.label()}에 다시 보여드려요") }
+                    scope.launch { showSeasonalUndo(snackbarHostState, viewModel, car.id, skipYearMessage, undoLabel) }
                 }
             )
         }
@@ -425,9 +442,9 @@ private fun HomeEmptyView() {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
-            Text("등록된 차량이 없어요", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.empty_no_registered_car), fontWeight = FontWeight.Bold)
             Text(
-                "위 차량 칩에서 차량을 추가해주세요.",
+                stringResource(R.string.home_no_car_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -466,13 +483,17 @@ private fun UrgentRow(
                 Text(
                     // "타이어 교체"처럼 이름이 이미 '교체/점검'으로 끝나면 겹쳐 붙이지 않는다.
                     // ("타이어 교체 교체 초과"가 되는 것을 방지)
-                    item.name.withActionSuffix(if (overdue) "초과" else "임박"),
+                    stringResource(
+                        R.string.home_item_status,
+                        LocalizedNames.itemAction(item.name).asString(),
+                        stringResource(if (overdue) R.string.status_overdue else R.string.status_soon)
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = accent
                 )
                 Text(
-                    item.remainingText,
+                    item.remainingText.asString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -512,7 +533,7 @@ private fun MoreUrgentRow(count: Int, hasOverdue: Boolean, onClick: () -> Unit) 
             )
             Spacer(Modifier.width(11.dp))
             Text(
-                "그 외 ${count}개 더 보기",
+                stringResource(R.string.home_more_items, count),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -566,7 +587,7 @@ private fun UpcomingScheduleCard(
                 }
                 Spacer(Modifier.width(11.dp))
                 Text(
-                    "다가오는 일정",
+                    stringResource(R.string.home_upcoming_schedules),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = accent,
@@ -589,14 +610,14 @@ private fun UpcomingScheduleCard(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            schedule.title,
+                            schedule.title.localizedItemName(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            formatScheduleDate(schedule.dueDate, today),
+                            formatScheduleDate(schedule.dueDate, today).asString(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -659,7 +680,7 @@ private fun SeasonalCareCard(
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        guide.title,
+                        guide.title.asString(),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -667,10 +688,10 @@ private fun SeasonalCareCard(
                         // 이번 계절에 이미 처리한 줄이 있으면 그걸 먼저 말한다 —
                         // 다 해둔 사람에게 "확인하세요"만 반복하면 카드가 잔소리가 된다.
                         when {
-                            allDone -> "이번 ${guide.season.label()} ${rows.size}가지를 다 기록했어요"
-                            doneCount > 0 -> "${rows.size}가지 중 ${doneCount}가지 기록했어요"
-                            hasAnyRecord -> guide.subtitle
-                            else -> "지금 확인하고 기록해두면, 다음부터 알려드릴 수 있어요"
+                            allDone -> stringResource(R.string.home_seasonal_all_done, guide.season.label(), rows.size)
+                            doneCount > 0 -> stringResource(R.string.home_seasonal_partial, rows.size, doneCount)
+                            hasAnyRecord -> guide.subtitle.asString()
+                            else -> stringResource(R.string.home_seasonal_start_hint)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = if (allDone) MaterialTheme.colorScheme.primary
@@ -683,7 +704,7 @@ private fun SeasonalCareCard(
                 IconButton(onClick = onSkip, modifier = Modifier.size(30.dp)) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "이 안내 접기",
+                        contentDescription = stringResource(R.string.home_seasonal_dismiss),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -743,7 +764,7 @@ private fun SeasonalToggleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (collapsed) "자세히 보기" else "접기",
+                stringResource(if (collapsed) R.string.common_expand else R.string.common_collapse),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = accent
@@ -794,7 +815,7 @@ private fun SeasonalSkipDialog(
         },
         title = {
             Text(
-                "이번 ${season.label()} 안내를 접을까요?",
+                stringResource(R.string.home_seasonal_skip_title, season.label()),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -804,21 +825,17 @@ private fun SeasonalSkipDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SkipOptionRow(
                     icon = Icons.Default.Snooze,
-                    title = "다음 달에 다시",
+                    title = stringResource(R.string.home_seasonal_snooze_title),
                     // 미룬 날짜가 다른 계절이면 그때는 그 계절 안내가 뜬다 — 미리 밝힌다.
-                    subtitle = buildString {
-                        append("${snoozeDate.monthValue}월 ${snoozeDate.dayOfMonth}일에 다시 보여드려요")
-                        if (snoozeSeason != season) {
-                            append("\n그때는 ${snoozeSeason.label()} 안내로 바뀌어요")
-                        }
-                    },
+                    subtitle = stringResource(R.string.home_seasonal_snooze_subtitle, snoozeDate.monthValue, snoozeDate.dayOfMonth) +
+                        if (snoozeSeason != season) stringResource(R.string.home_seasonal_snooze_changes, snoozeSeason.label()) else "",
                     emphasized = true,
                     onClick = { onSnooze(snoozeDate) }
                 )
                 SkipOptionRow(
                     icon = Icons.Default.EventBusy,
-                    title = "내년에 다시",
-                    subtitle = "이번 ${season.label()}은 넘기고\n내년 같은 때에 알려드려요",
+                    title = stringResource(R.string.home_seasonal_skip_year_title),
+                    subtitle = stringResource(R.string.home_seasonal_skip_year_subtitle, season.label()),
                     emphasized = false,
                     onClick = onSkipYear
                 )
@@ -826,7 +843,7 @@ private fun SeasonalSkipDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.common_cancel), fontWeight = FontWeight.SemiBold)
             }
         },
         shape = MaterialTheme.shapes.extraLarge,
@@ -903,11 +920,12 @@ private suspend fun showSeasonalUndo(
     snackbarHostState: SnackbarHostState,
     viewModel: HomeViewModel,
     carId: Long,
-    message: String
+    message: String,
+    undoLabel: String
 ) {
     val result = snackbarHostState.showSnackbar(
         message = message,
-        actionLabel = "실행 취소",
+        actionLabel = undoLabel,
         duration = SnackbarDuration.Short
     )
     if (result == SnackbarResult.ActionPerformed) viewModel.undoSeasonalCareSkip(carId)
@@ -945,7 +963,7 @@ private fun SeasonalCareRowItem(
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    row.itemName,
+                    row.itemName.localizedItemName(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -968,7 +986,7 @@ private fun SeasonalCareRowItem(
             when (row.state) {
                 SeasonalRowState.DONE -> Text(
                     // '확인함'은 앱이 점검했다는 뜻으로 읽힌다. 앱이 아는 건 기록뿐이다.
-                    "기록함",
+                    stringResource(R.string.home_seasonal_recorded),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -981,7 +999,7 @@ private fun SeasonalCareRowItem(
                         else MaterialTheme.colorScheme.primary
                     Surface(shape = CircleShape, color = accent.copy(alpha = 0.10f)) {
                         Text(
-                            if (row.state == SeasonalRowState.NOT_MANAGED) "추가" else "기록",
+                            stringResource(if (row.state == SeasonalRowState.NOT_MANAGED) R.string.home_seasonal_row_add else R.string.home_seasonal_row_record),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
@@ -1002,26 +1020,37 @@ private fun SeasonalCareRowItem(
  * 새고 있는지, 정비가 제대로 됐는지는 알 수 없다. 그래서 "안 해도 돼요" 같은
  * **판정 문장을 쓰지 않는다** — 기록이 있다는 사실만 말하고 판단은 사용자에게 남긴다.
  */
-private fun SeasonalCareRow.detailText(today: LocalDate): String = when (state) {
-    SeasonalRowState.NOT_MANAGED -> "$reason · 관리 목록에 없어요"
-    SeasonalRowState.DONE -> {
-        val date = lastServiceDate?.let { "${it.monthValue}월 ${it.dayOfMonth}일에" } ?: "이번 계절에"
-        "$reason · $date 기록했어요"
-    }
-    SeasonalRowState.TODO -> when (status) {
-        MaintenanceStatus.OVERDUE -> "$reason · 교체 시기가 지났어요"
-        MaintenanceStatus.SOON -> "$reason · 교체 시기가 다가왔어요"
-        else -> "$reason · ${lastCareLabel(lastServiceDate, today)}"
+@Composable
+@ReadOnlyComposable
+private fun SeasonalCareRow.detailText(today: LocalDate): String {
+    val reason = reason.asString()
+    return when (state) {
+        SeasonalRowState.NOT_MANAGED -> stringResource(R.string.home_seasonal_detail_not_managed, reason)
+        SeasonalRowState.DONE -> {
+            val date = lastServiceDate
+                ?.let { stringResource(R.string.home_seasonal_detail_done_on, it.monthValue, it.dayOfMonth) }
+                ?: stringResource(R.string.home_seasonal_detail_done_this_season)
+            stringResource(R.string.home_seasonal_detail_done, reason, date)
+        }
+        SeasonalRowState.TODO -> when (status) {
+            MaintenanceStatus.OVERDUE -> stringResource(R.string.home_seasonal_detail_overdue, reason)
+            MaintenanceStatus.SOON -> stringResource(R.string.home_seasonal_detail_soon, reason)
+            else -> stringResource(R.string.home_seasonal_detail_last, reason, lastCareLabel(lastServiceDate, today).asString())
+        }
     }
 }
 
 /** 스낵바 문구용 — "이번 여름은 넘길게요" */
-private fun Season.label(): String = when (this) {
-    Season.SPRING -> "봄"
-    Season.MONSOON -> "장마"
-    Season.SUMMER -> "여름"
-    Season.PRE_WINTER, Season.WINTER -> "겨울"
-}
+@Composable
+@ReadOnlyComposable
+private fun Season.label(): String = stringResource(
+    when (this) {
+        Season.SPRING -> R.string.season_name_spring
+        Season.MONSOON -> R.string.season_name_monsoon
+        Season.SUMMER -> R.string.season_name_summer
+        Season.PRE_WINTER, Season.WINTER -> R.string.season_name_winter
+    }
+)
 
 private fun Season.icon(): ImageVector = when (this) {
     Season.SPRING -> Icons.Default.LocalFlorist
@@ -1047,7 +1076,7 @@ private fun AllGoodRow() {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            "지금 정비가 필요한 항목이 없어요",
+            stringResource(R.string.home_no_maintenance_needed),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
@@ -1077,12 +1106,12 @@ private fun AllGoodCard() {
             Spacer(Modifier.width(11.dp))
             Column {
                 Text(
-                    "상태 좋아요",
+                    stringResource(R.string.maint_summary_good_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "지금 정비가 필요한 항목이 없어요.",
+                    stringResource(R.string.home_no_maintenance_needed_period),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1150,7 +1179,7 @@ private fun NextMaintenanceRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                if (item.remainingText.contains("일")) Icons.Default.CalendarMonth else Icons.Default.Route,
+                if (item.remainingKm == null) Icons.Default.CalendarMonth else Icons.Default.Route,
                 contentDescription = null,
                 modifier = Modifier.size(17.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1158,14 +1187,14 @@ private fun NextMaintenanceRow(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    item.name,
+                    item.name.localizedItemName(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    item.remainingText,
+                    item.remainingText.asString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1173,7 +1202,7 @@ private fun NextMaintenanceRow(
                 )
             }
             Text(
-                "정상",
+                stringResource(R.string.status_normal),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -1197,7 +1226,7 @@ private fun RecentRecordRow(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    record.typeName,
+                    record.typeName.localizedItemName(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -1213,7 +1242,7 @@ private fun RecentRecordRow(
             }
             if (record.cost != null) {
                 Text(
-                    "${record.cost.formatThousands()}원",
+                    stringResource(R.string.money_amount, record.cost),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -1240,7 +1269,7 @@ private fun RecentFuelRow(
         ) {
             Icon(
                 unit.icon(),
-                contentDescription = if (showKind) unit.actionLabel else null,
+                contentDescription = if (showKind) unit.actionLabel.asString() else null,
                 modifier = Modifier.size(17.dp),
                 // 종류가 섞여 있을 때만 색으로 구분한다.
                 tint = if (showKind) unit.accentColor() else MaterialTheme.colorScheme.onSurfaceVariant
@@ -1248,7 +1277,7 @@ private fun RecentFuelRow(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (showKind) "$dateLabel · ${unit.actionLabel}" else dateLabel,
+                    if (showKind) "$dateLabel · ${unit.actionLabel.asString()}" else dateLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1273,28 +1302,18 @@ internal fun RowDivider() {
 }
 
 /** "7월 12일 · 36,800km · 정비소" 형태의 부제. */
+@Composable
+@ReadOnlyComposable
 internal fun CarMaintenanceRecord.subtitle(): String = buildList {
     serviceDate?.toDisplayDateOrNull()?.let { add(it) }
     serviceMileage?.let { add("${it.formatThousands()}km") }
     place?.takeIf { it.isNotBlank() }?.let { add(it) }
-}.joinToString(" · ").ifBlank { "기록" }
+}.joinToString(" · ").ifBlank { stringResource(R.string.record_subtitle_fallback) }
 
-internal fun String.toDisplayDateOrNull(): String? = runCatching {
-    val date = LocalDate.parse(this)
-    "${date.monthValue}월 ${date.dayOfMonth}일"
-}.getOrNull()
+@Composable
+@ReadOnlyComposable
+internal fun String.toDisplayDateOrNull(): String? = runCatching { LocalDate.parse(this) }.getOrNull()
+    ?.let { stringResource(R.string.date_month_day, it.monthValue, it.dayOfMonth) }
 
 internal fun Int.formatThousands(): String = NumberFormat.getIntegerInstance().format(this)
 
-/**
- * "엔진오일" → "엔진오일 교체 초과", "타이어 교체" → "타이어 교체 초과".
- * 항목 이름이 이미 동작('교체' 등)이나 괄호 설명으로 끝나면 '교체'를 겹쳐 붙이지 않는다.
- */
-private fun String.withActionSuffix(status: String): String {
-    val trimmed = trimEnd()
-    val core = trimmed.substringBeforeLast('(').trimEnd()  // "PCV 밸브(점검/교환)" 대응
-    val endsWithAction = listOf("교체", "교환", "점검", "보충").any {
-        trimmed.endsWith(it) || core.endsWith(it) || trimmed.endsWith("$it)")
-    }
-    return if (endsWithAction) "$trimmed $status" else "$trimmed 교체 $status"
-}

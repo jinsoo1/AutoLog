@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.FuelUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,7 +51,7 @@ class FuelUnitTest {
         assertEquals(listOf(FuelUnit.KG), FuelUnit.supportedUnits("수소"))
         // 전기 충전은 아니므로 전기 관련 표시는 나오지 않는다.
         assertFalse(FuelUnit.usesElectricCharging("수소"))
-        assertEquals("충전", FuelUnit.KG.actionLabel)
+        assertEquals("충전", FuelUnit.KG.actionLabel.ko())
         assertEquals("kg", FuelUnit.KG.symbol)
     }
 
@@ -76,11 +77,11 @@ class FuelUnitTest {
 
     @Test
     fun `문구는 주유와 충전으로만 갈린다`() {
-        assertEquals("주유", FuelUnit.LITER.actionLabel)
-        assertEquals("주유소", FuelUnit.LITER.placeLabel)
-        assertEquals("충전", FuelUnit.KWH.actionLabel)
-        assertEquals("충전소", FuelUnit.KWH.placeLabel)
-        assertEquals("충전비", FuelUnit.KWH.costLabel)
+        assertEquals("주유", FuelUnit.LITER.actionLabel.ko())
+        assertEquals("주유소", FuelUnit.LITER.placeLabel.ko())
+        assertEquals("충전", FuelUnit.KWH.actionLabel.ko())
+        assertEquals("충전소", FuelUnit.KWH.placeLabel.ko())
+        assertEquals("충전비", FuelUnit.KWH.costLabel.ko())
     }
 
     @Test

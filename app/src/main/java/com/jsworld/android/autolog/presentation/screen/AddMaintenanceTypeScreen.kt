@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -84,10 +86,10 @@ fun AddMaintenanceTypeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("정비 항목 추가") },
+                title = { Text(stringResource(R.string.at_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
@@ -104,7 +106,7 @@ fun AddMaintenanceTypeScreen(
                                 carMonths = carMonths
                             )
                         }
-                    ) { Text("저장") }
+                    ) { Text(stringResource(R.string.common_save)) }
                 }
             )
         },
@@ -139,12 +141,12 @@ fun AddMaintenanceTypeScreen(
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("기본 정보", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.car_section_basic), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
 
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("항목 이름 (예: 브레이크 오일)") },
+                        label = { Text(stringResource(R.string.at_name_label)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -153,7 +155,7 @@ fun AddMaintenanceTypeScreen(
                         OutlinedTextField(
                             value = defaultKmText,
                             onValueChange = { defaultKmText = it.filter(Char::isDigit) },
-                            label = { Text("기본 km") },
+                            label = { Text(stringResource(R.string.at_default_km)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             visualTransformation = ThousandsSeparatorTransformation,
                             singleLine = true,
@@ -162,7 +164,7 @@ fun AddMaintenanceTypeScreen(
                         OutlinedTextField(
                             value = defaultMonthsText,
                             onValueChange = { defaultMonthsText = it.filter(Char::isDigit) },
-                            label = { Text("기본 개월") },
+                            label = { Text(stringResource(R.string.at_default_months)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -174,9 +176,9 @@ fun AddMaintenanceTypeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("이 차량만 주기 다르게", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.at_override_title), fontWeight = FontWeight.SemiBold)
                             Text(
-                                "켜면 이 차량에만 별도 주기를 저장해요.",
+                                stringResource(R.string.at_override_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -189,7 +191,7 @@ fun AddMaintenanceTypeScreen(
                             OutlinedTextField(
                                 value = carKmText,
                                 onValueChange = { carKmText = it.filter(Char::isDigit) },
-                                label = { Text("차량 km") },
+                                label = { Text(stringResource(R.string.at_car_km)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 visualTransformation = ThousandsSeparatorTransformation,
                                 singleLine = true,
@@ -198,7 +200,7 @@ fun AddMaintenanceTypeScreen(
                             OutlinedTextField(
                                 value = carMonthsText,
                                 onValueChange = { carMonthsText = it.filter(Char::isDigit) },
-                                label = { Text("차량 개월") },
+                                label = { Text(stringResource(R.string.at_car_months)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
@@ -220,11 +222,9 @@ fun AddMaintenanceTypeScreen(
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("입력 팁", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.at_tips_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "• km/개월 중 하나만 입력해도 돼요 (둘 다 입력하면 둘 다 기준으로 알림)\n" +
-                                "• ‘이 차량만 주기 다르게’를 켜면, 다른 차량엔 기본 주기가 적용돼요\n" +
-                                "• 이름이 동일한 항목이 있으면 새로 만들지 않고 기존 항목을 재사용해요",
+                        stringResource(R.string.at_tips_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

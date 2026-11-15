@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.CareCycleUnit
 import com.jsworld.android.autolog.domain.model.CarePickItem
 import com.jsworld.android.autolog.domain.model.buildCareCycles
@@ -65,9 +66,9 @@ class CareCycleTest {
         val c = cycles.single()
         assertEquals(CareCycleUnit.WASH_COUNT, c.unit)
         // 1회 남았다 = 다음에 세차할 때 하면 된다
-        assertEquals("다음 세차 때", c.remainText)
+        assertEquals("다음 세차 때", c.remainText.ko())
         assertFalse(c.isOverdue)
-        assertEquals("세차 3회마다 · 마지막 7월 10일", c.caption)
+        assertEquals("세차 3회마다 · 마지막 7월 10일", c.caption.ko())
     }
 
     @Test
@@ -79,9 +80,9 @@ class CareCycleTest {
             lastByName = mapOf("내부세차" to "2026-08-11"),
             today = today
         ).single()
-        assertEquals("다음 세차 때", justDone.remainText)
+        assertEquals("다음 세차 때", justDone.remainText.ko())
         assertFalse(justDone.isOverdue)
-        assertEquals("매 세차마다 · 마지막 8월 11일", justDone.caption)
+        assertEquals("매 세차마다 · 마지막 8월 11일", justDone.caption.ko())
 
         // 그 뒤에 세차만 한 번 더 하면 바로 할 때가 된다
         val due = buildCareCycles(
@@ -90,7 +91,7 @@ class CareCycleTest {
             lastByName = mapOf("내부세차" to "2026-08-11"),
             today = today
         ).single()
-        assertEquals("이번에 할 때", due.remainText)
+        assertEquals("이번에 할 때", due.remainText.ko())
         assertTrue(due.isOverdue)
     }
 
@@ -102,7 +103,7 @@ class CareCycleTest {
             lastByName = mapOf("왁스 코팅" to "2026-07-10"),
             today = today
         ).single()
-        assertEquals("이번에 할 때", due.remainText)
+        assertEquals("이번에 할 때", due.remainText.ko())
         assertTrue(due.isOverdue)
 
         val over = buildCareCycles(
@@ -111,7 +112,7 @@ class CareCycleTest {
             lastByName = mapOf("왁스 코팅" to "2026-07-10"),
             today = today
         ).single()
-        assertEquals("2회 지남", over.remainText)
+        assertEquals("2회 지남", over.remainText.ko())
         assertTrue(over.isOverdue)
     }
 
@@ -123,8 +124,8 @@ class CareCycleTest {
             lastByName = emptyMap(),
             today = today
         ).single()
-        assertEquals("이번에 할 때", c.remainText)
-        assertEquals("세차 3회마다 · 아직 기록 없음", c.caption)
+        assertEquals("이번에 할 때", c.remainText.ko())
+        assertEquals("세차 3회마다 · 아직 기록 없음", c.caption.ko())
     }
 
     @Test
@@ -136,7 +137,7 @@ class CareCycleTest {
             today = today
         ).single()
         assertEquals(CareCycleUnit.MONTHS, c.unit)
-        assertEquals("135일 남음", c.remainText)
+        assertEquals("135일 남음", c.remainText.ko())
         assertFalse(c.isOverdue)
     }
 
@@ -149,7 +150,7 @@ class CareCycleTest {
             today = today
         ).single()
         assertNull(c.progress)
-        assertEquals("첫 기록 필요", c.remainText)
+        assertEquals("첫 기록 필요", c.remainText.ko())
         assertFalse(c.isOverdue)
     }
 

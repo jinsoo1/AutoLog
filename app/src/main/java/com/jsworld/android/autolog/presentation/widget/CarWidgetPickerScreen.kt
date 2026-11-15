@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.widget
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,12 +57,12 @@ fun CarWidgetPickerScreen(
                 title = {
                     Column {
                         Text(
-                            "위젯 차량 선택",
+                            stringResource(R.string.widget_picker_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "홈 화면 위젯에 표시할 차량을 골라주세요",
+                            stringResource(R.string.widget_picker_sub),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -68,7 +70,7 @@ fun CarWidgetPickerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onCancel) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "취소")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_cancel))
                     }
                 }
             )
@@ -89,9 +91,9 @@ fun CarWidgetPickerScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(10.dp))
-                    Text("등록된 차량이 없어요", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.empty_no_registered_car), fontWeight = FontWeight.Bold)
                     Text(
-                        "앱에서 차량을 먼저 등록해주세요.",
+                        stringResource(R.string.widget_picker_empty_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -165,7 +167,7 @@ private fun WidgetCarCard(
                             shape = MaterialTheme.shapes.large
                         ) {
                             Text(
-                                "대표",
+                                stringResource(R.string.common_primary_car),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,

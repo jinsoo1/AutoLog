@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.asString
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedFuelType
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -89,7 +93,7 @@ fun CarListScreen(
             ExtendedFloatingActionButton(
                 onClick = onAddCarClick,
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("차량 추가") }
+                text = { Text(stringResource(R.string.carlist_add)) }
             )
         }
     ) { padding ->
@@ -142,9 +146,9 @@ private fun CarSummaryCard(
     val summary = ui.summary
 
     val (statusColor, statusLabel, statusIcon) = when (summary.status) {
-        MaintenanceStatus.OVERDUE -> Triple(StatusOverdue, "필요", Icons.Default.Error)
-        MaintenanceStatus.SOON -> Triple(StatusSoon, "임박", Icons.Default.Warning)
-        MaintenanceStatus.NORMAL -> Triple(StatusNormal, "정상", Icons.Default.CheckCircle)
+        MaintenanceStatus.OVERDUE -> Triple(StatusOverdue, stringResource(R.string.status_needed), Icons.Default.Error)
+        MaintenanceStatus.SOON -> Triple(StatusSoon, stringResource(R.string.status_soon), Icons.Default.Warning)
+        MaintenanceStatus.NORMAL -> Triple(StatusNormal, stringResource(R.string.status_normal), Icons.Default.CheckCircle)
     }
 
     // 반투명 색을 그대로 카드 배경에 쓰면 카드 그림자(elevation)가 배경 밑으로 비쳐
@@ -194,7 +198,7 @@ private fun CarSummaryCard(
                                     shape = MaterialTheme.shapes.large
                                 ) {
                                     Text(
-                                        "대표",
+                                        stringResource(R.string.common_primary_car),
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
@@ -224,7 +228,7 @@ private fun CarSummaryCard(
                     IconButton(onClick = { onPrimaryClick(ui.car) }) {
                         Icon(
                             imageVector = if (car.isPrimary) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = "대표 차량 설정",
+                            contentDescription = stringResource(R.string.carlist_set_primary),
                             tint = if (car.isPrimary) Color(0xFFFFB300)
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -244,7 +248,7 @@ private fun CarSummaryCard(
                     // 연료는 남는 공간을 먹고, 한 줄로만 보이도록
                     InfoPill(
                         icon = Icons.Default.LocalGasStation,
-                        text = car.fuelType ?: "-",
+                        text = car.fuelType?.localizedFuelType() ?: "-",
                         modifier = Modifier.weight(1f) // ⭐ 길면 여기서 줄어듦(ellipsis)
                     )
                 }
@@ -278,14 +282,14 @@ private fun CarSummaryCard(
 
                         Column(Modifier.weight(1f)) {
                             Text(
-                                summary.title,
+                                summary.title.asString(),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                summary.detail,
+                                summary.detail.asString(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -301,7 +305,7 @@ private fun CarSummaryCard(
                                 shape = MaterialTheme.shapes.large
                             ) {
                                 Text(
-                                    "위험 ${ui.dangerCount}",
+                                    stringResource(R.string.status_danger_count, ui.dangerCount),
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White,
@@ -362,7 +366,7 @@ fun CarListTopBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로"
+                        contentDescription = stringResource(R.string.common_back)
                     )
                 }
             }
@@ -370,13 +374,13 @@ fun CarListTopBar(
         title = {
             Column {
                 Text(
-                    text = "내 차량",
+                    text = stringResource(R.string.carlist_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 if (carCount > 0) {
                     Text(
-                        text = "${carCount}대 관리 중",
+                        text = stringResource(R.string.carlist_count_managing, carCount),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -387,7 +391,7 @@ fun CarListTopBar(
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "설정"
+                    contentDescription = stringResource(R.string.carlist_settings)
                 )
             }
         }
@@ -417,20 +421,20 @@ private fun BackupReminderBanner(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "백업을 권장해요",
+                    text = stringResource(R.string.carlist_backup_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
-                    text = "기기를 바꾸거나 앱을 지우면 기록이 사라져요.",
+                    text = stringResource(R.string.carlist_backup_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-            TextButton(onClick = onBackup) { Text("백업") }
+            TextButton(onClick = onBackup) { Text(stringResource(R.string.carlist_backup_action)) }
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "닫기")
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close))
             }
         }
     }
@@ -445,16 +449,16 @@ fun EmptyCarView(
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(56.dp))
-            Text("등록된 차량이 없어요", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("오른쪽 아래 버튼으로 차량을 추가해보세요.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.empty_no_registered_car), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.carlist_empty_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
             Button(onClick = onAdd) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("차량 추가")
+                Text(stringResource(R.string.carlist_add))
             }
             TextButton(onClick = onRestore) {
-                Text("이전에 쓰던 기록이 있나요? 백업에서 복원")
+                Text(stringResource(R.string.carlist_restore_hint))
             }
         }
     }

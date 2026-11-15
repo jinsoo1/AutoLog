@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -31,11 +33,11 @@ data class CareCycleProgress(
     /** 0~1. 주기가 없으면 null */
     val progress: Float?,
     /** "1회 남음" / "2회 지남" / "135일 남음" — 사람이 읽는 문장 */
-    val remainText: String,
+    val remainText: UiText,
     /** 주기를 넘겼는지. 빨간 경고가 아니라 차분한 강조에만 쓴다 */
     val isOverdue: Boolean,
     /** "세차 3회마다 · 마지막 7월 2일" 같은 보조 설명 */
-    val caption: String,
+    val caption: UiText,
     /**
      * 정렬용 임박도 — [progress] 와 달리 1을 넘을 수 있다(많이 지날수록 크다).
      * 항목이 많아지면 목록을 접어야 하는데, 그때 위에 남는 몇 개가
@@ -54,15 +56,15 @@ val CARE_DAY_OPTIONS = listOf(30, 90, 180, 365)
  * 1회 주기는 "세차 1회마다"보다 "매 세차마다"가 사람 말에 가깝다 —
  * 내부세차처럼 세차할 때 늘 같이 하는 항목이 여기 해당한다.
  */
-fun careWashCountLabel(n: Int): String =
-    if (n == 1) "매 세차마다" else "세차 ${n}회마다"
+fun careWashCountLabel(n: Int): UiText =
+    if (n == 1) UiText.Res(R.string.care_every_wash) else UiText.Res(R.string.care_every_n_wash, n)
 
 /** 30·365의 배수는 친숙한 단위로, 나머지는 일수로 읽어준다 */
-fun careDaysLabel(days: Int): String = when {
-    days % 365 == 0 -> "${days / 365}년"
-    days % 30 == 0 -> "${days / 30}개월"
-    days % 7 == 0 -> "${days / 7}주"
-    else -> "${days}일"
+fun careDaysLabel(days: Int): UiText = when {
+    days % 365 == 0 -> UiText.Res(R.string.duration_years, days / 365)
+    days % 30 == 0 -> UiText.Res(R.string.duration_months, days / 30)
+    days % 7 == 0 -> UiText.Res(R.string.duration_weeks, days / 7)
+    else -> UiText.Res(R.string.duration_days, days)
 }
 
 /**
@@ -102,22 +104,21 @@ fun buildCareCycles(
                     unit = CareCycleUnit.WASH_COUNT,
                     progress = (since.toFloat() / n).coerceIn(0f, 1f),
                     remainText = when {
-                        remaining > 1 -> "${remaining}회 남음"
+                        remaining > 1 -> UiText.Res(R.string.care_remain_count, remaining)
                         // 1회 남았다 = 다음에 세차할 때 하면 된다. '매 세차마다' 항목은
                         // 방금 같이 한 직후가 늘 이 상태라, 숫자보다 이 말이 정확하다.
-                        remaining == 1 -> "다음 세차 때"
-                        remaining == 0 -> "이번에 할 때"
-                        else -> "${-remaining}회 지남"
+                        remaining == 1 -> UiText.Res(R.string.care_next_wash)
+                        remaining == 0 -> UiText.Res(R.string.care_this_time)
+                        else -> UiText.Res(R.string.care_over_count, -remaining)
                     },
                     isOverdue = remaining <= 0,
-                    caption = buildString {
-                        append(careWashCountLabel(n))
-                        append(" · ")
-                        append(
-                            if (last == null) "아직 기록 없음"
-                            else "마지막 ${last.toShortDateText()}"
+                    caption = UiText.Joined(
+                        listOf(
+                            careWashCountLabel(n),
+                            if (last == null) UiText.Res(R.string.care_no_record_yet)
+                            else UiText.Res(R.string.care_last_date, last.toShortDateText())
                         )
-                    },
+                    ),
                     urgency = since.toFloat() / n
                 )
             }
@@ -130,9 +131,14 @@ fun buildCareCycles(
                         name = item.name,
                         unit = CareCycleUnit.MONTHS,
                         progress = null,
-                        remainText = "첫 기록 필요",
+                        remainText = UiText.Res(R.string.care_first_record_needed),
                         isOverdue = false,
-                        caption = "${careDaysLabel(item.intervalDays)}마다 · 아직 기록 없음",
+                        caption = UiText.Joined(
+                            listOf(
+                                UiText.Res(R.string.care_every_period, careDaysLabel(item.intervalDays)),
+                                UiText.Res(R.string.care_no_record_yet)
+                            )
+                        ),
                         urgency = null
                     )
                 } else {
@@ -147,12 +153,17 @@ fun buildCareCycles(
                         unit = CareCycleUnit.MONTHS,
                         progress = (used.toFloat() / total).coerceIn(0f, 1f),
                         remainText = when {
-                            remainingDays > 0 -> "${remainingDays}일 남음"
-                            remainingDays == 0L -> "오늘까지"
-                            else -> "${-remainingDays}일 지남"
+                            remainingDays > 0 -> UiText.Res(R.string.care_remain_days, remainingDays)
+                            remainingDays == 0L -> UiText.Res(R.string.care_due_today)
+                            else -> UiText.Res(R.string.care_over_days, -remainingDays)
                         },
                         isOverdue = remainingDays < 0,
-                        caption = "${careDaysLabel(item.intervalDays)}마다 · 마지막 ${lastDate.toShortDateText()}",
+                        caption = UiText.Joined(
+                            listOf(
+                                UiText.Res(R.string.care_every_period, careDaysLabel(item.intervalDays)),
+                                UiText.Res(R.string.care_last_date, lastDate.toShortDateText())
+                            )
+                        ),
                         urgency = used.toFloat() / total
                     )
                 }
@@ -177,7 +188,8 @@ fun careNudgeCandidates(cycles: List<CareCycleProgress>): List<CareCycleProgress
 private fun String.toLocalDateOrNull(): LocalDate? =
     runCatching { LocalDate.parse(this) }.getOrNull()
 
-private fun String.toShortDateText(): String =
-    toLocalDateOrNull()?.toShortDateText() ?: this
+private fun String.toShortDateText(): UiText =
+    toLocalDateOrNull()?.toShortDateText() ?: UiText.Raw(this)
 
-private fun LocalDate.toShortDateText(): String = "${monthValue}월 ${dayOfMonth}일"
+private fun LocalDate.toShortDateText(): UiText =
+    UiText.Res(R.string.date_month_day, monthValue, dayOfMonth)

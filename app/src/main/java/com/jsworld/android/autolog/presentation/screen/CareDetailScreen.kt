@@ -1,5 +1,11 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.runtime.ReadOnlyComposable
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedWashMethod
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -159,11 +165,11 @@ fun CareDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("세차·관리", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.care_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -172,7 +178,7 @@ fun CareDetailScreen(
             ExtendedFloatingActionButton(
                 onClick = { showSheet = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("세차 기록") }
+                text = { Text(stringResource(R.string.care_record_wash)) }
             )
         }
     ) { padding ->
@@ -208,8 +214,8 @@ fun CareDetailScreen(
 
             item {
                 SectionLabel(
-                    title = "관리 주기",
-                    actionLabel = "항목 관리",
+                    title = stringResource(R.string.care_cycle_section),
+                    actionLabel = stringResource(R.string.care_manage_items),
                     onAction = { onManageItems(carId) }
                 )
             }
@@ -217,9 +223,8 @@ fun CareDetailScreen(
             item {
                 if (cycles.isEmpty()) {
                     CareEmptyCard(
-                        title = "주기를 정한 관리 항목이 없어요",
-                        body = "'항목 관리'에서 왁스·코팅 같은 항목을 켜고 " +
-                            "'세차 3회마다'처럼 나만의 주기를 정할 수 있어요."
+                        title = stringResource(R.string.care_empty_cycle_title),
+                        body = stringResource(R.string.care_empty_cycle_body)
                     )
                 } else {
                     // 항목마다 카드를 띄우면 화면이 시끄럽다 — 한 카드 안에 줄로 모은다.
@@ -242,7 +247,7 @@ fun CareDetailScreen(
                             if (collapsible) {
                                 CareExpandRow(
                                     expanded = cyclesExpanded,
-                                    collapsedLabel = "외 ${cycles.size - CYCLE_COLLAPSED_COUNT}개 모두 보기",
+                                    collapsedLabel = stringResource(R.string.care_more_cycles, cycles.size - CYCLE_COLLAPSED_COUNT),
                                     onClick = { cyclesExpanded = !cyclesExpanded }
                                 )
                             }
@@ -252,7 +257,7 @@ fun CareDetailScreen(
             }
 
             if (sessions.isNotEmpty()) {
-                item { SectionLabel("기록 · ${sessions.size}건") }
+                item { SectionLabel(stringResource(R.string.care_records_section, sessions.size)) }
 
                 // 오래된 기록까지 한 번에 쏟아내지 않는다 — 최근 것부터, 달로 끊어서.
                 val collapsible = sessions.size > RECORD_COLLAPSE_MIN
@@ -292,7 +297,7 @@ fun CareDetailScreen(
                         ListCard {
                             CareExpandRow(
                                 expanded = recordsExpanded,
-                                collapsedLabel = "지난 기록 ${sessions.size - RECORD_COLLAPSED_COUNT}건 더 보기",
+                                collapsedLabel = stringResource(R.string.care_more_records, sessions.size - RECORD_COLLAPSED_COUNT),
                                 onClick = { recordsExpanded = !recordsExpanded }
                             )
                         }
@@ -431,20 +436,20 @@ private fun CareHeroCard(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "아직 세차 기록이 없어요",
+                        stringResource(R.string.care_no_wash_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = content
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        "아래 버튼으로 첫 세차를 기록해보세요",
+                        stringResource(R.string.care_no_wash_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = content.copy(alpha = 0.8f)
                     )
                 } else {
                     Text(
-                        "마지막 세차",
+                        stringResource(R.string.care_last_wash),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         color = content.copy(alpha = 0.75f)
@@ -453,7 +458,7 @@ private fun CareHeroCard(
                     // 숫자만 크게, 단위는 작게 — 한 덩어리로 읽히게 아래 정렬
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            if (overview.daysSinceWash == 0) "오늘" else "${overview.daysSinceWash}",
+                            if (overview.daysSinceWash == 0) stringResource(R.string.care_today) else "${overview.daysSinceWash}",
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             color = content
@@ -461,7 +466,7 @@ private fun CareHeroCard(
                         if (overview.daysSinceWash != 0) {
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                "일 전",
+                                stringResource(R.string.care_days_ago_unit),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = content.copy(alpha = 0.85f),
@@ -473,8 +478,8 @@ private fun CareHeroCard(
                         Text(
                             buildList {
                                 last.performedAt?.toDisplayDateOrNull()?.let { add(it) }
-                                last.method?.takeIf { it.isNotBlank() }?.let { add(it) }
-                                last.cost?.let { add("${it.formatThousands()}원") }
+                                last.method?.takeIf { it.isNotBlank() }?.let { add(it.localizedWashMethod()) }
+                                last.cost?.let { add(stringResource(R.string.money_amount, it)) }
                             }.joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall,
                             color = content.copy(alpha = 0.8f),
@@ -491,8 +496,8 @@ private fun CareHeroCard(
                             shape = CircleShape
                         ) {
                             Text(
-                                if (overview.isDue) "평균 ${avg}일마다 · 슬슬 때가 됐어요"
-                                else "평균 ${avg}일마다 세차하고 있어요",
+                                if (overview.isDue) stringResource(R.string.care_avg_due, avg)
+                                else stringResource(R.string.care_avg_interval, avg),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
@@ -506,13 +511,13 @@ private fun CareHeroCard(
                     HorizontalDivider(color = content.copy(alpha = 0.15f))
                     Spacer(Modifier.height(12.dp))
                     Row(Modifier.fillMaxWidth()) {
-                        HeroStat("이번 달", "${counts.monthCount}회", content, Modifier.weight(1f))
+                        HeroStat(stringResource(R.string.care_stat_month), stringResource(R.string.count_times, counts.monthCount), content, Modifier.weight(1f))
                         HeroStatDivider(content)
-                        HeroStat("올해", "${counts.yearCount}회", content, Modifier.weight(1f))
+                        HeroStat(stringResource(R.string.care_stat_year), stringResource(R.string.count_times, counts.yearCount), content, Modifier.weight(1f))
                         HeroStatDivider(content)
                         HeroStat(
-                            "올해 비용",
-                            "${formatCompactWon(counts.yearCost)}원",
+                            stringResource(R.string.care_stat_year_cost),
+                            stringResource(R.string.care_compact_won, formatCompactWon(counts.yearCost)),
                             content,
                             Modifier.weight(1f)
                         )
@@ -605,14 +610,14 @@ private fun CareSessionRow(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    session.performedAt?.toDisplayDateOrNull() ?: "날짜 없음",
+                    session.performedAt?.toDisplayDateOrNull() ?: stringResource(R.string.common_no_date),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 // 세차가 아닌 항목만 있는 날은 이름을, 여러 항목이면 개수를 보여준다.
                 val badge = when {
-                    multi -> "항목 ${session.records.size}개"
-                    session.primary.itemName != BASE_WASH_NAME -> session.primary.itemName
+                    multi -> stringResource(R.string.care_items_badge, session.records.size)
+                    session.primary.itemName != BASE_WASH_NAME -> session.primary.itemName.localizedItemName()
                     else -> null
                 }
                 badge?.let {
@@ -621,8 +626,8 @@ private fun CareSessionRow(
                 }
             }
             val subtitle = buildList {
-                if (multi) add(session.itemNames.joinToString(" · "))
-                session.primary.method?.takeIf { it.isNotBlank() }?.let { add(it) }
+                if (multi) add(session.itemNames.map { it.localizedItemName() }.joinToString(" · "))
+                session.primary.method?.takeIf { it.isNotBlank() }?.let { add(it.localizedWashMethod()) }
                 session.primary.place?.takeIf { it.isNotBlank() }?.let { add(it) }
                 if (!multi) session.primary.memo?.takeIf { it.isNotBlank() }?.let { add(it) }
             }.joinToString(" · ")
@@ -638,7 +643,7 @@ private fun CareSessionRow(
         }
         session.totalCost?.let {
             Text(
-                "${it.formatThousands()}원",
+                stringResource(R.string.money_amount, it),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -658,13 +663,11 @@ private fun CareSessionRow(
  */
 @Composable
 private fun CareMonthHeader(monthKey: String, sessions: List<CareSession>, today: LocalDate) {
-    val title = remember(monthKey, today) {
-        val month = runCatching { YearMonth.parse(monthKey) }.getOrNull()
-        when {
-            month == null -> "날짜 없음"
-            month.year == today.year -> "${month.monthValue}월"
-            else -> "${month.year}년 ${month.monthValue}월"
-        }
+    val month = remember(monthKey) { runCatching { YearMonth.parse(monthKey) }.getOrNull() }
+    val title = when {
+        month == null -> stringResource(R.string.common_no_date)
+        month.year == today.year -> stringResource(R.string.care_month_this_year, month.monthValue)
+        else -> stringResource(R.string.date_year_month, month.year, month.monthValue)
     }
     val cost = sessions.sumOf { (it.totalCost ?: 0).toLong() }
 
@@ -683,8 +686,8 @@ private fun CareMonthHeader(monthKey: String, sessions: List<CareSession>, today
         )
         Text(
             buildList {
-                add("${sessions.size}건")
-                if (cost > 0) add("${formatCompactWon(cost)}원")
+                add(stringResource(R.string.count_cases, sessions.size))
+                if (cost > 0) add(stringResource(R.string.care_compact_won, formatCompactWon(cost)))
             }.joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -704,7 +707,7 @@ private fun CareExpandRow(expanded: Boolean, collapsedLabel: String, onClick: ()
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            if (expanded) "접기" else collapsedLabel,
+            if (expanded) stringResource(R.string.common_collapse) else collapsedLabel,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
@@ -775,19 +778,19 @@ private fun CareSessionSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        session.performedAt?.toDisplayDateOrNull() ?: "날짜 없음",
+                        session.performedAt?.toDisplayDateOrNull() ?: stringResource(R.string.common_no_date),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "이날 한 관리 ${session.records.size}가지",
+                        stringResource(R.string.care_session_items, session.records.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 session.totalCost?.let {
                     Text(
-                        "${it.formatThousands()}원",
+                        stringResource(R.string.money_amount, it),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -807,12 +810,12 @@ private fun CareSessionSheet(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            record.itemName,
+                            record.itemName.localizedItemName(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         val detail = buildList {
-                            record.method?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            record.method?.takeIf { it.isNotBlank() }?.let { add(it.localizedWashMethod()) }
                             record.place?.takeIf { it.isNotBlank() }?.let { add(it) }
                             record.memo?.takeIf { it.isNotBlank() }?.let { add(it) }
                         }.joinToString(" · ")
@@ -828,7 +831,7 @@ private fun CareSessionSheet(
                     }
                     Text(
                         // 비용을 안 적은 항목은 "-" — 0원이라고 지어내지 않는다
-                        record.cost?.let { "${it.formatThousands()}원" } ?: "-",
+                        record.cost?.let { stringResource(R.string.money_amount, it) } ?: "-",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = if (record.cost == null) {
@@ -840,7 +843,7 @@ private fun CareSessionSheet(
                     Spacer(Modifier.width(6.dp))
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "수정",
+                        contentDescription = stringResource(R.string.common_edit),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -854,7 +857,7 @@ private fun CareSessionSheet(
 
             Spacer(Modifier.height(10.dp))
             Text(
-                "항목을 누르면 그 항목만 수정·삭제할 수 있어요.",
+                stringResource(R.string.care_edit_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -881,7 +884,7 @@ private fun CareCycleRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                cycle.name,
+                cycle.name.localizedItemName(),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
@@ -891,7 +894,7 @@ private fun CareCycleRow(
             // 남은 양은 알약으로 — 초과한 줄이 목록에서 바로 눈에 든다
             Surface(color = accent.copy(alpha = 0.12f), shape = CircleShape) {
                 Text(
-                    cycle.remainText,
+                    cycle.remainText.asString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = accent,
@@ -913,7 +916,7 @@ private fun CareCycleRow(
         )
         Spacer(Modifier.height(7.dp))
         Text(
-            cycle.caption,
+            cycle.caption.asString(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -945,15 +948,15 @@ private fun CareNudgeCard(
             val content = MaterialTheme.colorScheme.onTertiaryContainer
             val first = cycles.first()
             Text(
-                if (cycles.size == 1) "이번엔 ${first.name}도 할 때예요"
-                else "이번엔 ${first.name} 등 ${cycles.size}가지도 할 때예요",
+                if (cycles.size == 1) stringResource(R.string.care_nudge_single, first.name.localizedItemName())
+                else stringResource(R.string.care_nudge_multi, first.name.localizedItemName(), cycles.size),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = content
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                cycles.joinToString(" · ") { "${it.name} ${it.remainText}" },
+                cycles.map { "${it.name.localizedItemName()} ${it.remainText.asString()}" }.joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = content.copy(alpha = 0.85f)
             )
@@ -964,11 +967,11 @@ private fun CareNudgeCard(
                         onClick = { onRecord(cycle.name) },
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
                     ) {
-                        Text("${cycle.name} 기록", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.care_nudge_record, cycle.name.localizedItemName()), style = MaterialTheme.typography.labelMedium)
                     }
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("다음에", style = MaterialTheme.typography.labelMedium, color = content)
+                    Text(stringResource(R.string.care_nudge_later), style = MaterialTheme.typography.labelMedium, color = content)
                 }
             }
         }
@@ -977,6 +980,11 @@ private fun CareNudgeCard(
 
 /** 세차 방식 빠른 선택 */
 private val WASH_METHODS = listOf("셀프세차", "자동세차", "손세차")
+
+/** 방식 칩 라벨 — 저장값은 한국어 원문으로 두고 표시만 바꾼다(기존 기록과 호환) */
+@Composable
+@ReadOnlyComposable
+private fun washMethodLabel(method: String): String = method.localizedWashMethod()
 
 /**
  * 3초 기록 시트 — 정비 기록 화면(주행거리·정비소…)은 세차엔 과하다.
@@ -1023,9 +1031,9 @@ private fun CareRecordSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     when {
-                        existing != null -> "${existing.itemName} 기록 수정"
-                        selectedName == DefaultCareItems.WASH -> "세차 기록"
-                        else -> "$selectedName 기록"
+                        existing != null -> stringResource(R.string.care_sheet_edit_title, existing.itemName.localizedItemName())
+                        selectedName == DefaultCareItems.WASH -> stringResource(R.string.care_record_wash)
+                        else -> stringResource(R.string.care_sheet_record_title, selectedName.localizedItemName())
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -1033,7 +1041,7 @@ private fun CareRecordSheet(
                 )
                 if (onDelete != null) {
                     TextButton(onClick = onDelete) {
-                        Text("삭제", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -1042,7 +1050,7 @@ private fun CareRecordSheet(
             // 방식 — 전용 필드. 칩으로 고르거나, 그 외 방식은 메모에 적으면 된다.
             if (selectedName == BASE_WASH_NAME) {
                 Text(
-                    "방식 (선택)",
+                    stringResource(R.string.care_method_optional),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1051,7 +1059,7 @@ private fun CareRecordSheet(
                         FilterChip(
                             selected = method == m,
                             onClick = { method = if (method == m) "" else m },
-                            label = { Text(m) }
+                            label = { Text(washMethodLabel(m)) }
                         )
                     }
                 }
@@ -1060,7 +1068,7 @@ private fun CareRecordSheet(
                 // 세차하면서 같이 한 관리 — 다중 선택하면 각각 기록이 남는다.
                 if (togetherCandidates.isNotEmpty()) {
                     Text(
-                        "선택 항목 (함께 했다면 골라주세요 — 기록은 한 건으로 묶여요)",
+                        stringResource(R.string.care_together_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1079,14 +1087,14 @@ private fun CareRecordSheet(
                     }
                     if (defaultTogether.isNotEmpty()) {
                         Text(
-                            "'매 세차마다'로 정한 항목은 미리 골라뒀어요 — 안 한 날은 눌러서 빼주세요.",
+                            stringResource(R.string.care_together_preselected),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (together.isNotEmpty()) {
                         Text(
-                            "비용은 세차에 들어가요 — 저장 후 기록을 열면 항목별로 나눠 적을 수 있어요.",
+                            stringResource(R.string.care_cost_goes_to_wash),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1099,12 +1107,12 @@ private fun CareRecordSheet(
                 value = date.toDisplayDateOrNull() ?: date,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("날짜") },
+                label = { Text(stringResource(R.string.common_date)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showDatePicker = true },
                 trailingIcon = {
-                    TextButton(onClick = { showDatePicker = true }) { Text("변경") }
+                    TextButton(onClick = { showDatePicker = true }) { Text(stringResource(R.string.common_change)) }
                 }
             )
             Spacer(Modifier.height(8.dp))
@@ -1112,7 +1120,7 @@ private fun CareRecordSheet(
             OutlinedTextField(
                 value = costText,
                 onValueChange = { input -> costText = input.filter { it.isDigit() }.take(9) },
-                label = { Text("비용 (원)") },
+                label = { Text(stringResource(R.string.care_cost_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 visualTransformation = ThousandsSeparatorTransformation,
                 singleLine = true,
@@ -1123,8 +1131,8 @@ private fun CareRecordSheet(
             OutlinedTextField(
                 value = place,
                 onValueChange = { place = it },
-                label = { Text("장소 (선택)") },
-                placeholder = { Text("예: OO셀프세차장") },
+                label = { Text(stringResource(R.string.care_place_optional)) },
+                placeholder = { Text(stringResource(R.string.care_place_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1133,7 +1141,7 @@ private fun CareRecordSheet(
             OutlinedTextField(
                 value = memo,
                 onValueChange = { memo = it },
-                label = { Text("메모 (선택)") },
+                label = { Text(stringResource(R.string.common_memo_optional)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(16.dp))
@@ -1155,7 +1163,7 @@ private fun CareRecordSheet(
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (saving) "저장하는 중…" else "저장", fontWeight = FontWeight.Bold)
+                Text(stringResource(if (saving) R.string.common_saving else R.string.common_save), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1183,10 +1191,10 @@ private fun CareRecordSheet(
                             .atZone(ZoneId.of("UTC")).toLocalDate().toString()
                     }
                     showDatePicker = false
-                }) { Text("확인") }
+                }) { Text(stringResource(R.string.common_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("취소") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         ) {
             DatePicker(state = state)

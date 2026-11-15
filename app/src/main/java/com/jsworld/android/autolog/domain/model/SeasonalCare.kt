@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
@@ -45,13 +48,13 @@ enum class Season {
 data class SeasonalTip(
     /** ⚠️ [com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems] 의 이름과 글자까지 같아야 한다 */
     val itemName: String,
-    val reason: String
+    val reason: UiText
 )
 
 data class SeasonalCareGuide(
     val season: Season,
-    val title: String,
-    val subtitle: String,
+    val title: UiText,
+    val subtitle: UiText,
     val tips: List<SeasonalTip>
 )
 
@@ -68,53 +71,53 @@ fun seasonOf(month: Int): Season = when (month) {
  * 말을 거는 시점이 다를 뿐이라, 목록은 나누지 않고 문구만 나눈다.
  */
 private val WINTER_TIPS = listOf(
-    SeasonalTip("배터리", "추우면 성능이 뚝 떨어져요"),
-    SeasonalTip("냉각수(부동액)", "어는점을 확인해요"),
-    SeasonalTip("타이어 공기압 점검", "기온이 내려가면 공기압도 내려가요")
+    SeasonalTip("배터리", UiText.Res(R.string.tip_battery_winter)),
+    SeasonalTip("냉각수(부동액)", UiText.Res(R.string.tip_coolant_winter)),
+    SeasonalTip("타이어 공기압 점검", UiText.Res(R.string.tip_pressure_winter))
 )
 
 private val GUIDES = mapOf(
     Season.SPRING to SeasonalCareGuide(
         season = Season.SPRING,
-        title = "봄에 확인하면 좋은 3가지",
-        subtitle = "겨우내 쌓인 것부터 털어내요",
+        title = UiText.Res(R.string.season_spring_title),
+        subtitle = UiText.Res(R.string.season_spring_subtitle),
         tips = listOf(
-            SeasonalTip("에어컨(캐빈) 필터", "겨우내 쌓인 먼지, 에어컨 켜기 전에"),
-            SeasonalTip("하부(누유/부식) 점검", "겨울 제설제가 남아 있어요"),
-            SeasonalTip("휠 얼라인먼트 점검", "겨우내 팬 포트홀에 틀어졌을 수 있어요")
+            SeasonalTip("에어컨(캐빈) 필터", UiText.Res(R.string.tip_cabin_filter_spring)),
+            SeasonalTip("하부(누유/부식) 점검", UiText.Res(R.string.tip_underbody_spring)),
+            SeasonalTip("휠 얼라인먼트 점검", UiText.Res(R.string.tip_alignment_spring))
         )
     ),
     Season.MONSOON to SeasonalCareGuide(
         season = Season.MONSOON,
-        title = "장마 오기 전에 확인할 3가지",
-        subtitle = "빗길 사고는 시야와 접지에서 나요",
+        title = UiText.Res(R.string.season_monsoon_title),
+        subtitle = UiText.Res(R.string.season_monsoon_subtitle),
         tips = listOf(
-            SeasonalTip("와이퍼 블레이드", "비 올 때 시야가 먼저예요"),
-            SeasonalTip("타이어 교체", "빗길 제동은 홈 깊이가 좌우해요"),
-            SeasonalTip("브레이크패드", "젖은 노면은 제동거리가 길어져요")
+            SeasonalTip("와이퍼 블레이드", UiText.Res(R.string.tip_wiper_rain)),
+            SeasonalTip("타이어 교체", UiText.Res(R.string.tip_tire_rain)),
+            SeasonalTip("브레이크패드", UiText.Res(R.string.tip_brake_rain))
         )
     ),
     Season.SUMMER to SeasonalCareGuide(
         season = Season.SUMMER,
         // 창이 10월까지라 "한여름"으로 못 부른다 — 10월에 읽어도 맞는 말이어야 한다.
-        title = "여름철에 확인할 3가지",
-        subtitle = "더위에 약한 것부터 봐요",
+        title = UiText.Res(R.string.season_summer_title),
+        subtitle = UiText.Res(R.string.season_summer_subtitle),
         tips = listOf(
-            SeasonalTip("냉각수(부동액)", "과열은 여름에 나요"),
-            SeasonalTip("에어컨 냉매 점검/보충", "시원해지지 않으면 점검해요"),
-            SeasonalTip("타이어 공기압 점검", "기온이 오르면 공기압도 올라가요")
+            SeasonalTip("냉각수(부동액)", UiText.Res(R.string.tip_coolant_summer)),
+            SeasonalTip("에어컨 냉매 점검/보충", UiText.Res(R.string.tip_ac_summer)),
+            SeasonalTip("타이어 공기압 점검", UiText.Res(R.string.tip_pressure_summer))
         )
     ),
     Season.PRE_WINTER to SeasonalCareGuide(
         season = Season.PRE_WINTER,
-        title = "이번 겨울 전에 확인할 3가지",
-        subtitle = "기온이 떨어지기 전에 보면 좋아요",
+        title = UiText.Res(R.string.season_pre_winter_title),
+        subtitle = UiText.Res(R.string.season_pre_winter_subtitle),
         tips = WINTER_TIPS
     ),
     Season.WINTER to SeasonalCareGuide(
         season = Season.WINTER,
-        title = "겨울철에 확인할 3가지",
-        subtitle = "추울 때 특히 말썽인 것들이에요",
+        title = UiText.Res(R.string.season_winter_title),
+        subtitle = UiText.Res(R.string.season_winter_subtitle),
         tips = WINTER_TIPS
     )
 )
@@ -204,7 +207,7 @@ enum class SeasonalRowState {
 
 data class SeasonalCareRow(
     val itemName: String,
-    val reason: String,
+    val reason: UiText,
     val settingId: Long?,
     val lastServiceDate: LocalDate?,
     val state: SeasonalRowState,
@@ -257,16 +260,16 @@ fun shouldNotifySeason(
 ): Boolean = currentKey != notifiedKey && currentKey != dismissedKey
 
 /** 알림 본문 — 항목 이름만. "마지막 언제"는 차량마다 달라서 알림에 넣지 않는다 */
-fun seasonalNotificationBody(guide: SeasonalCareGuide): String =
-    guide.tips.joinToString(" · ") { it.itemName }
+fun seasonalNotificationBody(guide: SeasonalCareGuide): UiText =
+    UiText.Joined(guide.tips.map { LocalizedNames.item(it.itemName) })
 
 /** "마지막 2년 전" / "마지막 3개월 전" / "아직 기록 없음" */
-fun lastCareLabel(last: LocalDate?, today: LocalDate): String {
-    if (last == null) return "아직 기록 없음"
+fun lastCareLabel(last: LocalDate?, today: LocalDate): UiText {
+    if (last == null) return UiText.Res(R.string.care_no_record_yet)
     val months = ChronoUnit.MONTHS.between(YearMonth.from(last), YearMonth.from(today))
     return when {
-        months <= 0L -> "마지막 이번 달"
-        months < 12L -> "마지막 ${months}개월 전"
-        else -> "마지막 ${months / 12}년 전"
+        months <= 0L -> UiText.Res(R.string.care_last_this_month)
+        months < 12L -> UiText.Res(R.string.care_last_months_ago, months)
+        else -> UiText.Res(R.string.care_last_years_ago, months / 12)
     }
 }

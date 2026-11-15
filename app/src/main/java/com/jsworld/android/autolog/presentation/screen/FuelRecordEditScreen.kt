@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -182,9 +185,9 @@ fun FuelRecordEditScreen(
     val hasValue = (finalAmount ?: 0) > 0 || (finalQuantity ?: 0.0) > 0.0
 
     val saveLabel = when {
-        !dateValid -> "날짜를 확인해주세요"
-        !hasValue -> "금액이나 ${unit.quantityLabel}을 입력해주세요"
-        else -> "저장"
+        !dateValid -> stringResource(R.string.fuel_check_date)
+        !hasValue -> stringResource(R.string.fuel_enter_amount_or_qty, unit.quantityLabel.asString())
+        else -> stringResource(R.string.common_save)
     }
     val canSave = dateValid && hasValue
 
@@ -193,20 +196,21 @@ fun FuelRecordEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (isEdit) "${unit.actionLabel} 기록 수정" else "${unit.actionLabel} 기록",
+                        if (isEdit) stringResource(R.string.fuel_edit_title, unit.actionLabel.asString())
+                        else stringResource(R.string.fuel_add_record_of, unit.actionLabel.asString()),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     if (isEdit) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "삭제")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete))
                         }
                     }
                 }
@@ -265,7 +269,7 @@ fun FuelRecordEditScreen(
                             onValueChange = {},
                             readOnly = true,
                             enabled = false,
-                            label = { Text("날짜") },
+                            label = { Text(stringResource(R.string.common_date)) },
                             singleLine = true,
                             leadingIcon = {
                                 Icon(Icons.Default.CalendarMonth, contentDescription = null)
@@ -291,7 +295,7 @@ fun FuelRecordEditScreen(
                             mileageText = it.filter(Char::isDigit)
                             mileageAuto = false
                         },
-                        label = { Text("주행거리") },
+                        label = { Text(stringResource(R.string.common_mileage)) },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                         suffix = { Text("km") },
@@ -308,10 +312,10 @@ fun FuelRecordEditScreen(
                     onValueChange = {
                         amountText = it.filter(Char::isDigit)
                     },
-                    label = { Text("${unit.actionLabel} 금액") },
+                    label = { Text(stringResource(R.string.fuel_amount_label, unit.actionLabel.asString())) },
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
-                    suffix = { Text("원") },
+                    suffix = { Text(stringResource(R.string.money_unit)) },
                     trailingIcon = { if (autoField == FuelField.AMOUNT) AutoBadge() },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     visualTransformation = ThousandsSeparatorTransformation,
@@ -326,7 +330,7 @@ fun FuelRecordEditScreen(
                         onValueChange = {
                             quantityText = it.filter { ch -> ch.isDigit() || ch == '.' }
                         },
-                        label = { Text(unit.quantityLabel) },
+                        label = { Text(unit.quantityLabel.asString()) },
                         singleLine = true,
                         suffix = { Text(unit.symbol) },
                         trailingIcon = { if (autoField == FuelField.QUANTITY) AutoBadge() },
@@ -338,9 +342,9 @@ fun FuelRecordEditScreen(
                         onValueChange = {
                             unitPriceText = it.filter(Char::isDigit)
                         },
-                        label = { Text("단가") },
+                        label = { Text(stringResource(R.string.fuel_unit_price)) },
                         singleLine = true,
-                        suffix = { Text("원") },
+                        suffix = { Text(stringResource(R.string.money_unit)) },
                         trailingIcon = { if (autoField == FuelField.UNIT_PRICE) AutoBadge() },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         visualTransformation = ThousandsSeparatorTransformation,
@@ -356,7 +360,7 @@ fun FuelRecordEditScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "금액 · ${unit.quantityLabel} · 단가 중 둘만 넣으면 나머지는 자동 계산돼요.",
+                        stringResource(R.string.fuel_auto_calc_hint, unit.quantityLabel.asString()),
                         modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -368,7 +372,7 @@ fun FuelRecordEditScreen(
                 OutlinedTextField(
                     value = stationText,
                     onValueChange = { stationText = it },
-                    label = { Text("${unit.placeLabel} (선택)") },
+                    label = { Text(stringResource(R.string.fuel_place_optional, unit.placeLabel.asString())) },
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth()
@@ -392,7 +396,7 @@ fun FuelRecordEditScreen(
                 OutlinedTextField(
                     value = memoText,
                     onValueChange = { memoText = it },
-                    label = { Text("메모 (선택)") },
+                    label = { Text(stringResource(R.string.common_memo_optional)) },
                     leadingIcon = {
                         Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null)
                     },
@@ -406,18 +410,18 @@ fun FuelRecordEditScreen(
     if (showDeleteDialog && recordId != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("기록을 삭제할까요?", fontWeight = FontWeight.Bold) },
-            text = { Text("삭제한 ${unit.actionLabel} 기록은 되돌릴 수 없어요.") },
+            title = { Text(stringResource(R.string.fuel_delete_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.fuel_delete_body, unit.actionLabel.asString())) },
             confirmButton = {
                 Button(
                     onClick = {
                         showDeleteDialog = false
                         viewModel.delete(recordId, onBack)
                     }
-                ) { Text("삭제") }
+                ) { Text(stringResource(R.string.common_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("취소") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -445,10 +449,10 @@ fun FuelRecordEditScreen(
                             .atZone(ZoneId.of("UTC")).toLocalDate().toString()
                     }
                     showDatePicker = false
-                }) { Text("확인") }
+                }) { Text(stringResource(R.string.common_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("취소") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         ) {
             DatePicker(state = state)
@@ -465,7 +469,7 @@ private fun AutoBadge() {
         modifier = Modifier.padding(end = 8.dp)
     ) {
         Text(
-            "자동",
+            stringResource(R.string.fuel_auto_badge),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,

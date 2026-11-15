@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.data.repository
 
+import androidx.annotation.StringRes
+import com.jsworld.android.autolog.core.ui.asString
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.R
 import android.content.Context
 import android.net.Uri
 import com.jsworld.android.autolog.data.repository.CarExportData
@@ -23,6 +27,11 @@ class CarExcelExporter @Inject constructor(
     @ApplicationContext private val context: Context,
     private val carExportRepository: CarExportRepository
 ) {
+
+    private fun s(@StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
+    /** 저장된 한국어 원문 항목 이름 → 표시 언어 */
+    private fun String.itemName(): String = LocalizedNames.item(this).asString(context)
 
     private data class MaintenanceHistoryExportRow(
         val typeName: String,
@@ -97,7 +106,7 @@ class CarExcelExporter @Inject constructor(
         val safeCarName = carName.toSafeFileName()
         val nowText = System.currentTimeMillis().toFileDateText()
 
-        return "차량정비내역_${safeCarName}_${nowText}.xlsx"
+        return "${s(R.string.xl_file_prefix)}_${safeCarName}_${nowText}.xlsx"
     }
 
     /**
@@ -111,7 +120,7 @@ class CarExcelExporter @Inject constructor(
         workbook: XSSFWorkbook,
         data: CarExportData
     ) {
-        val sheet = workbook.createSheet("요약")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_summary))
 
         val titleStyle = createTitleStyle(workbook)
         val sectionStyle = createSectionStyle(workbook)
@@ -121,7 +130,7 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 0,
-            values = listOf("차량 정비 요약"),
+            values = listOf(s(R.string.xl_summary_title)),
             style = titleStyle
         )
 
@@ -129,22 +138,22 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 2,
-            values = listOf("차량 정보"),
+            values = listOf(s(R.string.xl_car_info)),
             style = sectionStyle
         )
 
-        createRow(sheet, 3, listOf("차량명", data.car.name))
-        createRow(sheet, 4, listOf("차량번호", data.car.plate))
-        createRow(sheet, 5, listOf("연식", data.car.year ?: ""))
-        createRow(sheet, 6, listOf("현재 주행거리", "${data.car.mileage} km"))
-        createRow(sheet, 7, listOf("연료", data.car.fuelType ?: ""))
-        createRow(sheet, 8, listOf("메모", data.car.notes ?: ""))
-        createRow(sheet, 9, listOf("대표차량", if (data.car.isPrimary) "Y" else "N"))
+        createRow(sheet, 3, listOf(s(R.string.xl_car_name), data.car.name))
+        createRow(sheet, 4, listOf(s(R.string.xl_plate), data.car.plate))
+        createRow(sheet, 5, listOf(s(R.string.car_year), data.car.year ?: ""))
+        createRow(sheet, 6, listOf(s(R.string.xl_current_mileage), "${data.car.mileage} km"))
+        createRow(sheet, 7, listOf(s(R.string.xl_fuel), LocalizedNames.fuelType(data.car.fuelType).asString(context)))
+        createRow(sheet, 8, listOf(s(R.string.common_memo), data.car.notes ?: ""))
+        createRow(sheet, 9, listOf(s(R.string.xl_primary), if (data.car.isPrimary) "Y" else "N"))
         createRow(
             sheet = sheet,
             rowIndex = 10,
             values = listOf(
-                "마지막 주행거리 갱신일",
+                s(R.string.xl_last_mileage_update),
                 data.car.lastMileageUpdatedAt?.toDateText() ?: ""
             )
         )
@@ -153,7 +162,7 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 12,
-            values = listOf("정비 요약"),
+            values = listOf(s(R.string.xl_maint_summary)),
             style = sectionStyle
         )
 
@@ -161,12 +170,12 @@ class CarExcelExporter @Inject constructor(
             sheet = sheet,
             rowIndex = 13,
             values = listOf(
-                "정비항목",
-                "최근 정비일",
-                "최근 정비거리",
-                "교체주기 km",
-                "교체주기 개월",
-                "다음 교체거리"
+                s(R.string.xl_item),
+                s(R.string.xl_last_date),
+                s(R.string.xl_last_mileage),
+                s(R.string.xl_cycle_km),
+                s(R.string.xl_cycle_months),
+                s(R.string.xl_next_mileage)
             ),
             style = headerStyle
         )
@@ -200,11 +209,11 @@ class CarExcelExporter @Inject constructor(
                 sheet = sheet,
                 rowIndex = 14 + index,
                 values = listOf(
-                    type.name,
+                    type.name.itemName(),
                     latestHistory?.serviceDate ?: "",
                     lastServiceMileage?.let { "$it km" } ?: "",
                     intervalKm?.let { "$it km" } ?: "",
-                    intervalMonths?.let { "$it 개월" } ?: "",
+                    intervalMonths?.let { s(R.string.xl_months_value, it) } ?: "",
                     nextServiceMileage?.let { "$it km" } ?: ""
                 )
             )
@@ -217,7 +226,7 @@ class CarExcelExporter @Inject constructor(
         workbook: XSSFWorkbook,
         data: CarExportData
     ) {
-        val sheet = workbook.createSheet("정비히스토리")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_history))
 
         val titleStyle = createTitleStyle(workbook)
         val sectionStyle = createSectionStyle(workbook)
@@ -226,7 +235,7 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 0,
-            values = listOf("정비히스토리"),
+            values = listOf(s(R.string.xl_sheet_history)),
             style = titleStyle
         )
 
@@ -256,14 +265,14 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 2,
-            values = listOf("전체 요약"),
+            values = listOf(s(R.string.xl_total_summary)),
             style = sectionStyle
         )
 
-        createRow(sheet, 3, listOf("총 정비 기록 수", "${totalCount}건"))
-        createRow(sheet, 4, listOf("총 정비 비용", "${totalCost}원"))
-        createRow(sheet, 5, listOf("최근 정비일", latestRow?.history?.serviceDate ?: ""))
-        createRow(sheet, 6, listOf("최근 정비항목", latestRow?.typeName ?: ""))
+        createRow(sheet, 3, listOf(s(R.string.xl_total_count), s(R.string.count_cases, totalCount)))
+        createRow(sheet, 4, listOf(s(R.string.xl_total_cost), s(R.string.money_amount, totalCost)))
+        createRow(sheet, 5, listOf(s(R.string.xl_last_date), latestRow?.history?.serviceDate ?: ""))
+        createRow(sheet, 6, listOf(s(R.string.xl_latest_item), latestRow?.typeName?.itemName() ?: ""))
 
         var rowIndex = 8
 
@@ -271,7 +280,7 @@ class CarExcelExporter @Inject constructor(
             createRow(
                 sheet = sheet,
                 rowIndex = rowIndex,
-                values = listOf("정비 이력이 없습니다.")
+                values = listOf(s(R.string.xl_no_history))
             )
 
             setMaintenanceHistoryColumnWidths(sheet)
@@ -298,7 +307,7 @@ class CarExcelExporter @Inject constructor(
             createRow(
                 sheet = sheet,
                 rowIndex = rowIndex,
-                values = listOf("[$typeName]"),
+                values = listOf("[${typeName.itemName()}]"),
                 style = sectionStyle
             )
             rowIndex++
@@ -308,11 +317,11 @@ class CarExcelExporter @Inject constructor(
                 sheet = sheet,
                 rowIndex = rowIndex,
                 values = listOf(
-                    "정비일",
-                    "주행거리",
-                    "정비장소",
-                    "비용",
-                    "메모"
+                    s(R.string.xl_h_date),
+                    s(R.string.xl_h_mileage),
+                    s(R.string.xl_h_place),
+                    s(R.string.common_cost),
+                    s(R.string.common_memo)
                 ),
                 style = headerStyle
             )
@@ -327,7 +336,7 @@ class CarExcelExporter @Inject constructor(
                         history.serviceDate ?: "",
                         history.serviceMileage?.let { "$it km" } ?: "",
                         history.place ?: "",
-                        history.cost?.let { "${it}원" } ?: "",
+                        history.cost?.let { s(R.string.money_amount, it) } ?: "",
                         history.memo ?: ""
                     )
                 )
@@ -353,7 +362,7 @@ class CarExcelExporter @Inject constructor(
         workbook: XSSFWorkbook,
         data: CarExportData
     ) {
-        val sheet = workbook.createSheet("주행거리히스토리")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_mileage))
 
         val titleStyle = createTitleStyle(workbook)
         val sectionStyle = createSectionStyle(workbook)
@@ -362,7 +371,7 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 0,
-            values = listOf("주행거리히스토리"),
+            values = listOf(s(R.string.xl_sheet_mileage)),
             style = titleStyle
         )
 
@@ -382,20 +391,20 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 2,
-            values = listOf("전체 요약"),
+            values = listOf(s(R.string.xl_total_summary)),
             style = sectionStyle
         )
 
-        createRow(sheet, 3, listOf("총 기록 수", "${histories.size}건"))
-        createRow(sheet, 4, listOf("현재 주행거리", "${data.car.mileage} km"))
-        createRow(sheet, 5, listOf("최근 기록일", latestHistory?.recordedAt?.toRecordedAtText() ?: ""))
-        createRow(sheet, 6, listOf("최근 기록 주행거리", latestHistory?.mileage?.let { "$it km" } ?: ""))
-        createRow(sheet, 7, listOf("누적 증가 주행거리", "${totalIncrease.coerceAtLeast(0)} km"))
+        createRow(sheet, 3, listOf(s(R.string.xl_m_total_count), s(R.string.count_cases, histories.size)))
+        createRow(sheet, 4, listOf(s(R.string.xl_current_mileage), "${data.car.mileage} km"))
+        createRow(sheet, 5, listOf(s(R.string.xl_m_latest_date), latestHistory?.recordedAt?.toRecordedAtText() ?: ""))
+        createRow(sheet, 6, listOf(s(R.string.xl_m_latest_mileage), latestHistory?.mileage?.let { "$it km" } ?: ""))
+        createRow(sheet, 7, listOf(s(R.string.xl_m_total_increase), "${totalIncrease.coerceAtLeast(0)} km"))
 
         createRow(
             sheet = sheet,
             rowIndex = 9,
-            values = listOf("주행거리 기록"),
+            values = listOf(s(R.string.xl_m_section)),
             style = sectionStyle
         )
 
@@ -403,10 +412,10 @@ class CarExcelExporter @Inject constructor(
             sheet = sheet,
             rowIndex = 10,
             values = listOf(
-                "기록일",
-                "주행거리",
-                "이전 기록 대비 증가",
-                "메모"
+                s(R.string.xl_m_recorded_date),
+                s(R.string.xl_h_mileage),
+                s(R.string.xl_m_increase),
+                s(R.string.common_memo)
             ),
             style = headerStyle
         )
@@ -415,7 +424,7 @@ class CarExcelExporter @Inject constructor(
             createRow(
                 sheet = sheet,
                 rowIndex = 11,
-                values = listOf("주행거리 기록이 없습니다.", "", "", "")
+                values = listOf(s(R.string.xl_m_empty), "", "", "")
             )
 
             setMileageHistoryColumnWidths(sheet)
@@ -492,16 +501,16 @@ class CarExcelExporter @Inject constructor(
         unitRecords: List<FuelRecordEntity>,
         drivenById: Map<Long, Int>
     ) {
-        val actionLabel = if (unitLabel == "L") "주유" else "충전"
-        val placeLabel = if (unitLabel == "L") "주유소" else "충전소"
+        val actionLabel = s(if (unitLabel == "L") R.string.fuel_action_refuel else R.string.fuel_action_charge)
+        val placeLabel = s(if (unitLabel == "L") R.string.fuel_place_refuel else R.string.fuel_place_charge)
 
-        val sheet = workbook.createSheet("${actionLabel}기록")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_fuel, actionLabel))
 
         val titleStyle = createTitleStyle(workbook)
         val sectionStyle = createSectionStyle(workbook)
         val headerStyle = createHeaderStyle(workbook)
 
-        createRow(sheet, 0, listOf("${actionLabel}기록"), titleStyle)
+        createRow(sheet, 0, listOf(s(R.string.xl_sheet_fuel, actionLabel)), titleStyle)
 
         // 최신순으로 들어오지만 방어적으로 다시 정렬한다.
         val sorted = unitRecords.sortedWith(
@@ -514,29 +523,29 @@ class CarExcelExporter @Inject constructor(
         val averageUnitPrice =
             if (totalQuantity > 0.0) (totalAmount / totalQuantity).toInt() else null
 
-        createRow(sheet, 2, listOf("전체 요약"), sectionStyle)
-        createRow(sheet, 3, listOf("총 기록 수", "${sorted.size}건"))
-        createRow(sheet, 4, listOf("총 지출", "$totalAmount 원"))
-        createRow(sheet, 5, listOf("총 ${actionLabel}량", "$totalQuantity $unitLabel"))
+        createRow(sheet, 2, listOf(s(R.string.xl_total_summary)), sectionStyle)
+        createRow(sheet, 3, listOf(s(R.string.xl_m_total_count), s(R.string.count_cases, sorted.size)))
+        createRow(sheet, 4, listOf(s(R.string.xl_f_total_spend), s(R.string.xl_won_value, totalAmount)))
+        createRow(sheet, 5, listOf(s(R.string.xl_f_total_qty, actionLabel), "$totalQuantity $unitLabel"))
         createRow(
             sheet, 6,
-            listOf("평균 단가", averageUnitPrice?.let { "$it 원/$unitLabel" } ?: "")
+            listOf(s(R.string.fuel_avg_price), averageUnitPrice?.let { s(R.string.xl_price_value, it, unitLabel) } ?: "")
         )
 
-        createRow(sheet, 8, listOf("${actionLabel} 기록"), sectionStyle)
+        createRow(sheet, 8, listOf(s(R.string.xl_f_section, actionLabel)), sectionStyle)
 
         createRow(
             sheet = sheet,
             rowIndex = 9,
             values = listOf(
-                "날짜",
-                "주행거리",
-                "이전 기록 이후 주행",
-                "금액",
-                "${actionLabel}량",
-                "단가",
+                s(R.string.common_date),
+                s(R.string.xl_h_mileage),
+                s(R.string.xl_f_driven_since),
+                s(R.string.xl_f_amount),
+                s(R.string.xl_f_qty, actionLabel),
+                s(R.string.fuel_unit_price),
                 placeLabel,
-                "메모"
+                s(R.string.common_memo)
             ),
             style = headerStyle
         )
@@ -545,7 +554,7 @@ class CarExcelExporter @Inject constructor(
             createRow(
                 sheet = sheet,
                 rowIndex = 10,
-                values = listOf("${actionLabel} 기록이 없습니다.", "", "", "", "", "", "", "")
+                values = listOf(s(R.string.xl_f_empty, actionLabel), "", "", "", "", "", "", "")
             )
             setFuelColumnWidths(sheet)
             return
@@ -559,9 +568,9 @@ class CarExcelExporter @Inject constructor(
                     record.filledAt,
                     record.mileage?.let { "$it km" } ?: "",
                     drivenById[record.id]?.let { "$it km" } ?: "",
-                    record.amount?.let { "$it 원" } ?: "",
+                    record.amount?.let { s(R.string.xl_won_value, it) } ?: "",
                     record.quantity?.let { "$it $unitLabel" } ?: "",
-                    record.unitPrice?.let { "$it 원/$unitLabel" } ?: "",
+                    record.unitPrice?.let { s(R.string.xl_price_value, it, unitLabel) } ?: "",
                     record.station ?: "",
                     record.memo ?: ""
                 )
@@ -606,13 +615,13 @@ class CarExcelExporter @Inject constructor(
     ) {
         if (data.careRecords.isEmpty()) return
 
-        val sheet = workbook.createSheet("세차관리기록")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_care))
         val headerStyle = createHeaderStyle(workbook)
 
         var rowIndex = 0
         createRow(
             sheet, rowIndex++,
-            listOf("날짜", "항목", "방식", "장소", "비용(원)", "메모"),
+            listOf(s(R.string.common_date), s(R.string.xl_c_item), s(R.string.xl_c_method), s(R.string.common_place), s(R.string.xl_c_cost), s(R.string.common_memo)),
             headerStyle
         )
 
@@ -621,8 +630,8 @@ class CarExcelExporter @Inject constructor(
                 sheet, rowIndex++,
                 listOf(
                     record.performedAt ?: "",
-                    record.itemName,
-                    record.method ?: "",
+                    record.itemName.itemName(),
+                    record.method?.let { LocalizedNames.washMethod(it).asString(context) } ?: "",
                     record.place ?: "",
                     record.cost?.toString() ?: "",
                     record.memo ?: ""
@@ -637,7 +646,7 @@ class CarExcelExporter @Inject constructor(
         workbook: XSSFWorkbook,
         data: CarExportData
     ) {
-        val sheet = workbook.createSheet("정비항목설정")
+        val sheet = workbook.createSheet(s(R.string.xl_sheet_settings))
 
         val titleStyle = createTitleStyle(workbook)
         val sectionStyle = createSectionStyle(workbook)
@@ -646,14 +655,14 @@ class CarExcelExporter @Inject constructor(
         createRow(
             sheet = sheet,
             rowIndex = 0,
-            values = listOf("정비항목설정"),
+            values = listOf(s(R.string.xl_sheet_settings)),
             style = titleStyle
         )
 
         createRow(
             sheet = sheet,
             rowIndex = 2,
-            values = listOf("차량별 정비 항목 설정"),
+            values = listOf(s(R.string.xl_s_section)),
             style = sectionStyle
         )
 
@@ -661,14 +670,14 @@ class CarExcelExporter @Inject constructor(
             sheet = sheet,
             rowIndex = 3,
             values = listOf(
-                "정비항목",
-                "차량별 주기 km",
-                "차량별 주기 개월",
-                "기본 주기 km",
-                "기본 주기 개월",
-                "적용 주기 km",
-                "적용 주기 개월",
-                "사용 여부"
+                s(R.string.xl_item),
+                s(R.string.xl_s_car_km),
+                s(R.string.xl_s_car_months),
+                s(R.string.xl_s_default_km),
+                s(R.string.xl_s_default_months),
+                s(R.string.xl_s_applied_km),
+                s(R.string.xl_s_applied_months),
+                s(R.string.xl_s_active)
             ),
             style = headerStyle
         )
@@ -677,7 +686,7 @@ class CarExcelExporter @Inject constructor(
             createRow(
                 sheet = sheet,
                 rowIndex = 4,
-                values = listOf("등록된 정비항목 설정이 없습니다.", "", "", "", "", "", "", "")
+                values = listOf(s(R.string.xl_s_empty), "", "", "", "", "", "", "")
             )
 
             setMaintenanceSettingColumnWidths(sheet)
@@ -695,14 +704,14 @@ class CarExcelExporter @Inject constructor(
                 sheet = sheet,
                 rowIndex = 4 + index,
                 values = listOf(
-                    type.name,
+                    type.name.itemName(),
                     setting.intervalKm?.let { "$it km" } ?: "",
-                    setting.intervalMonths?.let { "$it 개월" } ?: "",
+                    setting.intervalMonths?.let { s(R.string.xl_months_value, it) } ?: "",
                     type.defaultIntervalKm?.let { "$it km" } ?: "",
-                    type.defaultIntervalMonths?.let { "$it 개월" } ?: "",
+                    type.defaultIntervalMonths?.let { s(R.string.xl_months_value, it) } ?: "",
                     appliedIntervalKm?.let { "$it km" } ?: "",
-                    appliedIntervalMonths?.let { "$it 개월" } ?: "",
-                    if (setting.isActive) "사용" else "미사용"
+                    appliedIntervalMonths?.let { s(R.string.xl_months_value, it) } ?: "",
+                    s(if (setting.isActive) R.string.xl_used else R.string.xl_unused)
                 )
             )
         }
@@ -798,13 +807,13 @@ class CarExcelExporter @Inject constructor(
             .replace(">", "_")
             .replace("|", "_")
             .trim()
-            .ifEmpty { "차량" }
+            .ifEmpty { s(R.string.xl_car_fallback) }
     }
 
     private fun Long.toDateText(): String {
         val formatter = SimpleDateFormat(
             "yyyy-MM-dd HH:mm",
-            Locale.KOREA
+            Locale.getDefault()
         )
 
         return formatter.format(Date(this))
@@ -816,12 +825,12 @@ class CarExcelExporter @Inject constructor(
      * 그대로 날짜로 찍으면 1970-01-01 로 보인다.
      */
     private fun Long.toRecordedAtText(): String =
-        if (this == 0L) "등록 시점" else toDateText()
+        if (this == 0L) s(R.string.xl_registration_time) else toDateText()
 
     private fun Long.toFileDateText(): String {
         val formatter = SimpleDateFormat(
             "yyyyMMdd_HHmmss",
-            Locale.KOREA
+            Locale.getDefault()
         )
 
         return formatter.format(Date(this))

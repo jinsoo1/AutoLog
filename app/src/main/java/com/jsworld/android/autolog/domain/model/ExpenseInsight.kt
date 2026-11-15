@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
 import kotlin.math.abs
 
 /**
@@ -8,9 +11,9 @@ import kotlin.math.abs
  */
 data class ExpenseInsight(
     /** "지난달보다 182,000원 더 썼어요" */
-    val headline: String,
+    val headline: UiText,
     /** "늘어난 금액의 대부분은 타이어 교체 450,000원이에요 · 주유는 오히려 21,000원 줄었어요" */
-    val detail: String?,
+    val detail: UiText?,
     /** 양수 = 증가(경고 톤), 음수 = 감소(긍정 톤), 0 = 비슷 */
     val direction: Int
 )
@@ -34,41 +37,52 @@ fun buildExpenseInsight(
     val diff = current.total - previous.total
 
     val headline = when {
-        diff > 0L -> "지난달보다 ${diff.won()}원 더 썼어요"
-        diff < 0L -> "지난달보다 ${(-diff).won()}원 덜 썼어요"
-        else -> "지난달과 지출이 같아요"
+        diff > 0L -> UiText.Res(R.string.insight_more, diff)
+        diff < 0L -> UiText.Res(R.string.insight_less, -diff)
+        else -> UiText.Res(R.string.insight_same)
     }
 
     val deltas = listOf(
-        "주유·충전" to (current.fuelCost - previous.fuelCost),
-        "정비·수리" to (current.maintenanceCost - previous.maintenanceCost),
-        "세차·관리" to (current.careCost - previous.careCost)
+        R.string.category_fuel to (current.fuelCost - previous.fuelCost),
+        R.string.category_maintenance to (current.maintenanceCost - previous.maintenanceCost),
+        R.string.category_care to (current.careCost - previous.careCost)
     )
     val dominant = deltas.maxByOrNull { abs(it.second) }
         ?.takeIf { abs(it.second) >= NOISE_WON }
 
     val detail = dominant?.let { (label, delta) ->
-        val main =
-            if (label == "정비·수리" && delta > 0L &&
+        val main: UiText =
+            if (label == R.string.category_maintenance && delta > 0L &&
                 topMaintenanceName != null && topMaintenanceCost != null &&
                 topMaintenanceCost >= delta / 2
             ) {
-                "늘어난 금액의 대부분은 $topMaintenanceName ${topMaintenanceCost.toLong().won()}원이에요"
+                UiText.Res(
+                    R.string.insight_dominant_item,
+                    LocalizedNames.item(topMaintenanceName),
+                    topMaintenanceCost.toLong()
+                )
             } else {
-                "$label 지출이 ${abs(delta).won()}원 ${if (delta > 0L) "늘었어요" else "줄었어요"}"
+                UiText.Res(
+                    if (delta > 0L) R.string.insight_category_up else R.string.insight_category_down,
+                    UiText.Res(label),
+                    abs(delta)
+                )
             }
 
         // 반대 방향으로 움직인 카테고리가 있으면 한 마디 덧붙인다.
-        val counter = deltas
+        val counter: UiText? = deltas
             .filter { it !== dominant && abs(it.second) >= NOISE_WON }
             .filter { it.second * delta < 0L }
             .maxByOrNull { abs(it.second) }
             ?.let { (cLabel, cDelta) ->
-                " · ${cLabel}은 오히려 ${abs(cDelta).won()}원 ${if (cDelta > 0L) "늘었어요" else "줄었어요"}"
+                UiText.Res(
+                    if (cDelta > 0L) R.string.insight_counter_up else R.string.insight_counter_down,
+                    UiText.Res(cLabel),
+                    abs(cDelta)
+                )
             }
-            .orEmpty()
 
-        main + counter
+        if (counter == null) main else UiText.Joined(listOf(main, counter), separator = "")
     }
 
     return ExpenseInsight(
@@ -78,4 +92,3 @@ fun buildExpenseInsight(
     )
 }
 
-private fun Long.won(): String = "%,d".format(this)

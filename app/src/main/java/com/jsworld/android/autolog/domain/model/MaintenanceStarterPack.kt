@@ -1,14 +1,21 @@
 package com.jsworld.android.autolog.domain.model
 
+import androidx.annotation.StringRes
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
+
 /**
  * 온보딩에서 고르는 정비 관리 스타일.
  * "유저 등급"이 아니라 관리 스타일로 이름 지었다 — 가볍게 써도 틀린 게 아니라는 뉘앙스.
  */
 enum class MaintenanceStarterPack(
-    val title: String,
-    val description: String
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int
 ) {
-    LIGHT("가볍게", "누구나 챙기는 핵심 소모품만"),
-    STANDARD("꼼꼼하게", "자주 손 가는 항목까지 넉넉하게"),
-    FULL("빈틈없이", "점검 항목까지 전부 관리해요")
+    LIGHT(R.string.pack_light_title, R.string.pack_light_desc),
+    STANDARD(R.string.pack_standard_title, R.string.pack_standard_desc),
+    FULL(R.string.pack_full_title, R.string.pack_full_desc);
+
+    val title: UiText get() = UiText.Res(titleRes)
+    val description: UiText get() = UiText.Res(descriptionRes)
 }

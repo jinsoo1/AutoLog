@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,14 +65,14 @@ fun SymptomDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "점검 가이드",
+                        stringResource(R.string.symptom_detail_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -85,7 +88,7 @@ fun SymptomDetailScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("증상 정보를 찾을 수 없어요", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.symptom_detail_not_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             else -> SymptomDetailContent(
@@ -106,7 +109,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    symptom.category.label,
+                    symptom.category.label.asString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -115,7 +118,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
                 // 공통인지 태깅을 안 한 건지 사용자가 알 수 없다.
                 Spacer(Modifier.width(8.dp))
                 PowertrainBadge(
-                    label = symptom.powertrainScopeLabel(),
+                    label = symptom.powertrainScopeLabel().asString(),
                     specific = symptom.powertrainLabel() != null
                 )
             }
@@ -149,7 +152,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
         if (symptom.checks.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-                SectionLabel("먼저 확인해보세요")
+                SectionLabel(stringResource(R.string.symptom_section_checks))
             }
             item {
                 ListCard {
@@ -168,7 +171,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
         if (symptom.distinguishPoints.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-                SectionLabel("이렇게 구분해볼 수 있어요")
+                SectionLabel(stringResource(R.string.symptom_section_distinguish))
             }
             item {
                 ListCard {
@@ -187,7 +190,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
         if (symptom.observationPoints.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-                SectionLabel("추가로 확인해보세요")
+                SectionLabel(stringResource(R.string.symptom_section_observe))
             }
             item {
                 ListCard {
@@ -206,7 +209,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
         if (symptom.escalations.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-                SectionLabel("이런 증상이 함께 있다면 더 주의하세요")
+                SectionLabel(stringResource(R.string.symptom_section_escalation))
             }
             item {
                 ListCard {
@@ -251,7 +254,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
                     )
                     Spacer(Modifier.width(9.dp))
                     Text(
-                        symptom.powertrainNote(),
+                        symptom.powertrainNote().asString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -261,8 +264,7 @@ private fun SymptomDetailContent(symptom: Symptom, modifier: Modifier = Modifier
 
         item {
             Text(
-                text = "이 가이드는 일반적인 점검 참고 정보로, 실제 고장 원인을 확정하지 않아요. " +
-                    "차량 상태와 차종에 따라 원인이 다를 수 있고, 안전과 관련된 증상은 전문 정비 점검을 권장해요.",
+                text = stringResource(R.string.symptom_disclaimer),
                 modifier = Modifier.padding(top = 14.dp, start = 4.dp, end = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -302,7 +304,7 @@ private fun PowertrainBadge(label: String, specific: Boolean) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                "$label 해당",
+                stringResource(R.string.symptom_applies_to, label),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = content
@@ -322,14 +324,14 @@ private fun RiskLevelCard(level: SymptomRiskLevel) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "주행위험도",
+                    stringResource(R.string.symptom_risk_title),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "${level.level}단계 · ${level.label}",
+                    stringResource(R.string.symptom_risk_level, level.level, level.label.asString()),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = color
@@ -337,7 +339,7 @@ private fun RiskLevelCard(level: SymptomRiskLevel) {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                level.guidance,
+                level.guidance.asString(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -365,7 +367,7 @@ private fun ImmediateActionCard(action: String) {
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(
-                    "지금은 이렇게 하세요",
+                    stringResource(R.string.symptom_immediate_title),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer

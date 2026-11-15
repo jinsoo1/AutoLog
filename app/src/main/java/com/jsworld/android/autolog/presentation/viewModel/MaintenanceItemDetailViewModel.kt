@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.MaintenanceHistory
@@ -56,7 +57,7 @@ class MaintenanceItemDetailViewModel @Inject constructor(
                                 setting.intervalKm == null && setting.intervalMonths == null,
                             status = status?.status
                                 ?: MaintenanceItemDetailUiState().status,
-                            remainingText = status?.remainingText.orEmpty(),
+                            remainingText = status?.remainingText ?: UiText.Empty,
                             progressRatio = status?.progressRatio,
                             lastServiceMileage = lastMileage,
                             nextDueMileage = if (lastMileage != null && intervalKm != null) {

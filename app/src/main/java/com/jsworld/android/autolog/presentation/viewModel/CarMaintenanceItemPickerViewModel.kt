@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.model.MaintenanceType
@@ -23,6 +26,7 @@ import kotlin.collections.filter
 
 @HiltViewModel
 class CarMaintenanceItemPickerViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val maintenanceTypeRepository: MaintenanceTypeRepository,
     private val carMaintenanceSettingRepository: CarMaintenanceRepository,
     private val carRepository: CarRepository,
@@ -85,17 +89,17 @@ class CarMaintenanceItemPickerViewModel @Inject constructor(
                 when {
                     existing == null -> {
                         carMaintenanceSettingRepository.insertDefaultActive(carId, typeId)
-                        _events.tryEmit(PickerUiEvent.Snackbar("관리 항목에 추가했어요."))
+                        _events.tryEmit(PickerUiEvent.Snackbar(appContext.getString(R.string.vm_added_to_list)))
                     }
                     existing.isActive.not() -> {
                         carMaintenanceSettingRepository.setActive(existing.id, true)
-                        _events.tryEmit(PickerUiEvent.Snackbar("항목을 복구했어요."))
+                        _events.tryEmit(PickerUiEvent.Snackbar(appContext.getString(R.string.vm_restored)))
                     }
                 }
             } else {
                 if (existing != null && existing.isActive) {
                     carMaintenanceSettingRepository.setActive(existing.id, false)
-                    _events.tryEmit(PickerUiEvent.Snackbar("정비 내역은 유지됩니다."))
+                    _events.tryEmit(PickerUiEvent.Snackbar(appContext.getString(R.string.vm_history_kept)))
                 }
             }
             widgetUpdater.requestUpdate()

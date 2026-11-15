@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.R
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -50,7 +51,7 @@ class BackupRepository @Inject constructor(
                         writer.write(jsonText)
                     }
                     ?: throw IllegalStateException(
-                        "백업 파일을 열 수 없습니다."
+                        context.getString(R.string.bk_cannot_open)
                     )
             }
         }
@@ -97,7 +98,7 @@ class BackupRepository @Inject constructor(
                 .openInputStream(uri)
                 ?.bufferedReader(Charsets.UTF_8)
                 ?.use { it.readText() }
-                ?: error("백업 파일을 열 수 없습니다.")
+                ?: error(context.getString(R.string.bk_cannot_open))
 
             json.decodeFromString<AutoLogBackup>(jsonText)
         }
@@ -109,7 +110,7 @@ class BackupRepository @Inject constructor(
         require(
             backup.backupVersion == AutoLogBackup.CURRENT_BACKUP_VERSION
         ) {
-            "지원하지 않는 백업 파일입니다."
+            context.getString(R.string.bk_unsupported)
         }
 
         val carIds =
@@ -254,13 +255,13 @@ class BackupRepository @Inject constructor(
                 }
 
                 val itemUri = resolver.insert(collection, values)
-                    ?: throw IllegalStateException("백업 파일을 만들 수 없습니다.")
+                    ?: throw IllegalStateException(context.getString(R.string.bk_cannot_create))
 
                 try {
                     resolver.openOutputStream(itemUri)
                         ?.bufferedWriter(Charsets.UTF_8)
                         ?.use { it.write(jsonText) }
-                        ?: throw IllegalStateException("백업 파일을 열 수 없습니다.")
+                        ?: throw IllegalStateException(context.getString(R.string.bk_cannot_open))
 
                     values.clear()
                     values.put(MediaStore.Downloads.IS_PENDING, 0)

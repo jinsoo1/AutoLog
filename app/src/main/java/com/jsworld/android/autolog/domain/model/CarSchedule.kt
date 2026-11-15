@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -180,19 +183,22 @@ fun shouldNotifySchedule(stage: ScheduleAlertStage, previous: ScheduleAlertStage
 }
 
 /** 알림 본문 — 남은 일수를 사람 말로. 제목 뒤에 조사가 붙으므로 띄우지 않는다 */
-fun scheduleAlertText(title: String, remainingDays: Long): String = when {
-    remainingDays < 0 -> "$title 날짜가 ${-remainingDays}일 지났어요"
-    remainingDays == 0L -> "오늘이 $title 날짜예요"
-    remainingDays == 1L -> "내일이 $title 날짜예요"
-    else -> "${title}까지 ${remainingDays}일 남았어요"
+fun scheduleAlertText(title: String, remainingDays: Long): UiText {
+    val name = LocalizedNames.item(title)
+    return when {
+        remainingDays < 0 -> UiText.Res(R.string.schedule_alert_overdue, name, -remainingDays)
+        remainingDays == 0L -> UiText.Res(R.string.schedule_alert_today, name)
+        remainingDays == 1L -> UiText.Res(R.string.schedule_alert_tomorrow, name)
+        else -> UiText.Res(R.string.schedule_alert_days_left, name, remainingDays)
+    }
 }
 
 /**
  * 알림·목록에 쓰는 날짜 표기 — **연도를 반드시 포함한다.**
  * 일정은 몇 년 뒤가 흔해서 연도가 없으면 지난 날짜처럼 읽힌다.
  */
-fun formatScheduleDate(dueDate: String, today: LocalDate): String = runCatching {
+fun formatScheduleDate(dueDate: String, today: LocalDate): UiText = runCatching {
     val date = LocalDate.parse(dueDate)
-    if (date.year == today.year) "${date.monthValue}월 ${date.dayOfMonth}일"
-    else "${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일"
-}.getOrDefault(dueDate)
+    if (date.year == today.year) UiText.Res(R.string.date_month_day, date.monthValue, date.dayOfMonth)
+    else UiText.Res(R.string.date_year_month_day, date.year, date.monthValue, date.dayOfMonth)
+}.getOrDefault(UiText.Raw(dueDate))

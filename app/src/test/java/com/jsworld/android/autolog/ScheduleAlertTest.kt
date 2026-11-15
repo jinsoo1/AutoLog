@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.ScheduleAlertStage
 import com.jsworld.android.autolog.domain.model.formatScheduleDate
 import com.jsworld.android.autolog.domain.model.scheduleAlertStage
@@ -63,19 +64,19 @@ class ScheduleAlertTest {
     @Test
     fun `본문은 남은 일수를 사람 말로`() {
         // 제목 뒤에 조사가 붙으므로 띄우지 않는다
-        assertEquals("정기검사까지 14일 남았어요", scheduleAlertText("정기검사", 14))
-        assertEquals("내일이 보험 만기 날짜예요", scheduleAlertText("보험 만기", 1))
-        assertEquals("오늘이 자동차세 날짜예요", scheduleAlertText("자동차세", 0))
-        assertEquals("정기검사 날짜가 3일 지났어요", scheduleAlertText("정기검사", -3))
+        assertEquals("정기검사까지 14일 남았어요", scheduleAlertText("정기검사", 14).ko())
+        assertEquals("내일이 보험 만기 날짜예요", scheduleAlertText("보험 만기", 1).ko())
+        assertEquals("오늘이 자동차세 날짜예요", scheduleAlertText("자동차세", 0).ko())
+        assertEquals("정기검사 날짜가 3일 지났어요", scheduleAlertText("정기검사", -3).ko())
     }
 
     @Test
     fun `일정 날짜는 연도를 포함한다 - 올해만 생략`() {
         val today = java.time.LocalDate.of(2026, 8, 19)
         // 몇 년 뒤가 흔한 일정이라 연도가 빠지면 지난 날짜처럼 읽힌다
-        assertEquals("2027년 7월 1일", formatScheduleDate("2027-07-01", today))
-        assertEquals("12월 16일", formatScheduleDate("2026-12-16", today))
+        assertEquals("2027년 7월 1일", formatScheduleDate("2027-07-01", today).ko())
+        assertEquals("12월 16일", formatScheduleDate("2026-12-16", today).ko())
         // 깨진 값은 그대로 — 지어내지 않는다
-        assertEquals("깨짐", formatScheduleDate("깨짐", today))
+        assertEquals("깨짐", formatScheduleDate("깨짐", today).ko())
     }
 }

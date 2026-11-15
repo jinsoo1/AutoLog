@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -24,7 +25,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    application: Application,
+    private val application: Application,
     private val userPrefsRepository: UserPrefsRepository,
     private val backupRepository: BackupRepository,
     private val seasonalCareNotifier: SeasonalCareNotifier
@@ -157,7 +158,7 @@ class SettingsViewModel @Inject constructor(
                     _backupEvent.send(
                         BackupUiEvent.ExportFailure(
                             message = throwable.message
-                                ?: "백업 파일 생성에 실패했습니다."
+                                ?: application.getString(R.string.vm_backup_create_failed)
                         )
                     )
                 }
@@ -185,7 +186,7 @@ class SettingsViewModel @Inject constructor(
                     _backupEvent.send(
                         BackupUiEvent.ExportFailure(
                             message = throwable.message
-                                ?: "백업 파일 생성에 실패했습니다."
+                                ?: application.getString(R.string.vm_backup_create_failed)
                         )
                     )
                 }
@@ -230,7 +231,7 @@ class SettingsViewModel @Inject constructor(
                     _restorePreview.value = RestorePreviewUiState(
                         loading = false,
                         // 여기서 실패하면 복원도 실패할 파일이다. 미리 알려준다.
-                        error = throwable.message ?: "백업 파일을 읽을 수 없습니다."
+                        error = throwable.message ?: application.getString(R.string.vm_backup_read_failed)
                     )
                 }
         }
@@ -267,7 +268,7 @@ class SettingsViewModel @Inject constructor(
                     _backupEvent.send(
                         BackupUiEvent.RestoreFailure(
                             it.message
-                                ?: "복원에 실패했습니다."
+                                ?: application.getString(R.string.nav_restore_failed)
                         )
                     )
                 }

@@ -1,5 +1,10 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.platform.LocalContext
+import com.jsworld.android.autolog.core.ui.localizedFuelType
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedItemName
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -161,10 +166,10 @@ fun CarMaintenanceItemPickerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("정비 항목 선택") },
+                title = { Text(stringResource(R.string.pk_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -174,7 +179,7 @@ fun CarMaintenanceItemPickerScreen(
             ExtendedFloatingActionButton(
                 onClick = onAddCustomItem,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("항목 추가") }
+                text = { Text(stringResource(R.string.care_items_add)) }
             )
         }
     ) { padding ->
@@ -190,8 +195,8 @@ fun CarMaintenanceItemPickerScreen(
             // 관리중
             item {
                 PickerSectionHeader(
-                    title = "관리중",
-                    subtitle = "체크 해제하면 비활성화됩니다.",
+                    title = stringResource(R.string.pk_managing),
+                    subtitle = stringResource(R.string.pk_managing_sub),
                     icon = Icons.Default.CheckCircle,
                     count = managing.size
                 )
@@ -210,8 +215,8 @@ fun CarMaintenanceItemPickerScreen(
             // 복원(비활성)
             item {
                 PickerSectionHeader(
-                    title = "복원",
-                    subtitle = "이전에 관리했던 항목이에요. 다시 켤 수 있어요.",
+                    title = stringResource(R.string.pk_restore),
+                    subtitle = stringResource(R.string.pk_restore_sub),
                     icon = Icons.Default.Restore,
                     count = restore.size
                 )
@@ -230,11 +235,11 @@ fun CarMaintenanceItemPickerScreen(
             // 추가 가능
             item {
                 PickerSectionHeader(
-                    title = "추가 가능한 항목",
+                    title = stringResource(R.string.pk_addable),
                     subtitle = if (!showAllAddable && hiddenCount > 0) {
-                        "${fuelType} 차량에 맞는 항목만 보여드려요."
+                        stringResource(R.string.pk_addable_fuel, fuelType.localizedFuelType())
                     } else {
-                        "체크하면 관리 목록에 추가됩니다."
+                        stringResource(R.string.pk_addable_sub)
                     },
                     icon = Icons.Default.Add,
                     count = addableVisible.size
@@ -259,8 +264,8 @@ fun CarMaintenanceItemPickerScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            if (showAllAddable) "이 차량에 맞는 항목만 보기"
-                            else "숨겨진 항목 ${hiddenCount}개 모두 보기"
+                            if (showAllAddable) stringResource(R.string.pk_show_matching)
+                            else stringResource(R.string.pk_show_hidden, hiddenCount)
                         )
                     }
                 }
@@ -279,12 +284,12 @@ private fun PickerSectionHeader(
     count: Int
 ) {
     val (accent, badgeContainer, badgeContent) = when (title) {
-        "관리중" -> Triple(
+        stringResource(R.string.pk_managing) -> Triple(
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer
         )
-        "복원" -> Triple(
+        stringResource(R.string.pk_restore) -> Triple(
             MaterialTheme.colorScheme.tertiary,
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer
@@ -319,7 +324,7 @@ private fun PickerSectionHeader(
 
             Surface(color = badgeContainer, shape = MaterialTheme.shapes.large) {
                 Text(
-                    text = "$count 개",
+                    text = stringResource(R.string.pk_count, count),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -363,7 +368,7 @@ private fun CategoryGroupCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = category.label,
+                    text = stringResource(category.labelRes),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -373,7 +378,7 @@ private fun CategoryGroupCard(
 
                 // (선택) 카테고리 안 항목 개수 표시
                 Text(
-                    text = "${items.size}개",
+                    text = stringResource(R.string.count_items, items.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -422,9 +427,10 @@ private fun PickerRowInCard(
     }
 
     // 텍스트 생성 헬퍼
+    val ctx = LocalContext.current
     fun cycleText(km: Int?, months: Int?): String {
         val kmText = km?.let { "${it.formatKm()}km" } ?: "-"
-        val moText = months?.let { "${it}개월" } ?: "-"
+        val moText = months?.let { ctx.getString(R.string.duration_months, it) } ?: "-"
         return "$kmText / $moText"
     }
 
@@ -454,7 +460,7 @@ private fun PickerRowInCard(
 
         Column(Modifier.weight(1f)) {
             Text(
-                text = item.typeName,
+                text = item.typeName.localizedItemName(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold
             )
@@ -463,7 +469,7 @@ private fun PickerRowInCard(
 
             // 기본 주기(항상 표시)
             Text(
-                text = "기본 주기: $defaultText",
+                text = stringResource(R.string.pk_default_cycle, defaultText),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -472,7 +478,7 @@ private fun PickerRowInCard(
             if (hasCustomInterval) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "현재 설정: $currentText",
+                    text = stringResource(R.string.pk_current_cycle, currentText),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
@@ -492,7 +498,7 @@ private fun LazyListScope.sectionWithCategoryGroups(
     if (groups.isEmpty()) {
         item(key = "empty_$sectionKey") {
             Text(
-                text = "항목이 없습니다.",
+                text = stringResource(R.string.pk_empty),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 4.dp)

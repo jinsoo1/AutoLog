@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
+
 /**
  * 정비 임박/초과 푸시 알림 설정.
  *
@@ -23,7 +26,8 @@ data class MaintenanceAlertPrefs(
         /** 초과 리마인드 선택지: 안 함 / 7일 / 14일 */
         val REMIND_OPTIONS = listOf(0, 7, 14)
 
-        fun remindLabel(days: Int): String = if (days == 0) "안 함" else "${days}일마다"
+        fun remindLabel(days: Int): UiText =
+            if (days == 0) UiText.Res(R.string.remind_none) else UiText.Res(R.string.remind_every_days, days)
     }
 }
 

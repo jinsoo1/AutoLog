@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.data.repository
 
+import com.jsworld.android.autolog.core.util.openLocalizedAsset
 import android.content.Context
 import com.jsworld.android.autolog.core.util.Constant.AUTOLOG_SYMPTOM_GUIDE
 import com.jsworld.android.autolog.domain.model.Powertrain
@@ -33,7 +34,7 @@ class SymptomGuideRepositoryImpl @Inject constructor(
     }
 
     private fun parse(): List<Symptom> {
-        val jsonText = context.assets.open(AUTOLOG_SYMPTOM_GUIDE)
+        val jsonText = context.openLocalizedAsset(AUTOLOG_SYMPTOM_GUIDE)
             .bufferedReader()
             .use { it.readText() }
 

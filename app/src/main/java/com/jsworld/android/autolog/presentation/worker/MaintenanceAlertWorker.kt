@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.worker
 
+import com.jsworld.android.autolog.core.ui.asString
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.UiText
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -182,11 +185,11 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     private fun showTestResultNotification(urgentTotal: Int, noHistoryCount: Int) {
         val reason = when {
             urgentTotal == 0 ->
-                "임박·초과 상태인 정비 항목이 없어요. 아무 항목의 주기를 짧게(예: 1,000km) 바꿔 초과 상태를 만든 뒤 다시 테스트해보세요."
+                applicationContext.getString(R.string.alert_test_none_no_urgent)
             noHistoryCount == urgentTotal ->
-                "임박·초과 항목 ${urgentTotal}건이 전부 아직 기록이 없는 항목이라 제외됐어요. 알림은 마지막 교체 기록이 있는 항목에만 갑니다 — 기록을 하나 입력한 뒤 다시 테스트해보세요."
+                applicationContext.getString(R.string.alert_test_none_no_history, urgentTotal)
             else ->
-                "임박·초과 ${urgentTotal}건 중 기록 없음 ${noHistoryCount}건은 제외됐고, 나머지는 임박/초과 알림 스위치 설정으로 제외됐어요."
+                applicationContext.getString(R.string.alert_test_none_filtered, urgentTotal, noHistoryCount)
         }
 
         val notification = NotificationCompat.Builder(
@@ -194,7 +197,7 @@ class MaintenanceAlertWorker @AssistedInject constructor(
             AutoLogNotificationHelper.MAINT_SOON_CHANNEL_ID
         )
             .setSmallIcon(R.drawable.ic_stat_autolog)
-            .setContentTitle("테스트: 보낼 알림이 없어요")
+            .setContentTitle(applicationContext.getString(R.string.alert_test_none_title))
             .setContentText(reason)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
             .setAutoCancel(true)
@@ -235,20 +238,27 @@ class MaintenanceAlertWorker @AssistedInject constructor(
 
         if (items.size == 1) {
             val item = items.first()
-            val action = item.name.toActionName()
-            val title =
-                if (item.status == MaintenanceStatus.OVERDUE) "$action 시기가 지났어요"
-                else "$action${action.subjectParticle()} 다가오고 있어요"
-            val body = "${car.name} · ${item.remainingText}"
+            val action = LocalizedNames.itemAction(item.name)
+            val title = UiText.Res(
+                if (item.status == MaintenanceStatus.OVERDUE) R.string.alert_title_overdue
+                else R.string.alert_title_soon,
+                action
+            ).asString(context)
+            val body = UiText.Res(R.string.alert_body_single, car.name, item.remainingText).asString(context)
             builder.setContentTitle(title)
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
         } else {
-            val title = "${car.name} — 확인할 정비가 ${items.size}건 있어요"
+            val title = context.getString(R.string.alert_title_multi, car.name, items.size)
             val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
-            items.forEach { style.addLine("${it.name} — ${it.remainingText}") }
+            items.forEach {
+                style.addLine(
+                    UiText.Res(R.string.alert_line_multi, LocalizedNames.item(it.name), it.remainingText)
+                        .asString(context)
+                )
+            }
             builder.setContentTitle(title)
-                .setContentText(items.joinToString(", ") { it.name })
+                .setContentText(items.joinToString(", ") { LocalizedNames.item(it.name).asString(context) })
                 .setStyle(style)
         }
 
@@ -269,19 +279,3 @@ class MaintenanceAlertWorker @AssistedInject constructor(
     }
 }
 
-/** "엔진오일" → "엔진오일 교체", 이미 교체/교환/점검/보충으로 끝나면 그대로 */
-private fun String.toActionName(): String {
-    val trimmed = trimEnd()
-    val core = trimmed.substringBeforeLast('(').trimEnd()
-    val endsWithAction = listOf("교체", "교환", "점검", "보충").any {
-        trimmed.endsWith(it) || core.endsWith(it) || trimmed.endsWith("$it)")
-    }
-    return if (endsWithAction) trimmed else "$trimmed 교체"
-}
-
-/** 받침 유무에 따라 이/가 — "교체"→가, "점검"→이 */
-private fun String.subjectParticle(): String {
-    val last = lastOrNull() ?: return "가"
-    if (last !in '가'..'힣') return "가"
-    return if ((last - '가') % 28 != 0) "이" else "가"
-}

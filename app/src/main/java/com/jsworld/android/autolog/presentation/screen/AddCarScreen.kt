@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedFuelType
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -86,14 +89,14 @@ fun AddCarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isFirst) "첫 차량 등록" else "차량 등록") },
+                title = { Text(stringResource(if (isFirst) R.string.car_add_first_title else R.string.car_add_title)) },
                 navigationIcon = {
                     // 온보딩(첫 실행)에서는 돌아갈 화면이 없으므로 숨긴다
                     if (!isFirst) {
                         IconButton(onClick = onBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "뒤로가기"
+                                contentDescription = stringResource(R.string.common_back)
                             )
                         }
                     }
@@ -130,13 +133,13 @@ fun AddCarScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("차량 등록하기", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.car_add_submit), fontWeight = FontWeight.SemiBold)
                     }
 
                     if (!isValid) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "차량 이름 · 번호판 · 현재 주행거리는 필수예요.",
+                            stringResource(R.string.car_add_required_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -148,7 +151,7 @@ fun AddCarScreen(
                             onClick = onRestore,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("이전에 쓰던 기록이 있나요? 백업에서 복원")
+                            Text(stringResource(R.string.carlist_restore_hint))
                         }
                     }
                 }
@@ -191,14 +194,11 @@ fun AddCarScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (isFirst) "첫 차량을 등록해볼까요?" else "차량 정보를 입력해주세요",
+                                stringResource(if (isFirst) R.string.car_add_first_heading else R.string.car_add_heading),
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                if (isFirst)
-                                    "등록하면 정비 주기를 계산해 알려드려요. 이름 · 번호판 · 주행거리만 있으면 시작할 수 있어요."
-                                else
-                                    "등록 후 정비 주기와 알림을 설정할 수 있어요.",
+                                stringResource(if (isFirst) R.string.car_add_first_body else R.string.car_add_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -209,29 +209,29 @@ fun AddCarScreen(
 
             item {
                 // 기본 정보 섹션
-                SectionCard(title = "기본 정보") {
+                SectionCard(title = stringResource(R.string.car_section_basic)) {
                     CarTextField2(
-                        label = "차량 이름 *",
+                        label = stringResource(R.string.car_name_required),
                         value = name,
                         onValueChange = { name = it },
-                        placeholder = "예: 그랜저",
+                        placeholder = stringResource(R.string.car_name_placeholder),
                         leadingIcon = Icons.Default.Badge
                     )
 
                     CarTextField2(
-                        label = "번호판 *",
+                        label = stringResource(R.string.car_plate_required),
                         value = plate,
                         onValueChange = { plate = it },
-                        placeholder = "예: 12가 3456",
+                        placeholder = stringResource(R.string.car_plate_placeholder),
                         leadingIcon = Icons.Default.ConfirmationNumber
                     )
 
                     CarTextField2(
-                        label = "연식",
+                        label = stringResource(R.string.car_year),
                         value = year,
                         onValueChange = { year = it.filter(Char::isDigit).take(4) },
                         keyboardType = KeyboardType.Number,
-                        placeholder = "예: 2021",
+                        placeholder = stringResource(R.string.car_year_placeholder),
                         leadingIcon = Icons.Default.CalendarMonth
                     )
                 }
@@ -239,7 +239,7 @@ fun AddCarScreen(
 
             item {
                 // 주행/연료 섹션
-                SectionCard(title = "주행 · 연료") {
+                SectionCard(title = stringResource(R.string.car_section_driving_fuel)) {
                     OutlinedTextField(
                         value = mileageField,
                         onValueChange = { input ->
@@ -251,15 +251,15 @@ fun AddCarScreen(
                                 selection = TextRange(formatted.length)
                             )
                         },
-                        label = { Text("현재 주행거리 *") },
-                        placeholder = { Text("예: 37,900") },
+                        label = { Text(stringResource(R.string.car_mileage_required)) },
+                        placeholder = { Text(stringResource(R.string.car_mileage_placeholder)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                         trailingIcon = { Text("km", style = MaterialTheme.typography.labelMedium) },
                         supportingText = {
                             Text(
-                                "정비 시기와 월 주행거리의 기준점이에요. 나중에 언제든 수정할 수 있어요.",
+                                stringResource(R.string.car_mileage_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -276,15 +276,15 @@ fun AddCarScreen(
 
             item {
                 // 메모 섹션
-                SectionCard(title = "메모") {
+                SectionCard(title = stringResource(R.string.car_section_memo)) {
                     CarTextField2(
-                        label = "메모",
+                        label = stringResource(R.string.common_memo),
                         value = notes,
                         onValueChange = { notes = it },
                         singleLine = false,
                         minLines = 3,
                         leadingIcon = Icons.AutoMirrored.Filled.Notes,
-                        placeholder = "예: 최근에 타이어 교체함"
+                        placeholder = stringResource(R.string.car_memo_placeholder)
                     )
                 }
             }
@@ -378,7 +378,7 @@ internal fun FuelTypeChips(
                 modifier = Modifier.padding(end = 6.dp)
             )
             Text(
-                "연료 타입",
+                stringResource(R.string.car_fuel_type),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -391,7 +391,7 @@ internal fun FuelTypeChips(
                 FilterChip(
                     selected = selected == type,
                     onClick = { onSelected(if (selected == type) "" else type) },
-                    label = { Text(type) }
+                    label = { Text(type.localizedFuelType()) }
                 )
             }
         }

@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.data.repository.BackupRepository
@@ -25,6 +28,7 @@ import kotlinx.coroutines.launch
  */
 @HiltViewModel
 class BackupPromptViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val userPrefsRepository: UserPrefsRepository,
     private val backupRepository: BackupRepository
 ) : ViewModel() {
@@ -88,7 +92,7 @@ class BackupPromptViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     // 실패하면 기준점을 갱신하지 않는다 — 다음 실행 때 다시 권한다.
-                    _events.send(Event.BackupFailed(e.message ?: "백업 파일 생성에 실패했습니다."))
+                    _events.send(Event.BackupFailed(e.message ?: appContext.getString(R.string.vm_backup_create_failed)))
                 }
         }
     }

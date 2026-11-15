@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.localizedItemName
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -88,10 +91,10 @@ fun EditMaintenanceSettingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("주기 수정") },
+                title = { Text(stringResource(R.string.es_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -118,7 +121,7 @@ fun EditMaintenanceSettingScreen(
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
-                            Text("기본값")
+                            Text(stringResource(R.string.es_default))
                         }
 
                         Button(
@@ -135,7 +138,7 @@ fun EditMaintenanceSettingScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
-                            Text("저장")
+                            Text(stringResource(R.string.common_save))
                         }
                     }
                 }
@@ -154,12 +157,12 @@ fun EditMaintenanceSettingScreen(
         }
 
         val defKmText = ui.defaultKm?.let { "${it}km" } ?: "-"
-        val defMonthsText = ui.defaultMonths?.let { "${it}개월" } ?: "-"
+        val defMonthsText = ui.defaultMonths?.let { stringResource(R.string.duration_months, it) } ?: "-"
 
         val effectiveKm = ui.currentKm ?: ui.defaultKm
         val effectiveMonths = ui.currentMonths ?: ui.defaultMonths
         val effectiveText =
-            "${effectiveKm?.let { "${it}km" } ?: "-"} / ${effectiveMonths?.let { "${it}개월" } ?: "-"}"
+            "${effectiveKm?.let { "${it}km" } ?: "-"} / ${effectiveMonths?.let { stringResource(R.string.duration_months, it) } ?: "-"}"
 
         val isUsingDefault = ui.currentKm == null && ui.currentMonths == null
 
@@ -212,13 +215,13 @@ fun EditMaintenanceSettingScreen(
 
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    text = ui.typeName,
+                                    text = ui.typeName.localizedItemName(),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    text = "현재 적용: $effectiveText",
+                                    text = stringResource(R.string.es_current_applied, effectiveText),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -232,7 +235,7 @@ fun EditMaintenanceSettingScreen(
                                 shape = MaterialTheme.shapes.large
                             ) {
                                 Text(
-                                    if (isUsingDefault) "기본" else "사용자 설정",
+                                    stringResource(if (isUsingDefault) R.string.es_badge_default else R.string.es_badge_custom),
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (isUsingDefault)
@@ -264,7 +267,7 @@ fun EditMaintenanceSettingScreen(
                             Spacer(Modifier.width(8.dp))
 
                             Text(
-                                text = "마지막 정비",
+                                text = stringResource(R.string.cd_last_service),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.width(72.dp),
@@ -273,7 +276,7 @@ fun EditMaintenanceSettingScreen(
 
                             // 접힘 상태 요약(항상 보여주기)
                             val summary = if (!hasLast) {
-                                "없음"
+                                stringResource(R.string.common_none)
                             } else {
                                 val d = ui.lastServiceDate ?: "-"
                                 val m = ui.lastServiceMileage?.let { "${it.formatKm()}km" } ?: "-"
@@ -308,19 +311,19 @@ fun EditMaintenanceSettingScreen(
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     HeaderMiniRow(
                                         icon = Icons.Default.Place,
-                                        label = "장소",
+                                        label = stringResource(R.string.common_place),
                                         value = ui.lastPlace?.takeIf { it.isNotBlank() } ?: "-"
                                     )
 
                                     HeaderMiniRow(
                                         icon = Icons.Default.Payments,
-                                        label = "비용",
-                                        value = ui.lastCost?.let { "${it.formatKm()}원" } ?: "-"
+                                        label = stringResource(R.string.common_cost),
+                                        value = ui.lastCost?.let { stringResource(R.string.money_amount, it) } ?: "-"
                                     )
 
                                     HeaderMiniRow(
                                         icon = Icons.AutoMirrored.Filled.Notes,
-                                        label = "메모",
+                                        label = stringResource(R.string.common_memo),
                                         value = ui.lastMemo?.takeIf { it.isNotBlank() } ?: "-",
                                         valueMaxLines = 3
                                     )
@@ -342,24 +345,24 @@ fun EditMaintenanceSettingScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
                 ) {
                     Column(Modifier.padding(14.dp)) {
-                        Text("기본 주기", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.es_default_cycle), fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(8.dp))
 
                         InfoLineCompact(
                             icon = Icons.Default.Route,
-                            title = "거리",
+                            title = stringResource(R.string.cd_distance),
                             value = defKmText
                         )
                         Spacer(Modifier.height(6.dp))
                         InfoLineCompact(
                             icon = Icons.Default.DateRange,
-                            title = "기간",
+                            title = stringResource(R.string.cd_period),
                             value = defMonthsText
                         )
 
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "입력을 비워두면 기본값을 사용합니다.",
+                            text = stringResource(R.string.es_empty_uses_default),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -380,15 +383,15 @@ fun EditMaintenanceSettingScreen(
                         OutlinedTextField(
                             value = kmText,
                             onValueChange = { kmText = it.filter(Char::isDigit) },
-                            label = { Text("주기 (km)") },
+                            label = { Text(stringResource(R.string.es_cycle_km)) },
                             leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) },
                             placeholder = { Text(ui.defaultKm?.toString() ?: "") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             visualTransformation = ThousandsSeparatorTransformation,
                             supportingText = {
                                 Text(
-                                    text = if (kmText.isBlank()) "비워두면 기본값($defKmText) 사용"
-                                    else "입력값: ${km ?: "-"}km",
+                                    text = if (kmText.isBlank()) stringResource(R.string.es_blank_default, defKmText)
+                                    else stringResource(R.string.es_input_km, km?.toString() ?: "-"),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -399,14 +402,14 @@ fun EditMaintenanceSettingScreen(
                         OutlinedTextField(
                             value = monthsText,
                             onValueChange = { monthsText = it.filter(Char::isDigit) },
-                            label = { Text("주기 (개월)") },
+                            label = { Text(stringResource(R.string.es_cycle_months)) },
                             leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
                             placeholder = { Text(ui.defaultMonths?.toString() ?: "") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             supportingText = {
                                 Text(
-                                    text = if (monthsText.isBlank()) "비워두면 기본값($defMonthsText) 사용"
-                                    else "입력값: ${months ?: "-"}개월",
+                                    text = if (monthsText.isBlank()) stringResource(R.string.es_blank_default, defMonthsText)
+                                    else stringResource(R.string.es_input_months, months?.toString() ?: "-"),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -489,7 +492,7 @@ private fun LastMaintenanceSection(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("마지막 정비 내역", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.es_last_history), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
 
                 if (hasAny) {
                     Icon(
@@ -504,7 +507,7 @@ private fun LastMaintenanceSection(
 
             if (!hasAny) {
                 Text(
-                    text = "저장된 정비 내역이 없습니다.",
+                    text = stringResource(R.string.es_no_history),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -514,13 +517,13 @@ private fun LastMaintenanceSection(
             // 기본(항상 표시): 날짜 + 주행거리만 간단히
             InfoLineCompact(
                 icon = Icons.Default.DateRange,
-                title = "날짜",
+                title = stringResource(R.string.common_date),
                 value = lastServiceDate ?: "-"
             )
             Spacer(Modifier.height(6.dp))
             InfoLineCompact(
                 icon = Icons.Default.Route,
-                title = "주행",
+                title = stringResource(R.string.es_driving),
                 value = lastServiceMileage?.let { "${it.formatKm()}km" } ?: "-"
             )
 
@@ -529,11 +532,11 @@ private fun LastMaintenanceSection(
                 Column {
                     if (!lastPlace.isNullOrBlank()) {
                         Spacer(Modifier.height(8.dp))
-                        InfoLineCompact(Icons.Default.Place, "장소", lastPlace)
+                        InfoLineCompact(Icons.Default.Place, stringResource(R.string.common_place), lastPlace)
                     }
                     if (lastCost != null) {
                         Spacer(Modifier.height(8.dp))
-                        InfoLineCompact(Icons.Default.Payments, "비용", "${lastCost.formatKm()}원")
+                        InfoLineCompact(Icons.Default.Payments, stringResource(R.string.common_cost), stringResource(R.string.money_amount, lastCost))
                     }
                     if (!lastMemo.isNullOrBlank()) {
                         Spacer(Modifier.height(10.dp))

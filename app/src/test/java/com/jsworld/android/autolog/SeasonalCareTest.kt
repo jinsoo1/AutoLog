@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.core.ui.UiText
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.data.repository.DefaultMaintenanceItems
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import com.jsworld.android.autolog.domain.model.Season
@@ -166,10 +168,10 @@ class SeasonalCareTest {
     @Test
     fun `마지막 기록 문구`() {
         val today = LocalDate.of(2026, 10, 15)
-        assertEquals("아직 기록 없음", lastCareLabel(null, today))
-        assertEquals("마지막 이번 달", lastCareLabel(LocalDate.of(2026, 10, 1), today))
-        assertEquals("마지막 3개월 전", lastCareLabel(LocalDate.of(2026, 7, 20), today))
-        assertEquals("마지막 2년 전", lastCareLabel(LocalDate.of(2024, 10, 1), today))
+        assertEquals("아직 기록 없음", lastCareLabel(null, today).ko())
+        assertEquals("마지막 이번 달", lastCareLabel(LocalDate.of(2026, 10, 1), today).ko())
+        assertEquals("마지막 3개월 전", lastCareLabel(LocalDate.of(2026, 7, 20), today).ko())
+        assertEquals("마지막 2년 전", lastCareLabel(LocalDate.of(2024, 10, 1), today).ko())
     }
 
     private fun firstMonthOf(season: Season): Int = when (season) {
@@ -184,7 +186,7 @@ class SeasonalCareTest {
         settingId = settingId,
         name = name,
         status = com.jsworld.android.autolog.domain.model.MaintenanceStatus.NORMAL,
-        remainingText = ""
+        remainingText = UiText.Empty
     )
 
     /* ── 계절 알림 ── */
@@ -214,7 +216,7 @@ class SeasonalCareTest {
     @Test
     fun `알림 본문은 항목 이름만 담는다`() {
         val guide = seasonalGuide(LocalDate.of(2026, 11, 1))
-        val body = seasonalNotificationBody(guide)
+        val body = seasonalNotificationBody(guide).ko()
         assertEquals(guide.tips.joinToString(" · ") { it.itemName }, body)
         // "마지막 언제"는 차량마다 달라서 알림에 넣지 않는다
         assertFalse(body.contains("마지막"))

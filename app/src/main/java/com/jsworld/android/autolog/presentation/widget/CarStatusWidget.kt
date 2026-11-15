@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.widget
 
+import com.jsworld.android.autolog.core.ui.LocalizedNames
+import com.jsworld.android.autolog.core.ui.asString
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -107,7 +109,7 @@ class CarStatusWidget : GlanceAppWidget() {
             val carId = prefs[KEY_CAR_ID] ?: -1L
 
             if (carId <= 0L) {
-                EmptyMessage("차량을 선택해주세요")
+                EmptyMessage(context.getString(R.string.widget_select_car))
                 return@provideContent
             }
 
@@ -124,7 +126,7 @@ class CarStatusWidget : GlanceAppWidget() {
 
             val loaded = ui
             if (loaded == null) {
-                EmptyMessage("불러오는 중…")
+                EmptyMessage(context.getString(R.string.common_loading))
                 return@provideContent
             }
 
@@ -227,7 +229,7 @@ private fun CompactLayout(ui: CarWidgetUi) {
 
         if (shown.isEmpty()) {
             Text(
-                "정비 항목이 없어요",
+                LocalContext.current.getString(R.string.widget_no_items),
                 style = TextStyle(fontSize = 11.sp, color = WColors.TextSecondary)
             )
         } else {
@@ -243,13 +245,13 @@ private fun CompactLayout(ui: CarWidgetUi) {
 private fun CompactItem(row: MaintenanceProgressRow) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         Text(
-            row.name.ellipsize(9),
+            LocalizedNames.item(row.name).asString(LocalContext.current).ellipsize(9),
             style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
             maxLines = 1
         )
         Spacer(GlanceModifier.height(3.dp))
         Text(
-            row.remainText,
+            row.remainText.asString(LocalContext.current),
             style = TextStyle(fontSize = 10.sp, color = WColors.statusColor(row.status)),
             maxLines = 1
         )
@@ -285,7 +287,7 @@ private fun WideLayout(ui: CarWidgetUi) {
 
             Spacer(GlanceModifier.height(10.dp))
 
-            Text("주행거리", style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary))
+            Text(LocalContext.current.getString(R.string.widget_mileage), style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary))
             Text(
                 "${ui.mileage.formatComma()} km",
                 style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = WColors.Accent),
@@ -323,13 +325,14 @@ private fun WideLayout(ui: CarWidgetUi) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "정비 주기",
+                    LocalContext.current.getString(R.string.widget_cycle_title),
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = WColors.TextPrimary),
                     maxLines = 1
                 )
                 Spacer(GlanceModifier.defaultWeight())
                 Text(
-                    if (shown.isEmpty()) "항목 없음" else "위험 TOP ${shown.size}",
+                    if (shown.isEmpty()) LocalContext.current.getString(R.string.widget_no_rows)
+                    else LocalContext.current.getString(R.string.widget_top_n, shown.size),
                     style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary),
                     maxLines = 1
                 )
@@ -338,9 +341,9 @@ private fun WideLayout(ui: CarWidgetUi) {
             Spacer(GlanceModifier.height(7.dp))
 
             if (shown.isEmpty()) {
-                Text("정비 항목이 없어요", style = TextStyle(fontSize = 12.sp, color = WColors.TextSecondary))
+                Text(LocalContext.current.getString(R.string.widget_no_items), style = TextStyle(fontSize = 12.sp, color = WColors.TextSecondary))
                 Spacer(GlanceModifier.height(2.dp))
-                Text("앱에서 항목을 추가해보세요", style = TextStyle(fontSize = 11.sp, color = WColors.TextSecondary))
+                Text(LocalContext.current.getString(R.string.widget_add_items_hint), style = TextStyle(fontSize = 11.sp, color = WColors.TextSecondary))
             } else {
                 shown.forEachIndexed { index, row ->
                     MaintenanceRow(row)
@@ -355,7 +358,8 @@ private fun WideLayout(ui: CarWidgetUi) {
 
 @Composable
 private fun StatusBadge(ui: CarWidgetUi) {
-    val label = if (ui.dangerCount > 0) "위험 ${ui.dangerCount}" else "정상"
+    val label = if (ui.dangerCount > 0) LocalContext.current.getString(R.string.status_danger_count, ui.dangerCount)
+    else LocalContext.current.getString(R.string.status_normal)
     Box(
         modifier = GlanceModifier
             .background(WColors.statusBg(ui.overallStatus))
@@ -395,13 +399,13 @@ private fun MaintenanceRow(row: MaintenanceProgressRow) {
                 ) {}
                 Spacer(GlanceModifier.width(6.dp))
                 Text(
-                    row.name.ellipsize(8),
+                    LocalizedNames.item(row.name).asString(LocalContext.current).ellipsize(8),
                     style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = WColors.TextPrimary),
                     maxLines = 1
                 )
                 Spacer(GlanceModifier.defaultWeight())
                 Text(
-                    row.remainText,
+                    row.remainText.asString(LocalContext.current),
                     style = TextStyle(fontSize = 10.sp, color = WColors.TextSecondary),
                     maxLines = 1
                 )

@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.Powertrain
 import com.jsworld.android.autolog.domain.model.Symptom
 import com.jsworld.android.autolog.domain.model.SymptomCategory
@@ -106,10 +107,10 @@ class SymptomSearchTest {
     fun `표시 문구는 enum 선언 순서를 따른다`() {
         // 집합에 넣은 순서가 아니라 선언 순서로 나와야 항목마다 배지 문구가 흔들리지 않는다.
         val engine = handleShake.copy(powertrains = setOf(Powertrain.HYBRID, Powertrain.ICE))
-        assertEquals("내연기관 · 하이브리드", engine.powertrainLabel())
+        assertEquals("내연기관 · 하이브리드", engine.powertrainLabel()?.ko())
 
         val ev = handleShake.copy(powertrains = setOf(Powertrain.FCEV, Powertrain.EV))
-        assertEquals("전기 · 수소", ev.powertrainLabel())
+        assertEquals("전기 · 수소", ev.powertrainLabel()?.ko())
     }
 
     @Test
@@ -117,10 +118,10 @@ class SymptomSearchTest {
         // DPF·요소수(디젤)나 봄베(LPG)를 '내연기관'으로 묶으면 가솔린 차주가
         // 자기 얘기로 읽는다. 그래서 별도 값을 둔다.
         val diesel = handleShake.copy(powertrains = setOf(Powertrain.DIESEL))
-        assertEquals("디젤", diesel.powertrainLabel())
+        assertEquals("디젤", diesel.powertrainLabel()?.ko())
 
         val lpg = handleShake.copy(powertrains = setOf(Powertrain.LPG))
-        assertEquals("LPG", lpg.powertrainLabel())
+        assertEquals("LPG", lpg.powertrainLabel()?.ko())
     }
 
     @Test
@@ -128,17 +129,17 @@ class SymptomSearchTest {
         // 목록은 공통이면 배지를 숨기지만(소음), 상세는 "내 차에 해당하나"를
         // 판단하는 자리라 배지가 없으면 태깅 누락과 구별되지 않는다.
         assertNull(handleShake.powertrainLabel())
-        assertEquals("모든 차량", handleShake.powertrainScopeLabel())
+        assertEquals("모든 차량", handleShake.powertrainScopeLabel().ko())
 
         val diesel = handleShake.copy(powertrains = setOf(Powertrain.DIESEL))
-        assertEquals("디젤", diesel.powertrainScopeLabel())
+        assertEquals("디젤", diesel.powertrainScopeLabel().ko())
     }
 
     @Test
     fun `해당 문구는 범위에 따라 갈린다`() {
-        assertTrue(handleShake.powertrainNote().contains("모든 차량"))
+        assertTrue(handleShake.powertrainNote().ko().contains("모든 차량"))
         val diesel = handleShake.copy(powertrains = setOf(Powertrain.DIESEL))
-        assertTrue(diesel.powertrainNote().contains("디젤 차량에 해당"))
+        assertTrue(diesel.powertrainNote().ko().contains("디젤 차량에 해당"))
     }
 
     @Test

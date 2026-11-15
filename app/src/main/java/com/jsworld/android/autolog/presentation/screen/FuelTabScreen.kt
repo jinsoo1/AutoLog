@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,7 +97,7 @@ fun FuelTabScreen(
                         if (canAddMultipleKinds) showKindSheet = true else onAddFuel(primaryUnit)
                     },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(if (canAddMultipleKinds) "기록 추가" else "${primaryUnit.actionLabel} 기록") }
+                    text = { Text(if (canAddMultipleKinds) stringResource(R.string.fuel_add_record) else stringResource(R.string.fuel_add_record_of, primaryUnit.actionLabel.asString())) }
                 )
             }
         },
@@ -112,7 +116,7 @@ fun FuelTabScreen(
             TabTopBar(leading = { CarSwitcherChip(car = car, onClick = onSwitchCar) })
 
             if (car == null) {
-                FuelEmptyMessage("차량을 먼저 추가해주세요", "위 차량 칩에서 차량을 추가할 수 있어요.")
+                FuelEmptyMessage(stringResource(R.string.empty_no_car_title), stringResource(R.string.empty_no_car_body))
                 return@Column
             }
 
@@ -121,9 +125,9 @@ fun FuelTabScreen(
 
             if (records.isEmpty()) {
                 FuelEmptyMessage(
-                    if (canAddMultipleKinds) "아직 주유·충전 기록이 없어요"
-                    else "아직 ${primaryUnit.actionLabel} 기록이 없어요",
-                    "오른쪽 아래 버튼으로 첫 기록을 남겨보세요."
+                    if (canAddMultipleKinds) stringResource(R.string.fuel_empty_title_mixed)
+                    else stringResource(R.string.fuel_empty_title_of, primaryUnit.actionLabel.asString()),
+                    stringResource(R.string.fuel_empty_body)
                 )
                 return@Column
             }
@@ -182,11 +186,11 @@ fun FuelTabScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             displayUnits.forEach { unit ->
                                 StatCard(
-                                    label = "이번 달 ${unit.costLabel}",
+                                    label = stringResource(R.string.fuel_month_cost_of, unit.costLabel.asString()),
                                     value = (thisMonthByUnit[unit] ?: 0).formatThousands(),
-                                    unit = "원",
+                                    unit = stringResource(R.string.money_unit),
                                     caption = (thisMonthCountByUnit[unit] ?: 0).let {
-                                        if (it > 0) "${it}회" else "아직 없어요"
+                                        if (it > 0) stringResource(R.string.count_times, it) else stringResource(R.string.fuel_none_yet)
                                     },
                                     accentDot = unit.accentColor(),
                                     modifier = Modifier.weight(1f)
@@ -199,20 +203,20 @@ fun FuelTabScreen(
                         val averageUnitPrice = remember(records) { records.averageUnitPrice() }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             StatCard(
-                                label = "이번 달 ${onlyUnit.costLabel}",
+                                label = stringResource(R.string.fuel_month_cost_of, onlyUnit.costLabel.asString()),
                                 value = (thisMonthByUnit[onlyUnit] ?: 0).formatThousands(),
-                                unit = "원",
+                                unit = stringResource(R.string.money_unit),
                                 caption = (thisMonthCountByUnit[onlyUnit] ?: 0).let {
-                                    if (it > 0) "${it}회" else "아직 없어요"
+                                    if (it > 0) stringResource(R.string.count_times, it) else stringResource(R.string.fuel_none_yet)
                                 },
                                 modifier = Modifier.weight(1f)
                             )
                             StatCard(
-                                label = "평균 단가",
+                                label = stringResource(R.string.fuel_avg_price),
                                 value = averageUnitPrice?.formatThousands() ?: "-",
-                                unit = "원/${onlyUnit.symbol}",
+                                unit = stringResource(R.string.fuel_price_unit, onlyUnit.symbol),
                                 // 이번 달이 아니라 **전체 기록** 평균이다 — 그 사실을 밝힌다.
-                                caption = "기록 ${records.size}회 기준",
+                                caption = stringResource(R.string.fuel_records_basis, records.size),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -228,7 +232,7 @@ fun FuelTabScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                "이번 달 총 에너지비 ${total.formatThousands()}원",
+                                stringResource(R.string.fuel_month_total_energy, total),
                                 modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
@@ -241,7 +245,8 @@ fun FuelTabScreen(
                 if (monthly.isNotEmpty()) {
                     item {
                         SectionLabel(
-                            if (isMixed) "월 에너지비" else "월 ${displayUnits.first().costLabel}"
+                            if (isMixed) stringResource(R.string.fuel_monthly_energy)
+                            else stringResource(R.string.fuel_monthly_cost_of, displayUnits.first().costLabel.asString())
                         )
                     }
                     item {
@@ -263,7 +268,12 @@ fun FuelTabScreen(
                     }
                 }
 
-                item { SectionLabel(if (isMixed) "내역" else "${displayUnits.first().actionLabel} 내역") }
+                item {
+                    SectionLabel(
+                        if (isMixed) stringResource(R.string.fuel_history)
+                        else stringResource(R.string.fuel_history_of, displayUnits.first().actionLabel.asString())
+                    )
+                }
 
                 // 두 종류가 섞여 있을 때만 필터를 보여준다.
                 if (unitsInRecords.size > 1) {
@@ -272,7 +282,7 @@ fun FuelTabScreen(
                             FilterChip(
                                 selected = activeFilter == null,
                                 onClick = { filter = null },
-                                label = { Text("전체") }
+                                label = { Text(stringResource(R.string.common_all)) }
                             )
                             unitsInRecords
                                 .sortedBy { if (it.isElectric) 1 else 0 }
@@ -282,7 +292,7 @@ fun FuelTabScreen(
                                         onClick = {
                                             filter = if (activeFilter == unit) null else unit
                                         },
-                                        label = { Text(unit.actionLabel) }
+                                        label = { Text(unit.actionLabel.asString()) }
                                     )
                                 }
                         }
@@ -339,12 +349,12 @@ private fun FuelKindSheet(
                 .padding(bottom = 16.dp)
         ) {
             Text(
-                "무엇을 기록할까요?",
+                stringResource(R.string.fuel_sheet_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "주유와 충전을 따로 남길 수 있어요",
+                stringResource(R.string.fuel_sheet_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -378,13 +388,13 @@ private fun FuelKindSheet(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                "${unit.actionLabel} 기록",
+                                stringResource(R.string.fuel_add_record_of, unit.actionLabel.asString()),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = accent
                             )
                             Text(
-                                "금액 · ${unit.quantityLabel}(${unit.symbol}) · 단가",
+                                stringResource(R.string.fuel_sheet_row_detail, unit.quantityLabel.asString(), unit.symbol),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -416,7 +426,7 @@ private fun FuelRecordRow(
             Surface(color = accent.copy(alpha = 0.15f), shape = CircleShape) {
                 Icon(
                     record.unit.icon(),
-                    contentDescription = record.unit.actionLabel,
+                    contentDescription = record.unit.actionLabel.asString(),
                     modifier = Modifier
                         .padding(6.dp)
                         .size(15.dp),
@@ -442,7 +452,7 @@ private fun FuelRecordRow(
                         Spacer(Modifier.width(6.dp))
                         Surface(color = accent.copy(alpha = 0.14f), shape = CircleShape) {
                             Text(
-                                record.unit.actionLabel,
+                                record.unit.actionLabel.asString(),
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
@@ -470,7 +480,7 @@ private fun FuelRecordRow(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        "km 주행",
+                        stringResource(R.string.fuel_km_driven),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -514,18 +524,22 @@ internal fun FuelUnit.icon() =
     if (isElectric) Icons.Default.Bolt else Icons.Default.LocalGasStation
 
 /** "8월 2일 · 71,400원" */
+@Composable
+@ReadOnlyComposable
 private fun FuelRecord.titleLine(): String {
     val date = filledAt.toDisplayDateOrNull() ?: filledAt
-    val cost = amount?.let { "${it.formatThousands()}원" }
+    val cost = amount?.let { stringResource(R.string.money_amount, it) }
     return listOfNotNull(date, cost).joinToString(" · ")
 }
 
 /** "42.5L · 1,680원/L · SK 강남" */
+@Composable
+@ReadOnlyComposable
 private fun FuelRecord.subLine(): String = buildList {
     quantity?.let { add("${FuelAmountCalc.formatQuantity(it)}${unit.symbol}") }
-    unitPrice?.let { add("${it.formatThousands()}원/${unit.symbol}") }
+    unitPrice?.let { add(stringResource(R.string.fuel_price_per_unit, it, unit.symbol)) }
     station?.takeIf { it.isNotBlank() }?.let { add(it) }
-}.joinToString(" · ").ifBlank { "기록" }
+}.joinToString(" · ").ifBlank { stringResource(R.string.common_record) }
 
 /**
  * 평균 단가. 단일 종류 차량에서만 쓴다(단위가 섞이면 의미가 없다).

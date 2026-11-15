@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.presentation.state.EditHistoryUiState
@@ -24,6 +27,7 @@ import java.time.format.DateTimeFormatter
 
 @HiltViewModel
 class MaintenanceHistoryEditViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val repo: CarMaintenanceRepository,
     private val carRepo: CarRepository,
     private val userPrefsRepository: UserPrefsRepository,
@@ -42,7 +46,7 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
 
             val h = repo.getHistoryById(historyId).firstOrNull()
             if (h == null) {
-                _ui.update { it.copy(loading = false, error = "정비 내역을 찾을 수 없습니다.") }
+                _ui.update { it.copy(loading = false, error = appContext.getString(R.string.vm_history_not_found)) }
                 return@launch
             }
 
@@ -97,14 +101,14 @@ class MaintenanceHistoryEditViewModel @Inject constructor(
     fun onMemoChange(v: String) = _ui.update { it.copy(memo = v) }
 
     private fun validate(state: EditHistoryUiState): String? {
-        val d = state.date.toLocalDateOrNull() ?: return "날짜를 입력해주세요(yyyy-MM-dd)"
-        val m = state.mileage.toIntOrNull() ?: return "주행거리를 입력해주세요"
+        val d = state.date.toLocalDateOrNull() ?: return appContext.getString(R.string.vm_enter_date)
+        val m = state.mileage.toIntOrNull() ?: return appContext.getString(R.string.am_enter_mileage)
 
-        state.prevDate?.let { if (d.isBefore(it)) return "날짜는 이전 내역(${it})보다 빠를 수 없어요" }
-        state.nextDate?.let { if (d.isAfter(it))  return "날짜는 다음 내역(${it})보다 늦을 수 없어요" }
+        state.prevDate?.let { if (d.isBefore(it)) return appContext.getString(R.string.vm_date_before_prev, it.toString()) }
+        state.nextDate?.let { if (d.isAfter(it))  return appContext.getString(R.string.vm_date_after_next, it.toString()) }
 
-        state.prevMileage?.let { if (m < it) return "주행거리는 이전 내역(${it}km)보다 작을 수 없어요" }
-        state.nextMileage?.let { if (m > it) return "주행거리는 다음 내역(${it}km)보다 클 수 없어요" }
+        state.prevMileage?.let { if (m < it) return appContext.getString(R.string.vm_mileage_below_prev, it) }
+        state.nextMileage?.let { if (m > it) return appContext.getString(R.string.vm_mileage_above_next, it) }
 
         return null
     }

@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog.presentation.worker
 
+import com.jsworld.android.autolog.core.ui.asString
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -127,10 +128,10 @@ class ScheduleAlertNotifier @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = scheduleAlertText(schedule.title, remainingDays)
+        val title = scheduleAlertText(schedule.title, remainingDays).asString(context)
         val body = listOfNotNull(
             car?.name,
-            formatScheduleDate(schedule.dueDate, LocalDate.now()),
+            formatScheduleDate(schedule.dueDate, LocalDate.now()).asString(context),
             schedule.memo?.takeIf { it.isNotBlank() }
         ).joinToString(" · ")
 

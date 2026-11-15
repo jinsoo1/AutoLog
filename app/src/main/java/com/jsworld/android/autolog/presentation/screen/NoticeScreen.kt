@@ -1,5 +1,11 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.runtime.remember
+import com.jsworld.android.autolog.core.util.isAssetAvailableInCurrentLanguage
+import com.jsworld.android.autolog.core.util.Constant
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -53,14 +59,14 @@ fun NoticeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "공지사항",
+                        stringResource(R.string.notice_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
@@ -73,7 +79,7 @@ fun NoticeScreen(
                             modifier = Modifier.padding(end = 6.dp)
                         ) {
                             Text(
-                                text = "새 공지 ${unreadCount}개",
+                                text = stringResource(R.string.notice_new_count, unreadCount),
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
@@ -83,13 +89,17 @@ fun NoticeScreen(
                     }
 
                     IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "새로고침")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.notice_refresh))
                     }
                 }
             )
 
         }
     ) { padding ->
+        val context = LocalContext.current
+        val noticeAvailableInLanguage = remember(context) {
+            context.isAssetAvailableInCurrentLanguage(Constant.AUTOLOG_NOTICE)
+        }
 
         when {
             ui.loading -> Box(
@@ -101,7 +111,7 @@ fun NoticeScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("표시할 공지사항이 없어요", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.notice_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             else -> {
@@ -112,6 +122,17 @@ fun NoticeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // 공지는 "앱이 살아 있다"는 신호라 숨기지 않는다. 대신 현재 언어 판이 없으면
+                    // 그 사실을 한 줄로 밝힌다 — autolog_notice_<lang>.json 을 넣으면 사라진다.
+                    if (!noticeAvailableInLanguage) {
+                        item(key = "language-note") {
+                            Text(
+                                stringResource(R.string.notice_korean_only),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     items(ui.notices, key = { it.id }) { notice ->
                         val expanded = expandedIds.contains(notice.id)
                         val isRead = ui.readIds.contains(notice.id)
@@ -211,7 +232,7 @@ private fun NoticeCard(
                         shape = MaterialTheme.shapes.large
                     ) {
                         Text(
-                            text = "다음 버전 추가 기능 예정 ${notice.next.size}개",
+                            text = stringResource(R.string.notice_next_count, notice.next.size),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -237,7 +258,7 @@ private fun NoticeCard(
             if (notice.next.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "다음 버전 예정",
+                    stringResource(R.string.notice_next_title),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

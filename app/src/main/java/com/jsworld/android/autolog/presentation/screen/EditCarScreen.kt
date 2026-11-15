@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,7 +84,7 @@ fun EditCarScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("차량 정보 수정") },
+                    title = { Text(stringResource(R.string.car_edit_title)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -91,7 +93,7 @@ fun EditCarScreen(
                     actions = {
                         // 삭제 버튼(휴지통)
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "차량 삭제")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.car_delete))
                         }
                     }
                 )
@@ -139,7 +141,7 @@ fun EditCarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("차량 정보 수정") },
+                title = { Text(stringResource(R.string.car_edit_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -147,7 +149,7 @@ fun EditCarScreen(
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "차량 삭제")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.car_delete))
                     }
                 }
             )
@@ -164,7 +166,7 @@ fun EditCarScreen(
                     OutlinedButton(
                         onClick = onBack,
                         modifier = Modifier.weight(1f)
-                    ) { Text("취소") }
+                    ) { Text(stringResource(R.string.common_cancel)) }
 
                     Button(
                         onClick = {
@@ -189,7 +191,7 @@ fun EditCarScreen(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("저장")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             }
@@ -232,13 +234,13 @@ fun EditCarScreen(
 
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = if (name.isBlank()) "차량 이름" else name,
+                                text = if (name.isBlank()) stringResource(R.string.car_name) else name,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = if (plate.isBlank()) "번호판" else plate,
+                                text = if (plate.isBlank()) stringResource(R.string.car_plate) else plate,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -249,7 +251,7 @@ fun EditCarScreen(
                                 shape = MaterialTheme.shapes.large
                             ) {
                                 Text(
-                                    "대표",
+                                    stringResource(R.string.common_primary_car),
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary,
@@ -275,18 +277,18 @@ fun EditCarScreen(
                             .padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        SectionHeader(title = "기본 정보", icon = Icons.Default.Badge)
+                        SectionHeader(title = stringResource(R.string.car_section_basic), icon = Icons.Default.Badge)
 
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("차량 이름 *") },
+                            label = { Text(stringResource(R.string.car_name_required)) },
                             leadingIcon = { Icon(Icons.Default.DirectionsCar, null) },
                             isError = triedSave && !nameValid,
                             supportingText = {
                                 if (triedSave && !nameValid) {
                                     Text(
-                                        "차량 이름을 입력해주세요.",
+                                        stringResource(R.string.car_name_empty),
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold
@@ -299,13 +301,13 @@ fun EditCarScreen(
                         OutlinedTextField(
                             value = plate,
                             onValueChange = { plate = it },
-                            label = { Text("번호판 *") },
+                            label = { Text(stringResource(R.string.car_plate_required)) },
                             leadingIcon = { Icon(Icons.Default.ConfirmationNumber, null) },
                             isError = triedSave && !plateValid,
                             supportingText = {
                                 if (triedSave && !plateValid) {
                                     Text(
-                                        "번호판을 입력해주세요.",
+                                        stringResource(R.string.car_plate_empty),
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold
@@ -318,8 +320,8 @@ fun EditCarScreen(
                         OutlinedTextField(
                             value = year,
                             onValueChange = { input -> year = input.filter(Char::isDigit).take(4) },
-                            label = { Text("연식") },
-                            placeholder = { Text("예: 2021") },
+                            label = { Text(stringResource(R.string.car_year)) },
+                            placeholder = { Text(stringResource(R.string.car_year_placeholder)) },
                             leadingIcon = { Icon(Icons.Default.DateRange, null) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -337,9 +339,9 @@ fun EditCarScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("대표 차량", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.car_primary), fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "홈/목록에서 우선 표시됩니다.",
+                                    stringResource(R.string.car_primary_hint),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -364,7 +366,7 @@ fun EditCarScreen(
                             .padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        SectionHeader(title = "주행 / 메모", icon = Icons.Default.Route)
+                        SectionHeader(title = stringResource(R.string.car_section_driving_memo), icon = Icons.Default.Route)
 
                         OutlinedTextField(
                             value = mileageField,
@@ -377,24 +379,24 @@ fun EditCarScreen(
                                     selection = TextRange(formatted.length)
                                 )
                             },
-                            label = { Text("총 주행거리(km) *") },
+                            label = { Text(stringResource(R.string.car_total_mileage_required)) },
                             leadingIcon = { Icon(Icons.Default.Route, null) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             isError = showMileageError,
                             supportingText = {
                                 Column {
                                     Text(
-                                        text = "정비 기록상 최대 주행거리: ${minAllowedMileage.formatKm()} km",
+                                        text = stringResource(R.string.car_max_history_mileage, minAllowedMileage.formatKm()),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall
                                     )
 
                                     if (showMileageError) {
                                         val err = when {
-                                            mileage == null -> "주행거리를 숫자로 입력해주세요."
+                                            mileage == null -> stringResource(R.string.car_mileage_not_number)
                                             mileage < minAllowedMileage ->
-                                                "정비 기록(최대 ${minAllowedMileage.formatKm()} km)보다 작게 설정할 수 없어요."
-                                            else -> "주행거리를 확인해주세요."
+                                                stringResource(R.string.car_mileage_below_history, minAllowedMileage.formatKm())
+                                            else -> stringResource(R.string.car_mileage_check)
                                         }
 
                                         Text(
@@ -412,7 +414,7 @@ fun EditCarScreen(
                         OutlinedTextField(
                             value = notes,
                             onValueChange = { notes = it },
-                            label = { Text("메모") },
+                            label = { Text(stringResource(R.string.common_memo)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.Notes, null) },
                             minLines = 3,
                             modifier = Modifier.fillMaxWidth()
@@ -426,25 +428,25 @@ fun EditCarScreen(
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("⚠️ 차량 삭제", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.car_delete_title), fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
                         Text(
-                            "이 차량의 정비 설정·정비 내역·주행거리 기록이 모두 삭제됩니다.",
+                            stringResource(R.string.car_delete_body1),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?",
+                            stringResource(R.string.car_delete_body2),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("취소")
+                        Text(stringResource(R.string.common_cancel))
                     }
                 },
                 confirmButton = {
@@ -456,7 +458,7 @@ fun EditCarScreen(
                         }
                     ) {
                         Text(
-                            "삭제",
+                            stringResource(R.string.common_delete),
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold
                         )

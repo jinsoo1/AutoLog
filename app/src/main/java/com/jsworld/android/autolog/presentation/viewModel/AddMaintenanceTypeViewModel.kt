@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.domain.model.DuplicateItemNameException
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jsworld.android.autolog.domain.repository.CarMaintenanceRepository
@@ -12,6 +16,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class AddMaintenanceTypeViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val repo: CarMaintenanceRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
@@ -47,7 +52,11 @@ class AddMaintenanceTypeViewModel @Inject constructor(
             }.onSuccess {
                 _events.tryEmit(UiEvent.Done)
             }.onFailure {
-                _events.tryEmit(UiEvent.Snackbar(it.message ?: "추가에 실패했어요"))
+                val message = when (it) {
+                    is DuplicateItemNameException -> appContext.getString(R.string.vm_add_duplicate)
+                    else -> it.message ?: appContext.getString(R.string.vm_add_failed)
+                }
+                _events.tryEmit(UiEvent.Snackbar(message))
             }
         }
     }

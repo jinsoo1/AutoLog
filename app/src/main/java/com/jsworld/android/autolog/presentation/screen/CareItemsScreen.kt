@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -95,14 +99,14 @@ fun CareItemsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "관리 항목",
+                        stringResource(R.string.care_items_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -111,7 +115,7 @@ fun CareItemsScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("항목 추가") }
+                text = { Text(stringResource(R.string.care_items_add)) }
             )
         }
     ) { padding ->
@@ -124,15 +128,14 @@ fun CareItemsScreen(
         ) {
             item {
                 Text(
-                    "세차는 항상 기록되고, 여기서 켠 항목이 세차 기록의 '선택 항목'에 나타나요. " +
-                        "주기 버튼을 누르면 '세차 3회마다'처럼 나만의 주기를 정할 수 있습니다.",
+                    stringResource(R.string.care_items_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             if (enabled.isNotEmpty()) {
-                item { CareItemsSectionLabel("사용 중", enabled.size) }
+                item { CareItemsSectionLabel(stringResource(R.string.care_items_in_use), enabled.size) }
                 items(items = enabled, key = { "on-${it.name}" }) { item ->
                     CareItemCard(
                         item = item,
@@ -143,7 +146,7 @@ fun CareItemsScreen(
             }
 
             if (disabled.isNotEmpty()) {
-                item { CareItemsSectionLabel("사용 안 함", disabled.size) }
+                item { CareItemsSectionLabel(stringResource(R.string.care_items_not_used), disabled.size) }
                 items(items = disabled, key = { "off-${it.name}" }) { item ->
                     CareItemCard(
                         item = item,
@@ -224,7 +227,7 @@ private fun CareItemCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    item.name,
+                    item.name.localizedItemName(),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -238,10 +241,10 @@ private fun CareItemCard(
                     Text(
                         when {
                             item.intervalWashCount != null ->
-                                "주기 · ${careWashCountLabel(item.intervalWashCount)}"
+                                stringResource(R.string.care_items_cycle_prefix, careWashCountLabel(item.intervalWashCount).asString())
                             item.intervalDays != null ->
-                                "주기 · ${careDaysLabel(item.intervalDays)}마다"
-                            else -> "주기 없음 · 기록만 남겨요"
+                                stringResource(R.string.care_items_cycle_prefix, stringResource(R.string.care_every_period, careDaysLabel(item.intervalDays).asString()))
+                            else -> stringResource(R.string.care_items_no_cycle)
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = if (hasCycle) MaterialTheme.colorScheme.onSurfaceVariant
@@ -253,7 +256,7 @@ private fun CareItemCard(
                         onClick = onEditInterval,
                         label = {
                             Text(
-                                if (hasCycle) "주기 변경" else "주기 설정",
+                                stringResource(if (hasCycle) R.string.care_items_change_cycle else R.string.care_items_set_cycle),
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
@@ -285,14 +288,14 @@ private fun AddCareItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("관리 항목 추가") },
+        title = { Text(stringResource(R.string.care_items_add_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("항목 이름") },
-                    placeholder = { Text("예: 하부 세차") },
+                    label = { Text(stringResource(R.string.care_items_name_label)) },
+                    placeholder = { Text(stringResource(R.string.care_items_name_placeholder)) },
                     singleLine = true,
                     isError = duplicated,
                     modifier = Modifier.fillMaxWidth()
@@ -300,7 +303,7 @@ private fun AddCareItemDialog(
                 if (duplicated) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "이미 있는 항목이에요 — 목록에서 켜주세요.",
+                        stringResource(R.string.care_items_duplicate),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -311,10 +314,10 @@ private fun AddCareItemDialog(
             TextButton(
                 enabled = trimmed.isNotEmpty() && !duplicated,
                 onClick = { onAdd(trimmed) }
-            ) { Text("추가") }
+            ) { Text(stringResource(R.string.common_add)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("취소") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }
@@ -358,7 +361,7 @@ private fun CareIntervalSheet(
                 .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
         ) {
             Text(
-                "${item.name} 주기",
+                stringResource(R.string.care_cycle_title, item.name.localizedItemName()),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -369,17 +372,17 @@ private fun CareIntervalSheet(
                     selected = unit == CareCycleUnit.WASH_COUNT,
                     onClick = { unit = CareCycleUnit.WASH_COUNT },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
-                ) { Text("세차 횟수") }
+                ) { Text(stringResource(R.string.care_cycle_by_wash)) }
                 SegmentedButton(
                     selected = unit == CareCycleUnit.MONTHS,
                     onClick = { unit = CareCycleUnit.MONTHS },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
-                ) { Text("기간") }
+                ) { Text(stringResource(R.string.care_cycle_by_period)) }
                 SegmentedButton(
                     selected = unit == CareCycleUnit.NONE,
                     onClick = { unit = CareCycleUnit.NONE },
                     shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
-                ) { Text("없음") }
+                ) { Text(stringResource(R.string.care_cycle_none)) }
             }
             Spacer(Modifier.height(12.dp))
 
@@ -390,7 +393,7 @@ private fun CareIntervalSheet(
                             FilterChip(
                                 selected = washCount == n,
                                 onClick = { washCountText = n.toString() },
-                                label = { Text("${n}회") }
+                                label = { Text(stringResource(R.string.count_times, n)) }
                             )
                         }
                     }
@@ -400,8 +403,8 @@ private fun CareIntervalSheet(
                         onValueChange = { input ->
                             washCountText = input.filter { it.isDigit() }.take(3)
                         },
-                        label = { Text("직접 입력") },
-                        suffix = { Text("회마다") },
+                        label = { Text(stringResource(R.string.common_direct_input)) },
+                        suffix = { Text(stringResource(R.string.care_cycle_every_count_suffix)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -410,12 +413,12 @@ private fun CareIntervalSheet(
                     Text(
                         if (washCount != null && washCount > 0) {
                             if (washCount == 1) {
-                                "매 세차마다 ${item.name} — 세차를 기록할 때 미리 선택돼 있어요."
+                                stringResource(R.string.care_cycle_wash_each_hint, item.name.localizedItemName())
                             } else {
-                                "세차 ${washCount}회마다 ${item.name} — 세차 기록이 쌓이면 자동으로 세어드려요."
+                                stringResource(R.string.care_cycle_wash_n_hint, washCount, item.name.localizedItemName())
                             }
                         } else {
-                            "1 이상의 횟수를 입력해주세요."
+                            stringResource(R.string.care_cycle_count_invalid)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -428,7 +431,7 @@ private fun CareIntervalSheet(
                             FilterChip(
                                 selected = days == d,
                                 onClick = { daysText = d.toString() },
-                                label = { Text(careDaysLabel(d)) }
+                                label = { Text(careDaysLabel(d).asString()) }
                             )
                         }
                     }
@@ -438,8 +441,8 @@ private fun CareIntervalSheet(
                         onValueChange = { input ->
                             daysText = input.filter { it.isDigit() }.take(4)
                         },
-                        label = { Text("직접 입력") },
-                        suffix = { Text("일마다") },
+                        label = { Text(stringResource(R.string.common_direct_input)) },
+                        suffix = { Text(stringResource(R.string.care_cycle_every_days_suffix)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -447,11 +450,11 @@ private fun CareIntervalSheet(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         if (days != null && days > 0) {
-                            "마지막 ${item.name} 기록에서 ${days}일" +
-                                (careDaysLabel(days).takeIf { it != "${days}일" }?.let { "($it)" } ?: "") +
-                                "이 기준이 돼요."
+                            val plainDays = stringResource(R.string.duration_days, days)
+                            val friendly = careDaysLabel(days).asString().takeIf { it != plainDays }?.let { "($it)" } ?: ""
+                            stringResource(R.string.care_cycle_days_hint, item.name.localizedItemName(), days, friendly)
                         } else {
-                            "1 이상의 일수를 입력해주세요."
+                            stringResource(R.string.care_cycle_days_invalid)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -460,7 +463,7 @@ private fun CareIntervalSheet(
 
                 CareCycleUnit.NONE -> {
                     Text(
-                        "주기 없이 기록만 남겨요. 진행도는 표시되지 않습니다.",
+                        stringResource(R.string.care_cycle_none_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -483,7 +486,7 @@ private fun CareIntervalSheet(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("저장", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.common_save), fontWeight = FontWeight.Bold)
             }
         }
     }

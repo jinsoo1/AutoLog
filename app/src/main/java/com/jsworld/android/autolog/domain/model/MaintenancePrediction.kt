@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.domain.model
 
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.UiText
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
@@ -124,36 +126,37 @@ fun buildMaintenancePredictions(
  * 예측은 어차피 근사라서 날짜까지 쓰지 않는다 — 초·중순·말이 정직한 해상도이고,
  * 해가 바뀌면 그마저 과한 정밀도라 달만 말한다.
  */
-fun predictedDateLabel(date: LocalDate, today: LocalDate): String {
+fun predictedDateLabel(date: LocalDate, today: LocalDate): UiText {
     val month = date.monthValue
     return when (date.year) {
-        today.year -> "${month}월 ${tenthLabel(date.dayOfMonth)}"
-        today.year + 1 -> "내년 ${month}월"
-        else -> "${date.year}년 ${month}월"
+        today.year -> UiText.Res(R.string.pred_this_year, month, tenthLabel(date.dayOfMonth))
+        today.year + 1 -> UiText.Res(R.string.pred_next_year, month)
+        else -> UiText.Res(R.string.pred_year_month, date.year, month)
     }
 }
 
-private fun tenthLabel(dayOfMonth: Int): String = when {
-    dayOfMonth <= 10 -> "초"
-    dayOfMonth <= 20 -> "중순"
-    else -> "말"
-}
+private fun tenthLabel(dayOfMonth: Int): UiText = UiText.Res(
+    when {
+        dayOfMonth <= 10 -> R.string.pred_tenth_early
+        dayOfMonth <= 20 -> R.string.pred_tenth_mid
+        else -> R.string.pred_tenth_late
+    }
+)
 
 /** 예측 근거 한 마디 — 왜 이 날짜인지 밝힌다 */
-fun predictionBasisLabel(prediction: MaintenancePrediction, item: MaintenanceUiModel?): String {
-    val remain = when (prediction.basis) {
-        PredictionBasis.DISTANCE -> item?.remainingKm?.let { "${formatKmForPrediction(it)}km 남음" }
-        PredictionBasis.PERIOD -> item?.remainingDays?.let { "${it}일 남음" }
+fun predictionBasisLabel(prediction: MaintenancePrediction, item: MaintenanceUiModel?): UiText {
+    val remain: UiText? = when (prediction.basis) {
+        PredictionBasis.DISTANCE -> item?.remainingKm?.let { UiText.Res(R.string.pred_remain_km, it) }
+        PredictionBasis.PERIOD -> item?.remainingDays?.let { UiText.Res(R.string.pred_remain_days, it) }
     }
-    val basis = when (prediction.basis) {
-        PredictionBasis.DISTANCE -> "거리 기준"
-        PredictionBasis.PERIOD -> "기간이 먼저 와요"
-    }
-    return listOfNotNull(remain, basis).joinToString(" · ")
+    val basis = UiText.Res(
+        when (prediction.basis) {
+            PredictionBasis.DISTANCE -> R.string.pred_basis_distance
+            PredictionBasis.PERIOD -> R.string.pred_basis_period
+        }
+    )
+    return UiText.Joined(listOfNotNull(remain, basis))
 }
-
-private fun formatKmForPrediction(km: Int): String =
-    java.text.NumberFormat.getIntegerInstance().format(km)
 
 /** 남은 개월 수로 '다음 정비까지' 대략 몇 달인지 — 카드 부제용 */
 fun monthsUntil(date: LocalDate, today: LocalDate): Long =

@@ -1,5 +1,8 @@
 package com.jsworld.android.autolog.presentation.viewModel
 
+import com.jsworld.android.autolog.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +21,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ExcelExportViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val carRepository: CarRepository,
     private val carExcelExporter: CarExcelExporter
 ) : ViewModel() {
@@ -51,7 +55,7 @@ class ExcelExportViewModel @Inject constructor(
 
         if (carId == null) {
             _exportState.value = ExcelExportUiState.Error(
-                message = "차량을 먼저 선택해주세요.",
+                message = appContext.getString(R.string.excel_select_car_first),
                 detail = "selectedCarId is null"
             )
             return
@@ -71,7 +75,7 @@ class ExcelExportViewModel @Inject constructor(
                 },
                 onFailure = { throwable ->
                     ExcelExportUiState.Error(
-                        message = "엑셀 파일 저장 중 오류가 발생했습니다.",
+                        message = appContext.getString(R.string.vm_excel_error),
                         detail = throwable.toCrashText()
                     )
                 }

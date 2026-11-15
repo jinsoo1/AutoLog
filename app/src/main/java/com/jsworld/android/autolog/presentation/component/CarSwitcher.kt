@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.component
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,7 +62,7 @@ fun CarSwitcherChip(
             )
             Spacer(Modifier.width(7.dp))
             Text(
-                text = car?.name ?: "차량 선택",
+                text = car?.name ?: stringResource(R.string.car_switcher_select),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -70,7 +72,7 @@ fun CarSwitcherChip(
             Spacer(Modifier.width(3.dp))
             Icon(
                 Icons.Default.ExpandMore,
-                contentDescription = "차량 전환",
+                contentDescription = stringResource(R.string.car_switcher_switch),
                 modifier = Modifier.size(17.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
             )
@@ -107,12 +109,12 @@ fun CarSwitcherSheet(
                 .padding(bottom = 12.dp)
         ) {
             Text(
-                "차량 전환",
+                stringResource(R.string.car_switcher_switch),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "선택한 차량이 홈·정비 탭에 표시됩니다",
+                stringResource(R.string.car_switcher_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -133,14 +135,14 @@ fun CarSwitcherSheet(
             if (onAddCar != null) {
                 SheetActionRow(
                     icon = Icons.Default.Add,
-                    label = "차량 추가",
+                    label = stringResource(R.string.car_switcher_add),
                     onClick = onAddCar
                 )
             }
             if (onManageCars != null) {
                 SheetActionRow(
                     icon = Icons.Default.DirectionsCar,
-                    label = "차량 관리",
+                    label = stringResource(R.string.car_switcher_manage),
                     onClick = onManageCars
                 )
             }
@@ -182,7 +184,7 @@ private fun CarSwitcherRow(
                     if (car.isPrimary) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "대표",
+                            stringResource(R.string.common_primary_car),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -190,7 +192,7 @@ private fun CarSwitcherRow(
                     }
                 }
                 Text(
-                    "${car.plate} · ${car.mileage.formatComma()} km",
+                    stringResource(R.string.car_switcher_plate_km, car.plate, car.mileage),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
@@ -200,7 +202,7 @@ private fun CarSwitcherRow(
             if (selected) {
                 Icon(
                     Icons.Default.Check,
-                    contentDescription = "선택됨",
+                    contentDescription = stringResource(R.string.common_selected),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }

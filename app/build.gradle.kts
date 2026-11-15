@@ -35,6 +35,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    androidResources {
+        // 앱이 실제로 제공하는 언어만 — 라이브러리 번역 리소스가 APK 에 딸려 오는 것을 막는다.
+        localeFilters += listOf("ko", "ja")
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE"))

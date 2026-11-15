@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.NarrativeTone
 import com.jsworld.android.autolog.domain.model.buildReportNarrative
@@ -36,7 +37,7 @@ class ReportNarrativeTest {
             soonCount = 1
         )
         assertEquals(NarrativeTone.WARNING, n.tone)
-        assertTrue(n.subtitle.contains("2개"))
+        assertTrue(n.subtitle.ko().contains("2개"))
     }
 
     @Test
@@ -57,8 +58,8 @@ class ReportNarrativeTest {
 
     @Test
     fun `지구 바퀴 - 한 바퀴 전에는 퍼센트, 넘으면 바퀴 수`() {
-        assertTrue(earthLapsText(20_000)!!.contains("한 바퀴의 50%"))
-        assertTrue(earthLapsText(72_000)!!.contains("1.8바퀴째"))
+        assertTrue(earthLapsText(20_000)!!.ko().contains("한 바퀴의 50%"))
+        assertTrue(earthLapsText(72_000)!!.ko().contains("1.8바퀴째"))
         assertNull(earthLapsText(0))
     }
 
@@ -73,17 +74,17 @@ class ReportNarrativeTest {
         val months = listOf(m(4, 300), m(5, 100), m(6, 200), m(8, 900))
         assertEquals(
             "기록을 시작한 뒤 가장 많이 달린 달이에요",
-            personalRecordText(months, m(8, 900))
+            personalRecordText(months, m(8, 900))?.ko()
         )
     }
 
     @Test
     fun `거리 사다리 - 규모에 따라 비유가 바뀐다`() {
-        assertTrue(distanceLadderText(40)!!.contains("여의도"))
-        assertTrue(distanceLadderText(200)!!.contains("제주"))
-        assertTrue(distanceLadderText(500)!!.contains("경부고속도로"))
-        assertTrue(distanceLadderText(1_500)!!.contains("국토종주"))
-        assertTrue(distanceLadderText(3_000)!!.contains("마라톤"))
+        assertTrue(distanceLadderText(40)!!.ko().contains("여의도"))
+        assertTrue(distanceLadderText(200)!!.ko().contains("제주"))
+        assertTrue(distanceLadderText(500)!!.ko().contains("경부고속도로"))
+        assertTrue(distanceLadderText(1_500)!!.ko().contains("국토종주"))
+        assertTrue(distanceLadderText(3_000)!!.ko().contains("마라톤"))
         assertNull(distanceLadderText(0))
     }
 }

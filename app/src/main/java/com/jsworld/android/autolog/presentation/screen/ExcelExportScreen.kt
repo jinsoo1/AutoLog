@@ -1,5 +1,7 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -81,7 +83,7 @@ fun ExcelExportScreen(
         is ExcelExportUiState.Success -> {
             Toast.makeText(
                 context,
-                "엑셀 파일이 저장되었습니다.",
+                context.getString(R.string.excel_saved),
                 Toast.LENGTH_SHORT
             ).show()
 
@@ -106,7 +108,7 @@ fun ExcelExportScreen(
                 val copyText = buildString {
                     appendLine(error.message)
                     appendLine()
-                    appendLine(error.detail ?: "상세 로그가 없습니다.")
+                    appendLine(error.detail ?: context.getString(R.string.excel_no_detail))
                 }
 
                 copyToClipboard(
@@ -117,7 +119,7 @@ fun ExcelExportScreen(
 
                 Toast.makeText(
                     context,
-                    "크래시 로그가 클립보드에 복사되었습니다.",
+                    context.getString(R.string.excel_log_copied),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -129,7 +131,7 @@ fun ExcelExportScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "엑셀 내보내기",
+                        text = stringResource(R.string.excel_title),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -137,7 +139,7 @@ fun ExcelExportScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "뒤로가기"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 }
@@ -154,7 +156,7 @@ fun ExcelExportScreen(
                         if (fileName == null) {
                             Toast.makeText(
                                 context,
-                                "차량을 먼저 선택해주세요.",
+                                context.getString(R.string.excel_select_car_first),
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
@@ -170,11 +172,7 @@ fun ExcelExportScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = if (exportState is ExcelExportUiState.Loading) {
-                            "엑셀 저장 중..."
-                        } else {
-                            "선택한 차량 엑셀로 저장"
-                        }
+                        text = stringResource(if (exportState is ExcelExportUiState.Loading) R.string.excel_saving else R.string.excel_save_selected)
                     )
                 }
             }
@@ -188,7 +186,7 @@ fun ExcelExportScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "등록된 차량이 없습니다.",
+                    text = stringResource(R.string.excel_no_cars),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -205,7 +203,7 @@ fun ExcelExportScreen(
             ) {
                 item {
                     Text(
-                        text = "엑셀로 저장할 차량을 선택해주세요.",
+                        text = stringResource(R.string.excel_pick_car),
                         modifier = Modifier.padding(
                             horizontal = 20.dp,
                             vertical = 12.dp
@@ -244,7 +242,7 @@ private fun ExcelExportErrorDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "엑셀 저장 오류",
+                text = stringResource(R.string.excel_error_title),
                 fontWeight = FontWeight.Bold
             )
         },
@@ -258,7 +256,7 @@ private fun ExcelExportErrorDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "아래 버튼을 눌러 크래시 로그를 복사한 뒤 확인할 수 있습니다.",
+                    text = stringResource(R.string.excel_error_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -266,7 +264,7 @@ private fun ExcelExportErrorDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = error.detail?.take(1_500) ?: "상세 로그가 없습니다.",
+                    text = error.detail?.take(1_500) ?: stringResource(R.string.excel_no_detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 12
@@ -277,14 +275,14 @@ private fun ExcelExportErrorDialog(
             TextButton(
                 onClick = onCopyClick
             ) {
-                Text("크래시 로그 복사")
+                Text(stringResource(R.string.excel_copy_log))
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
             ) {
-                Text("닫기")
+                Text(stringResource(R.string.common_close))
             }
         }
     )

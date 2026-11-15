@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -88,14 +92,14 @@ fun MaintenanceStarterScreen(
         ) {
             item {
                 Text(
-                    "차량은 어떻게\n관리하시겠어요?",
+                    stringResource(R.string.ms_title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     lineHeight = MaterialTheme.typography.headlineMedium.lineHeight
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "고른 스타일에 맞춰 정비 항목과 교체 주기를 채워드려요.\n나중에 언제든 켜고 끌 수 있고, 목록에 없는 항목은 직접 추가할 수 있어요.",
+                    stringResource(R.string.ms_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -128,8 +132,8 @@ fun MaintenanceStarterScreen(
                 ) {
                     val count = itemsByPack[selected]?.size ?: 0
                     Text(
-                        if (applying) "설정하는 중…"
-                        else "${selected.title} 시작하기 · 항목 ${count}개",
+                        if (applying) stringResource(R.string.ms_applying)
+                        else stringResource(R.string.ms_start, selected.title.asString(), count),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -138,7 +142,7 @@ fun MaintenanceStarterScreen(
                     enabled = !applying,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("나중에 직접 고를게요", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.ms_choose_later), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -193,7 +197,7 @@ private fun StarterPackCard(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            pack.title,
+                            pack.title.asString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -201,7 +205,7 @@ private fun StarterPackCard(
                             Spacer(Modifier.width(7.dp))
                             Surface(color = accent.copy(alpha = 0.13f), shape = CircleShape) {
                                 Text(
-                                    "추천",
+                                    stringResource(R.string.ms_recommended),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
@@ -211,14 +215,14 @@ private fun StarterPackCard(
                         }
                     }
                     Text(
-                        "${pack.description} · ${items.size}개",
+                        stringResource(R.string.ms_desc_count, pack.description.asString(), items.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Icon(
                     if (selected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = if (selected) "선택됨" else null,
+                    contentDescription = if (selected) stringResource(R.string.common_selected) else null,
                     tint = if (selected) accent
                     else MaterialTheme.colorScheme.outlineVariant
                 )
@@ -252,9 +256,9 @@ private fun StarterPackCard(
                         }
                     }
                 } else {
-                    val preview = items.take(4).joinToString(" · ")
+                    val preview = items.take(4).map { it.localizedItemName() }.joinToString(" · ")
                     Text(
-                        if (items.size > 4) "$preview 외 ${items.size - 4}개" else preview,
+                        if (items.size > 4) stringResource(R.string.ms_preview_more, preview, items.size - 4) else preview,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                         lineHeight = MaterialTheme.typography.bodySmall.lineHeight
@@ -271,7 +275,7 @@ private fun StarterPackCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            if (expanded) "접기" else "항목 모두 보기",
+                            stringResource(if (expanded) R.string.common_collapse else R.string.ms_show_all),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

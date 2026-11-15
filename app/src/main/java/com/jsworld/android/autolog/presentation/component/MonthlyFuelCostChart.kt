@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.component
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -86,6 +90,7 @@ fun MonthlyFuelCostChart(
     val lastMonthTotal = months.last().second.sumOf { it.totalAmount }
 
     Column(modifier) {
+        val monthLabels = months.map { it.first.monthLabel() }
         Canvas(
             Modifier
                 .fillMaxWidth()
@@ -163,7 +168,7 @@ fun MonthlyFuelCostChart(
                     cursorBottom = segTop
                 }
 
-                val monthLabel = months[index].first.monthLabel()
+                val monthLabel = monthLabels[index]
                 val measured = textMeasurer.measure(monthLabel, labelStyle)
                 drawText(
                     textLayoutResult = measured,
@@ -197,7 +202,7 @@ fun MonthlyFuelCostChart(
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 unitsPresent.sortedBy { if (it.isElectric) 1 else 0 }.forEach { unit ->
-                    LegendDot(color = colorFor(unit), label = unit.actionLabel)
+                    LegendDot(color = colorFor(unit), label = unit.actionLabel.asString())
                 }
             }
         }
@@ -221,7 +226,9 @@ private fun LegendDot(color: Color, label: String) {
 }
 
 /** "2026-08" → "8월" */
+@Composable
+@ReadOnlyComposable
 private fun String.monthLabel(): String {
-    val month = substringAfter('-', "").trimStart('0')
-    return if (month.isBlank()) this else "${month}월"
+    val month = substringAfter('-', "").trimStart('0').toIntOrNull()
+    return if (month == null) this else stringResource(R.string.date_month, month)
 }

@@ -1,5 +1,9 @@
 package com.jsworld.android.autolog.presentation.screen
 
+import com.jsworld.android.autolog.core.ui.localizedItemName
+import androidx.compose.ui.res.stringResource
+import com.jsworld.android.autolog.R
+import com.jsworld.android.autolog.core.ui.asString
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -135,15 +139,14 @@ fun ScheduleStarterScreen(
         ) {
             item {
                 Text(
-                    "이런 날짜도\n챙겨드릴까요?",
+                    stringResource(R.string.starter_schedule_title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     lineHeight = MaterialTheme.typography.headlineMedium.lineHeight
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "정비 기록이 없어도 챙길 수 있는 것들이에요.\n" +
-                        "2주 전부터 알려드리고, 나중에 언제든 고칠 수 있어요.",
+                    stringResource(R.string.starter_schedule_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -152,16 +155,15 @@ fun ScheduleStarterScreen(
 
             item {
                 StarterScheduleCard(
-                    title = "정기검사",
+                    title = "정기검사".localizedItemName(),
                     checked = inspectionOn && inspectionDate != null,
                     enabled = inspectionDate != null,
-                    dateLabel = inspectionDate?.let { formatScheduleDate(it.toString(), today) },
-                    repeatLabel = "2년마다",
+                    dateLabel = inspectionDate?.let { formatScheduleDate(it.toString(), today).asString() },
+                    repeatLabel = stringResource(R.string.starter_repeat_2y),
                     hint = when {
-                        inspectionDate != null ->
-                            "연식으로 계산한 제안이에요 — 등록증의 검사 유효기간으로 맞춰주세요."
-                        yearInput.isNotEmpty() -> "연식을 다시 확인해주세요"
-                        else -> "연식을 알려주시면 계산해드려요"
+                        inspectionDate != null -> stringResource(R.string.schedule_year_hint_suggested)
+                        yearInput.isNotEmpty() -> stringResource(R.string.schedule_year_hint_check)
+                        else -> stringResource(R.string.starter_year_hint_enter)
                     },
                     onToggle = { inspectionOn = it }
                 ) {
@@ -171,7 +173,7 @@ fun ScheduleStarterScreen(
                         OutlinedTextField(
                             value = yearInput,
                             onValueChange = { yearInput = it.filter(Char::isDigit).take(4) },
-                            label = { Text("연식") },
+                            label = { Text(stringResource(R.string.schedule_year_label)) },
                             placeholder = { Text("2021") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -183,30 +185,30 @@ fun ScheduleStarterScreen(
 
             item {
                 StarterScheduleCard(
-                    title = "자동차세",
+                    title = "자동차세".localizedItemName(),
                     checked = taxOn,
                     enabled = true,
-                    dateLabel = formatScheduleDate(taxDate.toString(), today),
-                    repeatLabel = "6개월마다",
-                    hint = "6월·12월 납기 기준이에요. 연납이면 1월로 바꾸면 돼요.",
+                    dateLabel = formatScheduleDate(taxDate.toString(), today).asString(),
+                    repeatLabel = stringResource(R.string.starter_repeat_6m),
+                    hint = stringResource(R.string.starter_tax_hint),
                     onToggle = { taxOn = it }
                 )
             }
 
             item {
                 StarterScheduleCard(
-                    title = "보험 만기",
+                    title = "보험 만기".localizedItemName(),
                     checked = insuranceDate != null,
                     enabled = true,
-                    dateLabel = insuranceDate?.let { formatScheduleDate(it, today) },
-                    repeatLabel = "1년마다",
+                    dateLabel = insuranceDate?.let { formatScheduleDate(it, today).asString() },
+                    repeatLabel = stringResource(R.string.starter_repeat_1y),
                     // 가입일은 앱이 알 방법이 없다 — 지어내지 않고 고르게 한다.
-                    hint = "가입일은 앱이 알 수 없어요. 만기일을 고르면 등록돼요.",
+                    hint = stringResource(R.string.starter_insurance_hint),
                     onToggle = { on -> if (!on) insuranceDate = null else showInsurancePicker = true }
                 ) {
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = { showInsurancePicker = true }) {
-                        Text(if (insuranceDate == null) "만기일 고르기" else "날짜 변경")
+                        Text(stringResource(if (insuranceDate == null) R.string.starter_pick_expiry else R.string.starter_change_date))
                     }
                 }
             }
@@ -249,7 +251,7 @@ fun ScheduleStarterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (saving) "등록하는 중…" else "등록하기 · ${drafts.size}개",
+                        if (saving) stringResource(R.string.starter_registering) else stringResource(R.string.starter_register_count, drafts.size),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -258,7 +260,7 @@ fun ScheduleStarterScreen(
                     enabled = !saving,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("나중에 할게요", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.starter_later), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -279,10 +281,10 @@ fun ScheduleStarterScreen(
                             .atZone(ZoneId.systemDefault()).toLocalDate().toString()
                     }
                     showInsurancePicker = false
-                }) { Text("확인") }
+                }) { Text(stringResource(R.string.common_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showInsurancePicker = false }) { Text("취소") }
+                TextButton(onClick = { showInsurancePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         ) { DatePicker(state = state) }
     }
@@ -327,7 +329,7 @@ private fun StarterScheduleCard(
                     )
                     Text(
                         // 날짜가 없으면 "언제"를 지어내지 않는다.
-                        dateLabel?.let { "$it · $repeatLabel" } ?: "날짜 미정",
+                        dateLabel?.let { "$it · $repeatLabel" } ?: stringResource(R.string.starter_date_tbd),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (dateLabel != null) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant

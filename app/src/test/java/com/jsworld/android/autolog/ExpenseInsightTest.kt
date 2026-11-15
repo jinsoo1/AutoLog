@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.TestStrings.ko
 import com.jsworld.android.autolog.domain.model.MonthlyExpense
 import com.jsworld.android.autolog.domain.model.buildExpenseInsight
 import org.junit.Assert.assertEquals
@@ -22,11 +23,11 @@ class ExpenseInsightTest {
     @Test
     fun `증가하면 더 썼다고, 감소하면 덜 썼다고 말한다`() {
         val up = buildExpenseInsight(month(200_000), month(150_000))
-        assertTrue(up.headline.contains("50,000원 더 썼어요"))
+        assertTrue(up.headline.ko().contains("50,000원 더 썼어요"))
         assertTrue(up.direction > 0)
 
         val down = buildExpenseInsight(month(100_000), month(150_000))
-        assertTrue(down.headline.contains("50,000원 덜 썼어요"))
+        assertTrue(down.headline.ko().contains("50,000원 덜 썼어요"))
         assertTrue(down.direction < 0)
     }
 
@@ -38,7 +39,7 @@ class ExpenseInsightTest {
             topMaintenanceName = "타이어 교체",
             topMaintenanceCost = 450_000
         )
-        assertEquals("늘어난 금액의 대부분은 타이어 교체 450,000원이에요", insight.detail)
+        assertEquals("늘어난 금액의 대부분은 타이어 교체 450,000원이에요", insight.detail?.ko())
     }
 
     @Test
@@ -49,13 +50,13 @@ class ExpenseInsightTest {
             topMaintenanceName = "타이어 교체",
             topMaintenanceCost = 450_000
         )
-        assertTrue(insight.detail!!.contains("주유·충전은 오히려 21,000원 줄었어요"))
+        assertTrue(insight.detail!!.ko().contains("주유·충전은 오히려 21,000원 줄었어요"))
     }
 
     @Test
     fun `주유가 원인이면 카테고리로 말한다`() {
         val insight = buildExpenseInsight(month(250_000), month(150_000))
-        assertEquals("주유·충전 지출이 100,000원 늘었어요", insight.detail)
+        assertEquals("주유·충전 지출이 100,000원 늘었어요", insight.detail?.ko())
     }
 
     @Test

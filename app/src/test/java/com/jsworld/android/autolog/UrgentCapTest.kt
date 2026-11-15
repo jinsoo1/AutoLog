@@ -1,5 +1,6 @@
 package com.jsworld.android.autolog
 
+import com.jsworld.android.autolog.core.ui.UiText
 import com.jsworld.android.autolog.domain.model.MaintenanceStatus
 import com.jsworld.android.autolog.domain.model.MaintenanceUiModel
 import org.junit.Assert.assertEquals
@@ -21,7 +22,7 @@ class UrgentCapTest {
         settingId = name.hashCode().toLong(),
         name = name,
         status = status,
-        remainingText = "",
+        remainingText = UiText.Empty,
         hasHistory = true
     )
 
