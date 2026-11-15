@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="ko" />
+    <!-- 일본어는 아직 배포하지 않는다. 켤 때 build.gradle.kts 의 localeFilters 와 함께 푼다.
     <locale android:name="ja" />
+    -->
 </locale-config>

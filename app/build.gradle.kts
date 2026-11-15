@@ -37,7 +37,9 @@ android {
 
     androidResources {
         // 앱이 실제로 제공하는 언어만 — 라이브러리 번역 리소스가 APK 에 딸려 오는 것을 막는다.
-        localeFilters += listOf("ko", "ja")
+        // 일본어(values-ja)는 번역을 마쳤지만 아직 배포하지 않는다(2026-11 결정, 다음 배포 때 다시 판단).
+        // 켤 때: 여기에 "ja" 를 더하고 res/xml/locales_config.xml 의 ja 줄 주석을 푼다.
+        localeFilters += listOf("ko")
     }
 
     signingConfigs {
